@@ -1,4 +1,4 @@
 ---
-title: Download-to-Go for Android
+title: Download-to-Go for iOS
 ---
 
