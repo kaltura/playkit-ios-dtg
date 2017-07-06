@@ -18,6 +18,20 @@ public protocol ContentManager: class {
     /// Resume downloading of items that were in progress when stop() was called.
     func resumeInterruptedItems()
     
+    /// Add error observer.
+    func addErrorObserver(owner: Any, callback: (DTGItem, Error)->Void)
+    /// Remove error observer.
+    func removeErrorObserver(owner: Any)
+    
+    /// Add progress observer.
+    func addProgressObserver(owner: Any, callback: (DTGItem, Int64)->Void)
+    /// Remove progress observer.
+    func removeProgressObserver(owner: Any)
+    
+    /// Add state change observer.
+    func addStateObserver(owner: Any, callback: (DTGItem, _ newState: DTGItemState, _ oldState: DTGItemState)->Void)
+    /// Remove state change observer.
+    func removeStateObserver(owner: Any)
     
     /// Find an existing item.
     /// - Parameter id: the item's unique id.
@@ -34,56 +48,22 @@ public protocol ContentManager: class {
     /// Load metadata for the given item id.
     /// - Parameters:
     ///     - id: the item's unique id.
-    ///     - callback: block that takes the updated item and a track selector. The application is expected
-    ///                 to select tracks before the callback returns.
-    func loadItemMetadata(id: String, callback: (DTGItem, DTGTrackSelector)->Void)
+    ///     - callback: block that takes the updated item.
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int, callback: (DTGItem)->Void)
     
-    /// Start downloading an item.
-    /// - Parameters:
-    ///     - id: the item's unique id.
+    /// Start or resume item download.
     func startItem(id: String)
     
     /// Pause downloading an item.
-    /// - Parameters:
-    ///     - id: the item's unique id.
     func pauseItem(id: String)
     
     /// Remove an existing item from storage, deleting all related files.
-    /// - Parameters:
-    ///     - id: the item's unique id.
     func removeItem(id: String)
     
     /// Get a playable URL for an item.
-    /// - Parameters:
-    ///     - id: the item's unique id.
     /// - Returns: a playback URL, or nil.
     func itemPlaybackUrl(id: String) -> URL? 
     
-}
-
-/// Allows an application to select tracks for download. An instance of this class is
-/// provided to the app when an item's metadata is loaded.
-public protocol DTGTrackSelector: class {
-    /// Get the available tracks of a given type.
-    /// - Parameter type: track type.
-    /// - Returns: an array with tracks of the requested type.
-    func availableTracks(type: DTGTrackType) -> [DTGTrack]
-    
-    /// Add list of tracks to download.
-    /// - Parameter tracks: the tracks to add to the download.
-    func addTracks(tracks: [DTGTrack])
-    
-    /// Select the default tracks. This discards of any added tracks.
-    func selectDefaults()
-}
-
-public extension DTGTrackSelector {
-    /// Add all tracks of the given type.
-    /// - Note: shouldn't be called with the `video` type.
-    func addAllTracks(type: DTGTrackType) {
-        let tracks = availableTracks(type: type)
-        addTracks(tracks: tracks)
-    }
 }
 
 /// A downloadable item.
@@ -102,22 +82,18 @@ public protocol DTGItem: class {
     
     /// Downloaded size in bytes.
     var downloadedSize: Int64? {get}
-    
-    /// Get the downloaded tracks of a given type.
-    /// - Parameter type: track type.
-    /// - Returns: an array with the downloaded tracks.
-    func downloadedTracks(type: DTGTrackType) -> [DTGTrack]
 }
 
 public protocol DTGTrack: class {
 }
 
-public protocol DTGTextTrack: class {
-    
-    var language: String? {get}
+public enum DTGTrackType {
+    case video
+    case audio
+    case text
 }
 
-public protocol DTGVideoTrack: class {
+public protocol DTGVideoTrack: DTGTrack {
     
     var width: Int? {get}
     
@@ -128,7 +104,7 @@ public protocol DTGVideoTrack: class {
     var codec: String? {get}
 }
 
-public protocol DTGAudioTrack: class {
+public protocol DTGAudioTrack: DTGTrack {
     
     var bitrate: Int? {get}
     
@@ -137,10 +113,9 @@ public protocol DTGAudioTrack: class {
     var language: String? {get}
 }
 
-public enum DTGTrackType {
-    case video
-    case audio
-    case text
+public protocol DTGTextTrack: DTGTrack {
+    
+    var language: String? {get}
 }
 
 public enum DTGItemState: Int {
@@ -161,4 +136,7 @@ public enum DTGItemState: Int {
     
     /// Item download has failed.
     case failed
+    
+    /// Item is removed. This is only a temporary state, as the item is actually removed.
+    case removed
 }
