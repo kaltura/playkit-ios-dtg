@@ -49,7 +49,7 @@ public protocol ContentManager: class {
     /// - Parameters:
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int, callback: (DTGItem)->Void)
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: (DTGItem, DTGVideoTrack)->Void)
     
     /// Start or resume item download.
     func startItem(id: String)
