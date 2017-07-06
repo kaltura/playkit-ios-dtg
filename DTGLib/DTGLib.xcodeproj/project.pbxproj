@@ -10,6 +10,7 @@
 		FB64E1831F0E581D005B3004 /* DTGLib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB64E1791F0E581D005B3004 /* DTGLib.framework */; };
 		FB64E1881F0E581D005B3004 /* DTGLibTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB64E1871F0E581D005B3004 /* DTGLibTests.swift */; };
 		FB64E18A1F0E581D005B3004 /* DTGLib.h in Headers */ = {isa = PBXBuildFile; fileRef = FB64E17C1F0E581D005B3004 /* DTGLib.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		FBC031E21F0EC6AF0087850E /* API.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC031E11F0EC6AF0087850E /* API.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +30,7 @@
 		FB64E1821F0E581D005B3004 /* DTGLibTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DTGLibTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB64E1871F0E581D005B3004 /* DTGLibTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTGLibTests.swift; sourceTree = "<group>"; };
 		FB64E1891F0E581D005B3004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FBC031E11F0EC6AF0087850E /* API.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = API.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				FB64E17C1F0E581D005B3004 /* DTGLib.h */,
+				FBC031E11F0EC6AF0087850E /* API.swift */,
 				FB64E17D1F0E581D005B3004 /* Info.plist */,
 			);
 			path = DTGLib;
@@ -149,7 +152,7 @@
 					FB64E1781F0E581D005B3004 = {
 						CreatedOnToolsVersion = 8.3.3;
 						DevelopmentTeam = X8RDCFJK95;
-						LastSwiftMigration = 0900;
+						LastSwiftMigration = 0830;
 						ProvisioningStyle = Automatic;
 					};
 					FB64E1811F0E581D005B3004 = {
@@ -199,6 +202,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FBC031E21F0EC6AF0087850E /* API.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,6 +370,7 @@
 		FB64E1911F0E581D005B3004 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X8RDCFJK95;
 				INFOPLIST_FILE = DTGLibTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
@@ -378,6 +383,7 @@
 		FB64E1921F0E581D005B3004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X8RDCFJK95;
 				INFOPLIST_FILE = DTGLibTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
