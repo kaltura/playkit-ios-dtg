@@ -1,9 +1,8 @@
 
+import Foundation
+
 /// Main entry point of the library, used to control item download and get their playback URL.
 public protocol ContentManager: class {
-    
-    /// Shared (singleton) ContentManager
-    static var shared: ContentManager {get}
     
     /// Set max concurrent downloads. This relates to download chunks, not DTGItems.
     /// Must be set before start() is called, otherwise has no effect.
@@ -18,25 +17,12 @@ public protocol ContentManager: class {
     /// Resume downloading of items that were in progress when stop() was called.
     func resumeInterruptedItems()
     
-    /// Add error observer.
-    func addErrorObserver(owner: Any, callback: (DTGItem, Error)->Void)
-    /// Remove error observer.
-    func removeErrorObserver(owner: Any)
-    
-    /// Add progress observer.
-    func addProgressObserver(owner: Any, callback: (DTGItem, Int64)->Void)
-    /// Remove progress observer.
-    func removeProgressObserver(owner: Any)
-    
-    /// Add state change observer.
-    func addStateObserver(owner: Any, callback: (DTGItem, _ newState: DTGItemState, _ oldState: DTGItemState)->Void)
-    /// Remove state change observer.
-    func removeStateObserver(owner: Any)
+    func itemsByState(_ state: DTGItemState) -> [DTGItem]
     
     /// Find an existing item.
     /// - Parameter id: the item's unique id.
     /// - Returns: an item, or nil if not found.
-    func findItem(id: String) -> DTGItem?
+    func itemById(_ id: String) -> DTGItem?
     
     /// Add a new item.
     /// - Parameters:
@@ -49,7 +35,7 @@ public protocol ContentManager: class {
     /// - Parameters:
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: (DTGItem, DTGVideoTrack)->Void)
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: DTGMetadataCallback)
     
     /// Start or resume item download.
     func startItem(id: String)
@@ -64,7 +50,27 @@ public protocol ContentManager: class {
     /// - Returns: a playback URL, or nil.
     func itemPlaybackUrl(id: String) -> URL? 
     
+    /// Add error observer.
+    func addErrorObserver(owner: Any, callback: @escaping DTGErrorCallback)
+    /// Remove error observer.
+    func removeErrorObserver(owner: Any)
+    
+    /// Add progress observer.
+    func addProgressObserver(owner: Any, callback: @escaping DTGProgressCallback)
+    /// Remove progress observer.
+    func removeProgressObserver(owner: Any)
+    
+    /// Add state change observer.
+    func addStateObserver(owner: Any, callback: @escaping DTGStateCallback)
+    /// Remove state change observer.
+    func removeStateObserver(owner: Any)
+    
 }
+
+public typealias DTGErrorCallback = (DTGItem, Error)->Void
+public typealias DTGProgressCallback = (DTGItem, Int64)->Void
+public typealias DTGStateCallback = (DTGItem, DTGItemState)->Void
+public typealias DTGMetadataCallback = (DTGItem?, DTGVideoTrack?, Error?) -> Void
 
 /// A downloadable item.
 public protocol DTGItem: class {
