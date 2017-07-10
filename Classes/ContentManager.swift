@@ -29,10 +29,10 @@ class ContentManagerImp: NSObject, ContentManager {
     
     var itemDelegate: DTGItemDelegate?
 
-    var storagePath: URL {
+    lazy var storagePath: URL = {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         return libraryDir.appendingPathComponent("KalturaDTG", isDirectory: true)
-    }
+    }()
     
     var maxConcurrentDownloads: Int = 1
     
@@ -103,7 +103,7 @@ class ContentManagerImp: NSObject, ContentManager {
         return nil
     }
 
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: DTGMetadataCallback) {
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: (DTGItem?, DTGVideoTrack?, Error?) -> Void) {
         
         guard var item = mockDb[id] else { return }
         

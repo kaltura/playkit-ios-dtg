@@ -4,6 +4,9 @@ import Foundation
 /// Main entry point of the library, used to control item download and get their playback URL.
 public protocol ContentManager: class {
     
+    /// Set download base path. Must be set before start(), otherwise has no effect.
+    var storagePath: URL {get set}
+    
     /// Set max concurrent downloads. This relates to download chunks, not DTGItems.
     /// Must be set before start() is called, otherwise has no effect.
     var maxConcurrentDownloads: Int {get set}
@@ -17,6 +20,7 @@ public protocol ContentManager: class {
     /// Resume downloading of items that were in progress when stop() was called.
     func resumeInterruptedItems()
     
+    /// Return all items in the specified state.
     func itemsByState(_ state: DTGItemState) -> [DTGItem]
     
     /// Find an existing item.
@@ -35,7 +39,7 @@ public protocol ContentManager: class {
     /// - Parameters:
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: DTGMetadataCallback)
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: (DTGItem?, DTGVideoTrack?, Error?) -> Void)
     
     /// Start or resume item download.
     func startItem(id: String)
@@ -50,16 +54,21 @@ public protocol ContentManager: class {
     /// - Returns: a playback URL, or nil.
     func itemPlaybackUrl(id: String) -> URL? 
     
+    /// Delegate that will receive download events.
     var itemDelegate: DTGItemDelegate? {get set}
 }
 
+/// Delegate that will receive download events.
 public protocol DTGItemDelegate: class {
+    /// Item download has failed.
     func item(id: String, didFailWithError error: Error)
-    func item(id: String, didDownloadData downloadedBytes: Int64, totalBytes: Int64)
+    
+    /// Some data was downloaded for the item. 
+    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64)
+    
+    /// Item has changed state.
     func item(id: String, didMoveToState state: DTGItemState)
 }
-
-public typealias DTGMetadataCallback = (DTGItem?, DTGVideoTrack?, Error?) -> Void
 
 /// A downloadable item.
 public protocol DTGItem {
@@ -79,42 +88,19 @@ public protocol DTGItem {
     var downloadedSize: Int64? {get}
 }
 
-public protocol DTGTrack {
-}
-
-public enum DTGTrackType {
-    case video
-    case audio
-    case text
-}
-
-public protocol DTGVideoTrack: DTGTrack {
-    
+/// Information about a Video track.
+public protocol DTGVideoTrack {
+    /// Width in pixels.
     var width: Int? {get}
     
+    /// Height in pixels.
     var height: Int? {get}
     
+    /// Bitrate.
     var bitrate: Int {get}
-
-    var codecs: [String]? {get}
 }
 
-// NOTE: Not used in phase 1
-public protocol DTGAudioTrack: DTGTrack {
-    
-    var bitrate: Int? {get}
-    
-    var codec: String? {get}
-    
-    var language: String? {get}
-}
-
-// NOTE: Not used in phase 1
-public protocol DTGTextTrack: DTGTrack {
-    
-    var language: String? {get}
-}
-
+/// Item state.
 public enum DTGItemState: Int {
     /// Item was just added, no metadata is available except for the id and the URL.
     case new
