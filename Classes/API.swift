@@ -110,6 +110,7 @@ public protocol DTGVideoTrack: DTGTrack {
     var codec: String? {get}
 }
 
+// NOTE: Not used in phase 1
 public protocol DTGAudioTrack: DTGTrack {
     
     var bitrate: Int? {get}
@@ -119,6 +120,7 @@ public protocol DTGAudioTrack: DTGTrack {
     var language: String? {get}
 }
 
+// NOTE: Not used in phase 1
 public protocol DTGTextTrack: DTGTrack {
     
     var language: String? {get}
