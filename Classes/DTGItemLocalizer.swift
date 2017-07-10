@@ -3,29 +3,29 @@ import Foundation
 import M3U8Kit
 
 
-public struct MediaSegment {
+struct MediaSegment {
     let sourceUrl: URL
     let targetPath: String
 }
 
-public class DTGItemLocalizer {
+class DTGItemLocalizer {
     
     let itemId: String
     let masterUrl: URL
     let preferredVideoBitrate: Int
     let downloadPath: String
     
-    public var tasks = [MediaSegment]()
-    public var duration: Double = Double.nan
+    var tasks = [MediaSegment]()
+    var duration: Double = Double.nan
     
-    public init(id: String, url: URL, preferredVideoBitrate: Int, baseDownloadPath: String) {
+    init(id: String, url: URL, preferredVideoBitrate: Int, baseDownloadPath: String) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
         self.downloadPath = "\(baseDownloadPath)/items/\(self.itemId)"
     }
     
-    public func loadMetadata(callback: (Error?) -> Void) {
+    func loadMetadata(callback: (Error?) -> Void) {
         // Load master playlist
         do {
             let master = try MasterPlaylist(contentOf: masterUrl)
@@ -98,6 +98,8 @@ public class DTGItemLocalizer {
     }
 }
 
+// M3U8Kit convenience extensions
+
 typealias MasterPlaylist = M3U8MasterPlaylist
 typealias MediaPlaylist = M3U8MediaPlaylist
 
@@ -116,7 +118,7 @@ extension M3U8MediaPlaylistType {
     }
 }
 
-extension MasterPlaylist {
+extension M3U8MasterPlaylist {
     func videoStreams() -> M3U8ExtXStreamInfList {
         return self.xStreamList
     }
