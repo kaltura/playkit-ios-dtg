@@ -67,12 +67,6 @@ public protocol ContentManager: class {
     
 }
 
-public extension ContentManager {
-    static var shared: ContentManager {
-        return ContentManagerImp()
-    }
-}
-
 public typealias DTGErrorCallback = (DTGItem, Error)->Void
 public typealias DTGProgressCallback = (DTGItem, Int64)->Void
 public typealias DTGStateCallback = (DTGItem, DTGItemState)->Void
