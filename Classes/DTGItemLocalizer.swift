@@ -8,21 +8,42 @@ struct MediaSegment {
     let targetPath: String
 }
 
+struct MockVideoTrack: DTGVideoTrack {
+    var width: Int?
+    
+    var height: Int?
+    
+    var bitrate: Int
+    
+    var codecs: [String]?
+}
+
 class DTGItemLocalizer {
     
     let itemId: String
     let masterUrl: URL
-    let preferredVideoBitrate: Int
-    let downloadPath: String
+    let preferredVideoBitrate: Int?
+    let downloadPath: URL
     
     var tasks = [MediaSegment]()
     var duration: Double = Double.nan
+    var estimatedSize: Int64?
     
-    init(id: String, url: URL, preferredVideoBitrate: Int, baseDownloadPath: String) {
+    var videoTrack: DTGVideoTrack?
+    
+    init(id: String, url: URL, preferredVideoBitrate: Int?, storagePath: URL) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
-        self.downloadPath = "\(baseDownloadPath)/items/\(self.itemId)"
+        let subPath = "items/\(id.safeItemPathName())"
+        self.downloadPath = storagePath.appendingPathComponent(subPath, isDirectory: true)
+    }
+    
+    func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
+        return MockVideoTrack(width: Int(videoStream.resolution.width), 
+                              height: Int(videoStream.resolution.height), 
+                              bitrate: videoStream.bandwidth, 
+                              codecs: videoStream.codecs as? [String])
     }
     
     func loadMetadata(callback: (Error?) -> Void) {
@@ -32,37 +53,43 @@ class DTGItemLocalizer {
             
             // Only one video stream
             let videoStream = selectVideoStream(master: master)
+            
+            self.videoTrack = videoTrack(videoStream: videoStream)
         
             try addAllSegments(mediaUrl: videoStream.m3u8URL(), type: M3U8MediaPlaylistTypeVideo, setDuration: true)
+            aggregateTrackSize(bitrate: videoStream.bandwidth)
             
             try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
             try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
+
+            // Success
+            callback(nil)
+            
         } catch {
             callback(error)
         }
-
-        // Success
-        callback(nil)
     }
     
-    func selectVideoStream(master: MasterPlaylist) -> M3U8ExtXStreamInf {
+    private func selectVideoStream(master: MasterPlaylist) -> M3U8ExtXStreamInf {
         let streams = master.videoStreams()
         
         // Algorithm: sort ascending. Then find the first stream with bandwidth >= preferredVideoBitrate.
         
         streams.sortByBandwidth(inOrder: .orderedAscending)
         
-        for i in 0 ..< streams.countInt {
-            if streams[i].bandwidth >= preferredVideoBitrate {
-                return streams[i]
+        if let bitrate = preferredVideoBitrate {
+            for i in 0 ..< streams.countInt {
+                if streams[i].bandwidth >= bitrate {
+                    return streams[i]
+                }
             }
         }
-        
-        // Not found -- this means the client asked for a bitrate higher than available. Return the last.
+
+        // Default to using the highest available bitrate.
         return streams.lastXStreamInf()
     }
     
-    func addAllSegments(mediaUrl: URL, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
+    private func addAllSegments(mediaUrl: URL, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
         let playlist = try MediaPlaylist(contentOf: mediaUrl, type: type)
         
         guard let segmentList = playlist.segmentList else {return}
@@ -77,24 +104,28 @@ class DTGItemLocalizer {
         
         if setDuration {
             self.duration = duration
-        } else if duration != self.duration {
-            print("Warning: unmatched duration, \(duration) != \(self.duration)")
         }
         
         self.tasks.append(contentsOf: segments)
     }
     
-    func mediaSegment(url: URL, type: M3U8MediaPlaylistType) -> MediaSegment {
+    private func mediaSegment(url: URL, type: M3U8MediaPlaylistType) -> MediaSegment {
         let targetPath = "\(downloadPath)/\(type.asString())/\(url.absoluteString.md5()).\(url.pathExtension))"
         return MediaSegment(sourceUrl: url, targetPath: targetPath)
     }
     
-    func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
+    private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
         guard let streams = streams else { return }
         
         for i in 0 ..< streams.countInt {
             try addAllSegments(mediaUrl: streams[i].m3u8URL(), type: type)
+            aggregateTrackSize(bitrate: streams[i].bandwidth())
         }
+    }
+    
+    private func aggregateTrackSize(bitrate: Int) {
+        let estimatedTrackSize = Int64(Double(bitrate) * duration / 8)
+        estimatedSize = (estimatedSize ?? 0) + estimatedTrackSize
     }
 }
 
@@ -103,7 +134,7 @@ class DTGItemLocalizer {
 typealias MasterPlaylist = M3U8MasterPlaylist
 typealias MediaPlaylist = M3U8MediaPlaylist
 
-extension M3U8MediaPlaylistType {
+private extension M3U8MediaPlaylistType {
     func asString() -> String {
         switch self {
         case M3U8MediaPlaylistTypeVideo:
@@ -118,7 +149,7 @@ extension M3U8MediaPlaylistType {
     }
 }
 
-extension M3U8MasterPlaylist {
+private extension M3U8MasterPlaylist {
     func videoStreams() -> M3U8ExtXStreamInfList {
         return self.xStreamList
     }
@@ -132,7 +163,7 @@ extension M3U8MasterPlaylist {
     }
 }
 
-extension M3U8ExtXStreamInfList {
+private extension M3U8ExtXStreamInfList {
     subscript(index: Int) -> M3U8ExtXStreamInf {
         get {
             return self.xStreamInf(at: UInt(index))
@@ -143,7 +174,7 @@ extension M3U8ExtXStreamInfList {
     }
 }
 
-extension M3U8ExtXMediaList {
+private extension M3U8ExtXMediaList {
     subscript(index: Int) -> M3U8ExtXMedia {
         get {
             return self.xMedia(at: UInt(index))
@@ -154,7 +185,7 @@ extension M3U8ExtXMediaList {
     }
 }
 
-extension M3U8SegmentInfoList {
+private extension M3U8SegmentInfoList {
     subscript(index: Int) -> M3U8SegmentInfo {
         get {
             return self.segmentInfo(at: UInt(index))
@@ -168,5 +199,9 @@ extension M3U8SegmentInfoList {
 extension String {
     func md5() -> String {
         return CCBridge.md5(with: self)
+    }
+    
+    func safeItemPathName() -> String {
+        return self.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlHostAllowed) ?? self.md5()
     }
 }

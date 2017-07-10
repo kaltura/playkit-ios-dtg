@@ -29,7 +29,7 @@ public protocol ContentManager: class {
     ///     - id: a unique id for the new item
     ///     - url: the remote URL of the item.
     /// - Returns: the newly allocated item or nil if already exists.
-    func addItem(id: String, url: String) -> DTGItem?
+    func addItem(id: String, url: URL) -> DTGItem?
     
     /// Load metadata for the given item id.
     /// - Parameters:
@@ -67,18 +67,24 @@ public protocol ContentManager: class {
     
 }
 
+public extension ContentManager {
+    static var shared: ContentManager {
+        return ContentManagerImp()
+    }
+}
+
 public typealias DTGErrorCallback = (DTGItem, Error)->Void
 public typealias DTGProgressCallback = (DTGItem, Int64)->Void
 public typealias DTGStateCallback = (DTGItem, DTGItemState)->Void
 public typealias DTGMetadataCallback = (DTGItem?, DTGVideoTrack?, Error?) -> Void
 
 /// A downloadable item.
-public protocol DTGItem: class {
+public protocol DTGItem {
     /// The item's unique id.
     var id: String {get}
     
     /// The items's remote URL.
-    var remoteUrl: String {get}
+    var remoteUrl: URL {get}
     
     /// The item's current state.
     var state: DTGItemState {get}
@@ -90,7 +96,7 @@ public protocol DTGItem: class {
     var downloadedSize: Int64? {get}
 }
 
-public protocol DTGTrack: class {
+public protocol DTGTrack {
 }
 
 public enum DTGTrackType {
@@ -105,9 +111,9 @@ public protocol DTGVideoTrack: DTGTrack {
     
     var height: Int? {get}
     
-    var bitrate: Int? {get}
+    var bitrate: Int {get}
 
-    var codec: String? {get}
+    var codecs: [String]? {get}
 }
 
 // NOTE: Not used in phase 1
