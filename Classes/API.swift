@@ -50,26 +50,15 @@ public protocol ContentManager: class {
     /// - Returns: a playback URL, or nil.
     func itemPlaybackUrl(id: String) -> URL? 
     
-    /// Add error observer.
-    func addErrorObserver(owner: Any, callback: @escaping DTGErrorCallback)
-    /// Remove error observer.
-    func removeErrorObserver(owner: Any)
-    
-    /// Add progress observer.
-    func addProgressObserver(owner: Any, callback: @escaping DTGProgressCallback)
-    /// Remove progress observer.
-    func removeProgressObserver(owner: Any)
-    
-    /// Add state change observer.
-    func addStateObserver(owner: Any, callback: @escaping DTGStateCallback)
-    /// Remove state change observer.
-    func removeStateObserver(owner: Any)
-    
+    var itemDelegate: DTGItemDelegate? {get set}
 }
 
-public typealias DTGErrorCallback = (DTGItem, Error)->Void
-public typealias DTGProgressCallback = (DTGItem, Int64)->Void
-public typealias DTGStateCallback = (DTGItem, DTGItemState)->Void
+public protocol DTGItemDelegate: class {
+    func item(id: String, didFailWithError error: Error)
+    func item(id: String, didDownloadData downloadedBytes: Int64, totalBytes: Int64)
+    func item(id: String, didMoveToState state: DTGItemState)
+}
+
 public typealias DTGMetadataCallback = (DTGItem?, DTGVideoTrack?, Error?) -> Void
 
 /// A downloadable item.

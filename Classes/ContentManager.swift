@@ -26,6 +26,9 @@ struct MockItem: DTGItem {
 }
 
 class ContentManagerImp: NSObject, ContentManager {
+    
+    var itemDelegate: DTGItemDelegate?
+
     var storagePath: URL {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         return libraryDir.appendingPathComponent("KalturaDTG", isDirectory: true)
@@ -34,9 +37,6 @@ class ContentManagerImp: NSObject, ContentManager {
     var maxConcurrentDownloads: Int = 1
     
     var started = false
-    fileprivate var errorObservers = [DTGErrorCallback]()
-    fileprivate var progressObservers = [DTGProgressCallback]()
-    fileprivate var stateObservers = [DTGStateCallback]()
     fileprivate var serverUrl: URL?
     
     
@@ -150,46 +150,10 @@ class ContentManagerImp: NSObject, ContentManager {
         // remove all files
         // remove from db
         // notify observers
-        stateObservers.forEach { (callback) in
-            callback(item, .removed)
-        }
+        itemDelegate?.item(id: id, didMoveToState: .removed)
     }
 
     func itemPlaybackUrl(id: String) -> URL? {
         return serverUrl?.appendingPathComponent("\(id)/master.m3u8")
-    }
-}
-
-
-extension ContentManagerImp {
-    
-    /// Add error observer.
-    func addErrorObserver(owner: Any, callback: @escaping DTGErrorCallback) {
-        errorObservers.append(callback)
-    }
-    
-    /// Remove error observer.
-    func removeErrorObserver(owner: Any) {
-        TODO
-    }
-    
-    /// Add progress observer.
-    func addProgressObserver(owner: Any, callback: @escaping DTGProgressCallback) {
-        progressObservers.append(callback)
-    }
-    
-    /// Remove progress observer.
-    func removeProgressObserver(owner: Any) {
-        TODO
-    }
-    
-    /// Add state change observer.
-    func addStateObserver(owner: Any, callback: @escaping DTGStateCallback) {
-        stateObservers.append(callback)
-    }
-    
-    /// Remove state change observer.
-    func removeStateObserver(owner: Any) {
-        TODO
     }
 }
