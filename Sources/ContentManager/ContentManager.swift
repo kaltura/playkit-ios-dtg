@@ -149,7 +149,7 @@ class ContentManagerImp: NSObject, ContentManager {
         
         guard var item = mockDb.itemById(id) else { return }
         
-        let localizer = DTGItemLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate, storagePath: storagePath)
+        let localizer = HLSLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate, storagePath: storagePath)
         
         localizer.loadMetadata { (error) in
             if error != nil {

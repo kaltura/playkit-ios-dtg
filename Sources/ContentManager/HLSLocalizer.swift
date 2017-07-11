@@ -17,7 +17,7 @@ enum DTGItemLocalizerError: Error {
     case unknownPlaylistType
 }
 
-class DTGItemLocalizer {
+class HLSLocalizer {
     
     let itemId: String
     let masterUrl: URL
