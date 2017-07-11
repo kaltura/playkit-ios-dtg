@@ -8,8 +8,6 @@ struct MockVideoTrack: DTGVideoTrack {
     var height: Int?
     
     var bitrate: Int
-    
-    var codecs: [String]?
 }
 
 enum DTGItemLocalizerError: Error {
@@ -41,32 +39,23 @@ class HLSLocalizer {
     func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
         return MockVideoTrack(width: Int(videoStream.resolution.width), 
                               height: Int(videoStream.resolution.height), 
-                              bitrate: videoStream.bandwidth, 
-                              codecs: videoStream.codecs as? [String])
+                              bitrate: videoStream.bandwidth)
     }
     
-    func loadMetadata(callback: (Error?) -> Void) {
+    func loadMetadata() throws {
         // Load master playlist
-        do {
-            let master = try MasterPlaylist(contentOf: masterUrl)
-            
-            // Only one video stream
-            let videoStream = selectVideoStream(master: master)
-            
-            self.videoTrack = videoTrack(videoStream: videoStream)
+        let master = try MasterPlaylist(contentOf: masterUrl)
         
-            try addAllSegments(mediaUrl: videoStream.m3u8URL(), type: M3U8MediaPlaylistTypeVideo, setDuration: true)
-            aggregateTrackSize(bitrate: videoStream.bandwidth)
-            
-            try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
-            try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
-
-            // Success
-            callback(nil)
-            
-        } catch {
-            callback(error)
-        }
+        // Only one video stream
+        let videoStream = selectVideoStream(master: master)
+        
+        self.videoTrack = videoTrack(videoStream: videoStream)
+    
+        try addAllSegments(mediaUrl: videoStream.m3u8URL(), type: M3U8MediaPlaylistTypeVideo, setDuration: true)
+        aggregateTrackSize(bitrate: videoStream.bandwidth)
+        
+        try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
+        try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
     }
     
     private func selectVideoStream(master: MasterPlaylist) -> M3U8ExtXStreamInf {

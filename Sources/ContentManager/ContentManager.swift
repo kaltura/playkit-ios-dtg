@@ -30,20 +30,17 @@ struct MockItem: DTGItem {
     }
 }
 
-struct MockDb {
+class MockDb {
     private var itemMap = [String: MockItem]()
     private var stateMap = [DTGItemState: [MockItem]]()
     private var taskMap = [String: [DownloadItemTask]]()
-    
-    init() {
-        
-    }
+    private var itemState = [String: DTGItemState]()
     
     func itemById(_ id: String) -> MockItem? {
         return itemMap[id]
     }
     
-    mutating func updateItem(_ item: MockItem) {
+    func updateItem(_ item: MockItem) {
         itemMap[item.id] = item
         let state = item.state
         if var list = stateMap[state] {
@@ -61,7 +58,7 @@ struct MockDb {
         return taskMap[id]
     }
     
-    mutating func setTasks(_ itemId: String, tasks: [DownloadItemTask]) {
+    func setTasks(_ itemId: String, tasks: [DownloadItemTask]) {
         taskMap[itemId] = tasks
     }
 }
@@ -151,17 +148,20 @@ class ContentManagerImp: NSObject, ContentManager {
         
         let localizer = HLSLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate, storagePath: storagePath)
         
-        localizer.loadMetadata { (error) in
-            if error != nil {
-                callback(nil, nil, error)
-            } else {
-                mockDb.updateItem(item)
+        DispatchQueue.global(qos: .default).async {
+            do {
+                try localizer.loadMetadata()
+                item.state = .metadataLoaded
+                self.mockDb.updateItem(item)
                 item.estimatedSize = localizer.estimatedSize
                 callback(item, localizer.videoTrack, nil)
+            } catch {
+                callback(nil, nil, error)
             }
         }
         
-        return
+        
+        return;
         
         
         TODO
