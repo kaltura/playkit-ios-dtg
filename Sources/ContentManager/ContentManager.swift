@@ -7,6 +7,12 @@ var TODO: Void {
 
 public let DTGSharedContentManager: ContentManager = ContentManagerImp()
 
+enum DTGTrackType {
+    case video
+    case audio
+    case text
+}
+
 struct MockItem: DTGItem {
     var id: String
 
