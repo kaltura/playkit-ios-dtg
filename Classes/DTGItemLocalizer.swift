@@ -2,12 +2,6 @@
 import Foundation
 import M3U8Kit
 
-
-struct MediaSegment {
-    let sourceUrl: URL
-    let targetPath: String
-}
-
 struct MockVideoTrack: DTGVideoTrack {
     var width: Int?
     
@@ -18,6 +12,11 @@ struct MockVideoTrack: DTGVideoTrack {
     var codecs: [String]?
 }
 
+enum DTGItemLocalizerError: Error {
+    /// sent when an unknown playlist type was encountered
+    case unknownPlaylistType
+}
+
 class DTGItemLocalizer {
     
     let itemId: String
@@ -25,7 +24,7 @@ class DTGItemLocalizer {
     let preferredVideoBitrate: Int?
     let downloadPath: URL
     
-    var tasks = [MediaSegment]()
+    var tasks = [DownloadItemTask]()
     var duration: Double = Double.nan
     var estimatedSize: Int64?
     
@@ -92,26 +91,31 @@ class DTGItemLocalizer {
     private func addAllSegments(mediaUrl: URL, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
         let playlist = try MediaPlaylist(contentOf: mediaUrl, type: type)
         
-        guard let segmentList = playlist.segmentList else {return}
+        guard let segmentList = playlist.segmentList else { return }
         
-        var segments = [MediaSegment]()
+        var downloadItemTasks = [DownloadItemTask]()
         var duration = 0.0
         for i in 0 ..< segmentList.countInt {
             duration += segmentList[i].duration
             
-            segments.append(mediaSegment(url: segmentList[i].mediaURL(), type: type))
+            try downloadItemTasks.append(downloadItemTask(url: segmentList[i].mediaURL(), type: type))
         }
         
         if setDuration {
             self.duration = duration
         }
         
-        self.tasks.append(contentsOf: segments)
+        self.tasks.append(contentsOf: downloadItemTasks)
     }
     
-    private func mediaSegment(url: URL, type: M3U8MediaPlaylistType) -> MediaSegment {
-        let targetPath = "\(downloadPath)/\(type.asString())/\(url.absoluteString.md5()).\(url.pathExtension))"
-        return MediaSegment(sourceUrl: url, targetPath: targetPath)
+    private func downloadItemTask(url: URL, type: M3U8MediaPlaylistType) throws -> DownloadItemTask {
+        guard let trackType = type.asDTGTrackType() else {
+            throw DTGItemLocalizerError.unknownPlaylistType
+        }
+        let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
+            .appendingPathComponent(url.absoluteString.md5())
+            .appendingPathExtension(url.pathExtension)
+        return DownloadItemTask(contentUrl: url, trackType: trackType, destinationUrl: destinationUrl, resumeData: nil)
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
@@ -145,6 +149,19 @@ private extension M3U8MediaPlaylistType {
             return "text"
         default:
             return "unknown"
+        }
+    }
+    
+    func asDTGTrackType() -> DTGTrackType? {
+        switch self {
+        case M3U8MediaPlaylistTypeVideo:
+            return .video
+        case M3U8MediaPlaylistTypeAudio:
+            return .audio
+        case M3U8MediaPlaylistTypeSubtitle:
+            return .text
+        default:
+            return nil
         }
     }
 }
