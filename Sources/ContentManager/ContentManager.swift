@@ -30,6 +30,42 @@ struct MockItem: DTGItem {
     }
 }
 
+struct MockDb {
+    private var itemMap = [String: MockItem]()
+    private var stateMap = [DTGItemState: [MockItem]]()
+    private var taskMap = [String: [DownloadItemTask]]()
+    
+    init() {
+        
+    }
+    
+    func itemById(_ id: String) -> MockItem? {
+        return itemMap[id]
+    }
+    
+    mutating func updateItem(_ item: MockItem) {
+        itemMap[item.id] = item
+        let state = item.state
+        if var list = stateMap[state] {
+            list.append(item)
+        } else {
+            stateMap[state] = [item]
+        }
+    }
+    
+    func itemsByState(_ state: DTGItemState) -> [MockItem] {
+        return stateMap[state] ?? []
+    }
+    
+    func tasksForItem(_ id: String) -> [DownloadItemTask]? {
+        return taskMap[id]
+    }
+    
+    mutating func setTasks(_ itemId: String, tasks: [DownloadItemTask]) {
+        taskMap[itemId] = tasks
+    }
+}
+
 class ContentManagerImp: NSObject, ContentManager {
     
     var itemDelegate: DTGItemDelegate?
@@ -43,10 +79,9 @@ class ContentManagerImp: NSObject, ContentManager {
     
     var started = false
     fileprivate var serverUrl: URL?
-    
-    
+      
     // TEMP db
-    var mockDb = [String: MockItem]()
+    var mockDb = MockDb()
         
     override init() {
         print("*** ContentManager ***")
@@ -76,6 +111,9 @@ class ContentManagerImp: NSObject, ContentManager {
     }
 
     func itemsByState(_ state: DTGItemState) -> [DTGItem] {
+        
+        return mockDb.itemsByState(state)
+
         TODO
         // get from db
         return []
@@ -83,8 +121,7 @@ class ContentManagerImp: NSObject, ContentManager {
     
     func itemById(_ id: String) -> DTGItem? {
         
-        return mockDb[id]
-        
+        return mockDb.itemById(id)
         TODO
         // get from db
         return nil
@@ -92,12 +129,12 @@ class ContentManagerImp: NSObject, ContentManager {
     
     func addItem(id: String, url: URL) -> DTGItem? {
         
-        if mockDb[id] != nil {
+        if mockDb.itemById(id) != nil {
             return nil
         }
         
         let mockItem = MockItem(id: id, url: url)
-        mockDb[id] = mockItem
+        mockDb.updateItem(mockItem)
         return mockItem
         
         
@@ -108,18 +145,17 @@ class ContentManagerImp: NSObject, ContentManager {
         return nil
     }
 
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: (DTGItem?, DTGVideoTrack?, Error?) -> Void) {
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void) {
         
-        guard var item = mockDb[id] else { return }
+        guard var item = mockDb.itemById(id) else { return }
         
         let localizer = DTGItemLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate, storagePath: storagePath)
         
         localizer.loadMetadata { (error) in
             if error != nil {
-                callback(nil, nil, nil)
+                callback(nil, nil, error)
             } else {
-                print(localizer.duration)
-                print(localizer.tasks)
+                mockDb.updateItem(item)
                 item.estimatedSize = localizer.estimatedSize
                 callback(item, localizer.videoTrack, nil)
             }
@@ -150,7 +186,6 @@ class ContentManagerImp: NSObject, ContentManager {
     func removeItem(id: String) {
         TODO
         // find in db
-        guard let item = itemById(id) else {return}
         // if in progress, cancel
         // remove all files
         // remove from db
