@@ -32,7 +32,7 @@ EXTERNAL SOURCES:
     :path: ..
 
 SPEC CHECKSUMS:
-  DownloadToGo: cc72abba7bbd4c253dad85400ecb88346cf87ce7
+  DownloadToGo: f426f757b079af46b06323d51b2696e70f3c437e
   FBSnapshotTestCase: 094f9f314decbabe373b87cc339bea235a63e07a
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
   M3U8Kit: 3e0f7feef04a775252b41c0fa91de7e1fe8f188c
