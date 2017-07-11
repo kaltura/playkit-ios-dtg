@@ -154,6 +154,7 @@ class ContentManagerImp: NSObject, ContentManager {
                 item.state = .metadataLoaded
                 self.mockDb.updateItem(item)
                 item.estimatedSize = localizer.estimatedSize
+                try localizer.localize()
                 callback(item, localizer.videoTrack, nil)
             } catch {
                 callback(nil, nil, error)

@@ -10,10 +10,44 @@ struct MockVideoTrack: DTGVideoTrack {
     var bitrate: Int
 }
 
-enum DTGItemLocalizerError: Error {
+enum HLSLocalizerError: Error {
     /// sent when an unknown playlist type was encountered
     case unknownPlaylistType
+    
+    
+    case invalidState
 }
+
+
+func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
+    let text = try String.init(contentsOf: url)
+    return M3U8MasterPlaylist(content: text, baseURL: url.deletingLastPathComponent())
+}
+
+func loadMediaPlaylist(url: URL, type: M3U8MediaPlaylistType) throws -> M3U8MediaPlaylist {
+    let text = try String.init(contentsOf: url)
+    return M3U8MediaPlaylist(content: text, type: type, baseURL: url.deletingLastPathComponent())
+}
+
+class Stream<T> {
+    let streamInfo: T
+    let mediaUrl: URL
+    let mediaPlaylist: M3U8MediaPlaylist
+    let type: M3U8MediaPlaylistType
+    
+    init(streamInfo: T, mediaUrl: URL, type: M3U8MediaPlaylistType) throws {
+        
+        let playlist = try loadMediaPlaylist(url: mediaUrl, type: type)
+
+        self.streamInfo = streamInfo
+        self.mediaPlaylist = playlist
+        self.mediaUrl = mediaUrl
+        self.type = type
+    }
+}
+
+typealias VideoStream = Stream<M3U8ExtXStreamInf>
+typealias MediaStream = Stream<M3U8ExtXMedia>
 
 class HLSLocalizer {
     
@@ -28,6 +62,11 @@ class HLSLocalizer {
     
     var videoTrack: DTGVideoTrack?
     
+    var masterPlaylist: MasterPlaylist?
+    var selectedVideoStream: VideoStream?
+    var selectedAudioStreams = [MediaStream]()
+    var selectedTextStreams = [MediaStream]()
+
     init(id: String, url: URL, preferredVideoBitrate: Int?, storagePath: URL) {
         self.itemId = id
         self.masterUrl = url
@@ -44,44 +83,147 @@ class HLSLocalizer {
     
     func loadMetadata() throws {
         // Load master playlist
-        let master = try MasterPlaylist(contentOf: masterUrl)
+        let master = try loadMasterPlaylist(url: masterUrl)
         
         // Only one video stream
-        let videoStream = selectVideoStream(master: master)
+        let videoStream = try selectVideoStream(master: master)
         
-        self.videoTrack = videoTrack(videoStream: videoStream)
+        try addAllSegments(segmentList: videoStream.mediaPlaylist.segmentList, type: M3U8MediaPlaylistTypeVideo, setDuration: true)
+        
+        self.videoTrack = videoTrack(videoStream: videoStream.streamInfo)
     
-        try addAllSegments(mediaUrl: videoStream.m3u8URL(), type: M3U8MediaPlaylistTypeVideo, setDuration: true)
-        aggregateTrackSize(bitrate: videoStream.bandwidth)
+        aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
         
+        self.selectedAudioStreams.removeAll()
         try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
+        self.selectedTextStreams.removeAll()
         try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
+        
+        
+        // Save the selected streams
+        self.masterPlaylist = master
+        self.selectedVideoStream = videoStream
     }
     
-    private func selectVideoStream(master: MasterPlaylist) -> M3U8ExtXStreamInf {
+
+    private func reduceMasterPlaylist(_ localText: String, _ selectedBitrate: Int) -> String {
+        let lines = localText.components(separatedBy: CharacterSet.newlines)
+        var reducedLines = [String]()
+        var removeStream = false
+        for line in lines {
+            if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                continue
+            }
+            if line.hasPrefix("#EXT-X-STREAM-INF") {
+                if line.range(of: "BANDWIDTH=\(selectedBitrate),") == nil {
+                    removeStream = true
+                } else {
+                    reducedLines.append(line)
+                }
+            } else {
+                if removeStream {
+                    // just don't add it.
+                    removeStream = false    // don't remove next line
+                } else {
+                    reducedLines.append(line)
+                }
+            }
+        }
+        
+        return reducedLines.joined(separator: "\n")
+    }
+    
+    func createDirectories() throws {
+        for type in [DTGTrackType.video, DTGTrackType.audio, DTGTrackType.text] {
+            try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
+        }
+    }
+    
+    func localize() throws {
+        
+        try createDirectories()
+        
+        // Localize the master
+        guard let masterText = masterPlaylist?.originalText else { throw HLSLocalizerError.invalidState }
+        let localText = NSMutableString(string: masterText)
+        
+        guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
+        
+        localText.replace(playlistUrl: videoStream.mediaUrl, type: .video)
+        
+        for stream in selectedAudioStreams {
+            localText.replace(playlistUrl: stream.mediaUrl, type: .audio)
+        }
+        
+        for stream in selectedTextStreams {
+            localText.replace(playlistUrl: stream.mediaUrl, type: .audio)
+        }
+        
+        let selectedVideoBitrate = videoStream.streamInfo.bandwidth
+        
+        let reducedMasterPlaylist = reduceMasterPlaylist(localText as String, selectedVideoBitrate)
+
+        let masterTargetFile = downloadPath.appendingPathComponent("master.m3u8")
+        try reducedMasterPlaylist.write(to: masterTargetFile, atomically: false, encoding: .utf8)
+        
+
+        // Localize the selected video stream
+        try saveMediaPlaylist(videoStream.mediaPlaylist, originalUrl: videoStream.mediaUrl, type: .video)
+        
+        // Localize the selected audio and text streams
+        for stream in selectedAudioStreams {
+            try saveMediaPlaylist(stream.mediaPlaylist, originalUrl: stream.mediaUrl, type: .audio)
+        }
+
+        for stream in selectedTextStreams {
+            try saveMediaPlaylist(stream.mediaPlaylist, originalUrl: stream.mediaUrl, type: .text)
+        }
+}
+    
+    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
+        
+        guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
+        let localText = NSMutableString(string: originalText)
+        
+        guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
+        for i in 0 ..< segments.countInt {
+            localText.replace(segmentUrl: segments[i].uri)
+//            localText.replaceOccurrences(of: segments[i].uri.absoluteString, with: segments[i].mediaURL().segmentRelativeLocalPath(), options: [], range: NSMakeRange(0, localText.length))
+        }
+                
+        let targetFile =  downloadPath.appendingPathComponent(originalUrl.mediaPlaylistRelativeLocalPath(as: type))
+        
+        try (localText as String).write(to: targetFile, atomically: false, encoding: .utf8)
+    }
+    
+    private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
         let streams = master.videoStreams()
         
         // Algorithm: sort ascending. Then find the first stream with bandwidth >= preferredVideoBitrate.
         
         streams.sortByBandwidth(inOrder: .orderedAscending)
         
+        var selectedStreamInfo: M3U8ExtXStreamInf?
         if let bitrate = preferredVideoBitrate {
             for i in 0 ..< streams.countInt {
                 if streams[i].bandwidth >= bitrate {
-                    return streams[i]
+                    selectedStreamInfo = streams[i]
+                    break
                 }
             }
         }
-
-        // Default to using the highest available bitrate.
-        return streams.lastXStreamInf()
+        
+        if selectedStreamInfo == nil {
+            selectedStreamInfo = streams.lastXStreamInf() // highest bitrate
+        }
+        
+        guard let streamInfo = selectedStreamInfo else {throw NSError()}
+        
+        return try VideoStream(streamInfo: streamInfo, mediaUrl: streamInfo.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
     }
     
-    private func addAllSegments(mediaUrl: URL, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
-        let playlist = try MediaPlaylist(contentOf: mediaUrl, type: type)
-        
-        guard let segmentList = playlist.segmentList else { return }
-        
+    private func addAllSegments(segmentList: M3U8SegmentInfoList, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
+                    
         var downloadItemTasks = [DownloadItemTask]()
         var duration = 0.0
         for i in 0 ..< segmentList.countInt {
@@ -99,7 +241,7 @@ class HLSLocalizer {
     
     private func downloadItemTask(url: URL, type: M3U8MediaPlaylistType) throws -> DownloadItemTask {
         guard let trackType = type.asDTGTrackType() else {
-            throw DTGItemLocalizerError.unknownPlaylistType
+            throw HLSLocalizerError.unknownPlaylistType
         }
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
@@ -111,8 +253,19 @@ class HLSLocalizer {
         guard let streams = streams else { return }
         
         for i in 0 ..< streams.countInt {
-            try addAllSegments(mediaUrl: streams[i].m3u8URL(), type: type)
+            
+            let stream = try MediaStream(streamInfo: streams[i], mediaUrl: streams[i].m3u8URL(), type: type)
+            try addAllSegments(segmentList: stream.mediaPlaylist.segmentList, type: type)
             aggregateTrackSize(bitrate: streams[i].bandwidth())
+            
+            switch type {
+            case M3U8MediaPlaylistTypeAudio:
+                selectedAudioStreams.append(stream)
+            case M3U8MediaPlaylistTypeSubtitle:
+                selectedTextStreams.append(stream)
+            default:
+                throw HLSLocalizerError.unknownPlaylistType
+            }
         }
     }
     
@@ -202,6 +355,20 @@ private extension M3U8SegmentInfoList {
     }
 }
 
+extension DTGTrackType {
+    func asString() -> String {
+        switch self {
+        case .video:
+            return "video"
+        case .audio:
+            return "audio"
+        case .text:
+            return "text"
+        }
+    }
+ 
+}
+
 extension String {
     func md5() -> String {
         return CCBridge.md5(with: self)
@@ -209,5 +376,27 @@ extension String {
     
     func safeItemPathName() -> String {
         return self.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlHostAllowed) ?? self.md5()
+    }
+}
+
+extension URL {
+    func mediaPlaylistRelativeLocalPath(as type: DTGTrackType) -> String {
+        return "\(type.asString())/\(absoluteString.md5()).\(pathExtension)"
+    }
+    
+    func segmentRelativeLocalPath() -> String {
+        return "\(absoluteString.md5()).\(pathExtension)"
+    }
+}
+
+extension NSMutableString {
+    func replace(playlistUrl: URL?, type: DTGTrackType) {
+        if let url = playlistUrl {
+            self.replaceOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type), options: [], range: NSMakeRange(0, self.length))
+        }
+    }
+    
+    func replace(segmentUrl: URL) {
+        self.replaceOccurrences(of: segmentUrl.absoluteString, with: segmentUrl.segmentRelativeLocalPath(), options: [], range: NSMakeRange(0, self.length))
     }
 }
