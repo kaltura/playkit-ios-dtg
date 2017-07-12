@@ -139,12 +139,25 @@ class HLSLocalizer {
         }
     }
     
+    func save(text: String, as relativePath: String) throws {
+        let targetFile = downloadPath.appendingPathComponent(relativePath)
+        try text.write(to: targetFile, atomically: false, encoding: .utf8)
+    }
+    
+    func saveOriginal(text: String, url: URL, as relativePath: String) throws {
+        let oText = "## Original URL: \(url.absoluteString)\n\(text)"
+        try save(text: oText, as: relativePath + ".orig.txt")
+    }
+    
     func localize() throws {
         
         try createDirectories()
         
         // Localize the master
         guard let masterText = masterPlaylist?.originalText else { throw HLSLocalizerError.invalidState }
+#if DEBUG
+        try saveOriginal(text: masterText, url: masterUrl, as: "master.m3u8")
+#endif
         let localText = NSMutableString(string: masterText)
         
         guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
@@ -163,9 +176,7 @@ class HLSLocalizer {
         
         let reducedMasterPlaylist = reduceMasterPlaylist(localText as String, selectedVideoBitrate)
 
-        let masterTargetFile = downloadPath.appendingPathComponent("master.m3u8")
-        try reducedMasterPlaylist.write(to: masterTargetFile, atomically: false, encoding: .utf8)
-        
+        try save(text: reducedMasterPlaylist, as: "master.m3u8")        
 
         // Localize the selected video stream
         try saveMediaPlaylist(videoStream.mediaPlaylist, originalUrl: videoStream.mediaUrl, type: .video)
@@ -183,17 +194,19 @@ class HLSLocalizer {
     private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
         
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
+        #if DEBUG
+            try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
+        #endif
+
         let localText = NSMutableString(string: originalText)
         
         guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
         for i in 0 ..< segments.countInt {
             localText.replace(segmentUrl: segments[i].uri)
-//            localText.replaceOccurrences(of: segments[i].uri.absoluteString, with: segments[i].mediaURL().segmentRelativeLocalPath(), options: [], range: NSMakeRange(0, localText.length))
         }
-                
-        let targetFile =  downloadPath.appendingPathComponent(originalUrl.mediaPlaylistRelativeLocalPath(as: type))
         
-        try (localText as String).write(to: targetFile, atomically: false, encoding: .utf8)
+        let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
+        try save(text: localText as String, as: target)
     }
     
     private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
