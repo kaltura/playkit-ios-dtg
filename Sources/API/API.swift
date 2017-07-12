@@ -11,6 +11,9 @@ public protocol ContentManager: class {
     /// Must be set before start() is called, otherwise has no effect.
     var maxConcurrentDownloads: Int {get set}
     
+    /// Delegate that will receive download events.
+    var itemDelegate: DTGItemDelegate? {get set} // FIXME: if no other Delegate in the future change the name to `delegate`
+    
     /// Start the content manager. This also starts the playback server.
     func start()
     
@@ -52,10 +55,15 @@ public protocol ContentManager: class {
     
     /// Get a playable URL for an item.
     /// - Returns: a playback URL, or nil.
-    func itemPlaybackUrl(id: String) -> URL? 
+    func itemPlaybackUrl(id: String) -> URL?
     
-    /// Delegate that will receive download events.
-    var itemDelegate: DTGItemDelegate? {get set} // FIXME: if no other Delegate in the future change the name to `delegate`
+    
+    /// Handles events of a background session waiting to be processed.
+    ///
+    /// - Parameters:
+    ///   - identifier: The background url session identifier.
+    ///   - completionHandler: the completionHandler to call when finished handling the events.
+    func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void)
 }
 
 /// Delegate that will receive download events.

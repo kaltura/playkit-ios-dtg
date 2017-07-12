@@ -32,7 +32,7 @@ enum DownloaderState: String {
     case cancelled
 }
 
-protocol Downloader {
+protocol Downloader: class {
     /// The session identifier, used to restore background sessions and to identify them.
     var sessionIdentifier: String { get }
     

@@ -243,6 +243,15 @@ class ContentManagerImp: NSObject, ContentManager {
     func itemPlaybackUrl(id: String) -> URL? {
         return serverUrl?.appendingPathComponent("\(id)/master.m3u8")
     }
+    
+    func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
+        for (_, downloader) in self.downloaders {
+            if downloader.sessionIdentifier == identifier {
+                downloader.backgroundSessionCompetionHandler = completionHandler
+                break
+            }
+        }
+    }
 }
 
 /************************************************************/
