@@ -15,7 +15,7 @@ public protocol ContentManager: class {
     var itemDelegate: DTGItemDelegate? {get set} // FIXME: if no other Delegate in the future change the name to `delegate`
     
     /// Start the content manager. This also starts the playback server.
-    func start()
+    func start() throws
     
     /// Stop the content manager, including the playback server.
     func stop()

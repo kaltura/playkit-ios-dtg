@@ -1,5 +1,6 @@
 
 import Foundation
+import GCDWebServer
 
 var TODO: Void {
     //fatalError("Not implemented")
@@ -96,7 +97,10 @@ class ContentManagerImp: NSObject, ContentManager {
     var maxConcurrentDownloads: Int = 1
     
     var started = false
-    fileprivate var serverUrl: URL?
+    var server = GCDWebServer()!
+    var serverUrl: URL? {
+        return server.isRunning ? server.serverURL : nil
+    }
       
     // TEMP db
     var mockDb = MockDb()
@@ -104,23 +108,32 @@ class ContentManagerImp: NSObject, ContentManager {
     // Map of item id and the related downloader
     fileprivate var downloaders = [String: Downloader]()
     
+    
     override init() {
         print("*** ContentManager ***")
     }
     
     /// Start the content manager. This also starts the playback server.
-    func start() {
+    func start() throws {
+        if started {
+            return
+        }
         
-        TODO
-        // prepare db
+        // TODO: prepare db
+        
         // start server
+        server.addGETHandler(forBasePath: "/", directoryPath: storagePath.appendingPathComponent("items").path, indexFilename: nil, cacheAge: 3600, allowRangeRequests: true)
+        try server.start(options: [GCDWebServerOption_BindToLocalhost: true,
+                               GCDWebServerOption_Port: 0,
+                               ])
+        
         started = true
     }
     
     /// Stop the content manager, including the playback server.
     func stop() {
-        TODO
         // stop server
+        server.stop()
         started = false
     }
 
@@ -135,17 +148,15 @@ class ContentManagerImp: NSObject, ContentManager {
         
         return mockDb.itemsByState(state)
 
-        TODO
-        // get from db
-        return []
+        
+        // TODO: get from db
     }
     
     func itemById(_ id: String) -> DTGItem? {
         
         return mockDb.itemById(id)
-        TODO
-        // get from db
-        return nil
+        
+        // TODO: get from db
     }
     
     func addItem(id: String, url: URL) -> DTGItem? {
@@ -154,17 +165,11 @@ class ContentManagerImp: NSObject, ContentManager {
             return nil
         }
         
-        var mockItem = MockItem(id: id, url: url, contentManager: self)
-        mockDb.updateItem(mockItem)
+        let item = MockItem(id: id, url: url, contentManager: self)
+        mockDb.updateItem(item)
 
-        return mockItem
-        
-        
-        TODO
-        // add to db
-        
-        // return the new object
-        return nil
+        // TODO: add to db
+        return item
     }
 
     func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void) {
