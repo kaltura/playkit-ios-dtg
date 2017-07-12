@@ -54,9 +54,7 @@ struct MockItem: DTGItem {
 
 class MockDb {
     private var itemMap = [String: MockItem]()
-    private var stateMap = [DTGItemState: [MockItem]]()
     private var taskMap = [String: [DownloadItemTask]]()
-    private var itemState = [String: DTGItemState]()
     
     func itemById(_ id: String) -> MockItem? {
         return itemMap[id]
@@ -64,16 +62,16 @@ class MockDb {
     
     func updateItem(_ item: MockItem) {
         itemMap[item.id] = item
-        let state = item.state
-        if var list = stateMap[state] {
-            list.append(item)
-        } else {
-            stateMap[state] = [item]
-        }
     }
     
     func itemsByState(_ state: DTGItemState) -> [MockItem] {
-        return stateMap[state] ?? []
+        var items = [MockItem]()
+        for (_, item) in itemMap {
+            if item.state == state {
+                items.append(item)
+            }
+        }
+        return items
     }
     
     func tasksForItem(_ id: String) -> [DownloadItemTask]? {
