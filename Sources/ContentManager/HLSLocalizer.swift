@@ -169,7 +169,7 @@ class HLSLocalizer {
         }
         
         for stream in selectedTextStreams {
-            localText.replace(playlistUrl: stream.mediaUrl, type: .audio)
+            localText.replace(playlistUrl: stream.mediaUrl, type: .text)
         }
         
         let selectedVideoBitrate = videoStream.streamInfo.bandwidth
@@ -202,7 +202,7 @@ class HLSLocalizer {
         
         guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
         for i in 0 ..< segments.countInt {
-            localText.replace(segmentUrl: segments[i].uri)
+            try localText.replace(segmentUrl: segments[i].uri.absoluteString, relativeTo: originalUrl.deletingLastPathComponent())
         }
         
         let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
@@ -395,7 +395,8 @@ extension NSMutableString {
         }
     }
     
-    func replace(segmentUrl: URL) {
-        self.replaceOccurrences(of: segmentUrl.absoluteString, with: segmentUrl.segmentRelativeLocalPath(), options: [], range: NSMakeRange(0, self.length))
+    func replace(segmentUrl: String, relativeTo: URL) throws {
+        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else {throw HLSLocalizerError.invalidState}
+        self.replaceOccurrences(of: segmentUrl, with: relativeLocalPath, options: [], range: NSMakeRange(0, self.length))
     }
 }
