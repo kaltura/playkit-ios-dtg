@@ -178,10 +178,9 @@ class ContentManagerImp: NSObject, ContentManager {
                 try localizer.loadMetadata()
                 item.state = .metadataLoaded
                 self.mockDb.updateItem(item)
-                print(localizer.duration)
-                print(localizer.tasks)
                 self.mockDb.setTasks(id, tasks: localizer.tasks) // FIXME: remove later if not needed
                 item.estimatedSize = localizer.estimatedSize
+                self.mockDb.updateItem(item)
                 try localizer.localize()
                 callback(item, localizer.videoTrack, nil)
             } catch {
