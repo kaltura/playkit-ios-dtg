@@ -18,7 +18,7 @@ public protocol ContentManager: class {
     func stop()
     
     /// Resume downloading of items that were in progress when stop() was called.
-    func resumeInterruptedItems()
+    func resumeInterruptedItems() throws
     
     /// Return all items in the specified state.
     func itemsByState(_ state: DTGItemState) -> [DTGItem]
@@ -42,7 +42,7 @@ public protocol ContentManager: class {
     func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void)
     
     /// Start or resume item download.
-    func startItem(id: String)
+    func startItem(id: String) throws
     
     /// Pause downloading an item.
     func pauseItem(id: String)
@@ -55,7 +55,7 @@ public protocol ContentManager: class {
     func itemPlaybackUrl(id: String) -> URL? 
     
     /// Delegate that will receive download events.
-    var itemDelegate: DTGItemDelegate? {get set}
+    var itemDelegate: DTGItemDelegate? {get set} // FIXME: if no other Delegate in the future change the name to `delegate`
 }
 
 /// Delegate that will receive download events.
@@ -67,7 +67,7 @@ public protocol DTGItemDelegate: class {
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64)
     
     /// Item has changed state.
-    func item(id: String, didMoveToState state: DTGItemState)
+    func item(id: String, didChangeToState newState: DTGItemState)
 }
 
 /// A downloadable item.
@@ -114,7 +114,7 @@ public enum DTGItemState: Int {
     /// Item is paused by the app/user.
     case paused
     
-    /// Item has finished downloading.
+    /// Item has finished downloading and processing.
     case completed
     
     /// Item download has failed.
@@ -122,4 +122,16 @@ public enum DTGItemState: Int {
     
     /// Item is removed. This is only a temporary state, as the item is actually removed.
     case removed
+    
+    public func asString() -> String {
+        switch self {
+        case .new: return "new"
+        case .metadataLoaded: return "metadataLoaded"
+        case .inProgress: return "inProgress"
+        case .paused: return "paused"
+        case .completed: return "completed"
+        case .failed: return "failed"
+        case .removed: return "removed"
+        }
+    }
 }

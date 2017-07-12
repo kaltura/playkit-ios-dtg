@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="vXZ-lx-hvc">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="87d-A5-y4t">
     <device id="retina4_7" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
@@ -8,7 +8,7 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!--View Controller-->
+        <!--Download to Go-->
         <scene sceneID="ufC-wZ-h7g">
             <objects>
                 <viewController id="vXZ-lx-hvc" customClass="ViewController" customModule="DownloadToGo_Example" customModuleProvider="target" sceneMemberID="viewController">
@@ -19,11 +19,152 @@
                     <view key="view" contentMode="scaleToFill" id="kh9-bI-dsS">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <subviews>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Selected Item:" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="O3t-SZ-StZ">
+                                <rect key="frame" x="16" y="84" width="110" height="20.5"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Select Item" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="XsP-Nu-3Ga">
+                                <rect key="frame" x="134" y="79.5" width="225" height="30"/>
+                                <color key="tintColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                <nil key="textColor"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits"/>
+                            </textField>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Status:" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="9eG-bV-JOc">
+                                <rect key="frame" x="16" y="124.5" width="54" height="20.5"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Z1o-J3-VeI">
+                                <rect key="frame" x="78" y="135" width="0.0" height="0.0"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="eQy-pv-dEJ">
+                                <rect key="frame" x="16" y="165" width="343" height="350"/>
+                                <subviews>
+                                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="wjP-bg-NpF">
+                                        <rect key="frame" x="0.0" y="0.0" width="343" height="50"/>
+                                        <subviews>
+                                            <progressView opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="nGf-FJ-2Q6">
+                                                <rect key="frame" x="81" y="25" width="262" height="2"/>
+                                            </progressView>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Progress:" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4yJ-dH-GDP">
+                                                <rect key="frame" x="0.0" y="15" width="73" height="20.5"/>
+                                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                <nil key="textColor"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
+                                        </subviews>
+                                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                        <constraints>
+                                            <constraint firstItem="4yJ-dH-GDP" firstAttribute="centerY" secondItem="wjP-bg-NpF" secondAttribute="centerY" id="14I-yc-uoD"/>
+                                            <constraint firstItem="nGf-FJ-2Q6" firstAttribute="leading" secondItem="4yJ-dH-GDP" secondAttribute="trailing" constant="8" id="4Y1-nA-c3l"/>
+                                            <constraint firstItem="nGf-FJ-2Q6" firstAttribute="centerY" secondItem="4yJ-dH-GDP" secondAttribute="centerY" constant="1" id="lxG-7h-8Wt"/>
+                                            <constraint firstItem="4yJ-dH-GDP" firstAttribute="leading" secondItem="wjP-bg-NpF" secondAttribute="leading" id="m3j-Ie-ByO"/>
+                                            <constraint firstAttribute="trailing" secondItem="nGf-FJ-2Q6" secondAttribute="trailing" id="mQ1-zU-aU1"/>
+                                        </constraints>
+                                    </view>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ppR-W6-8C2">
+                                        <rect key="frame" x="0.0" y="50" width="343" height="50"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <state key="normal" title="Add"/>
+                                        <connections>
+                                            <action selector="addItem:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="ZPG-1e-OgP"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1Fh-Yf-I9L">
+                                        <rect key="frame" x="0.0" y="100" width="343" height="50"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <state key="normal" title="Load Metadata"/>
+                                        <connections>
+                                            <action selector="loadMetadata:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="Y8T-zs-d3z"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="PWe-Oo-vCa">
+                                        <rect key="frame" x="0.0" y="150" width="343" height="50"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <state key="normal" title="Start"/>
+                                        <connections>
+                                            <action selector="start:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="KfY-gr-vfq"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="iJm-i3-ZEg">
+                                        <rect key="frame" x="0.0" y="200" width="343" height="50"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <state key="normal" title="Pause"/>
+                                        <connections>
+                                            <action selector="pause:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="8JT-sT-1d1"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nzH-iz-QzR">
+                                        <rect key="frame" x="0.0" y="250" width="343" height="50"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <state key="normal" title="Play Downloaded Item"/>
+                                        <connections>
+                                            <action selector="playDownloadedItem:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="hjF-l7-n41"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="txI-gE-pT9">
+                                        <rect key="frame" x="0.0" y="300" width="343" height="50"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <state key="normal" title="Remove"/>
+                                        <connections>
+                                            <action selector="remove:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="jUg-Aq-7cq"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
+                            </stackView>
+                        </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="eQy-pv-dEJ" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="16" id="2d4-7g-fH1"/>
+                            <constraint firstItem="eQy-pv-dEJ" firstAttribute="top" secondItem="9eG-bV-JOc" secondAttribute="bottom" constant="20" id="3XK-BZ-Y4z"/>
+                            <constraint firstItem="O3t-SZ-StZ" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" constant="20" id="5gR-bi-rE3"/>
+                            <constraint firstItem="Z1o-J3-VeI" firstAttribute="centerY" secondItem="9eG-bV-JOc" secondAttribute="centerY" id="93B-NL-VkE"/>
+                            <constraint firstItem="XsP-Nu-3Ga" firstAttribute="leading" secondItem="O3t-SZ-StZ" secondAttribute="trailing" constant="8" id="9c5-E7-9HM"/>
+                            <constraint firstItem="O3t-SZ-StZ" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="16" id="Fjm-Iu-V44"/>
+                            <constraint firstAttribute="trailing" secondItem="eQy-pv-dEJ" secondAttribute="trailing" constant="16" id="Iix-bd-0VH"/>
+                            <constraint firstAttribute="trailing" secondItem="XsP-Nu-3Ga" secondAttribute="trailing" constant="16" id="XMe-j7-etd"/>
+                            <constraint firstItem="Z1o-J3-VeI" firstAttribute="leading" secondItem="9eG-bV-JOc" secondAttribute="trailing" constant="8" id="b5R-44-RKI"/>
+                            <constraint firstItem="XsP-Nu-3Ga" firstAttribute="centerY" secondItem="O3t-SZ-StZ" secondAttribute="centerY" id="e6x-D4-CTE"/>
+                            <constraint firstItem="9eG-bV-JOc" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="16" id="fdu-Tc-RWV"/>
+                            <constraint firstItem="9eG-bV-JOc" firstAttribute="top" secondItem="O3t-SZ-StZ" secondAttribute="bottom" constant="20" id="mYC-GM-O2i"/>
+                        </constraints>
                     </view>
+                    <navigationItem key="navigationItem" title="Download to Go" id="Kza-Yt-8qV"/>
+                    <connections>
+                        <outlet property="itemTextField" destination="XsP-Nu-3Ga" id="Mym-HJ-UYl"/>
+                        <outlet property="progressView" destination="nGf-FJ-2Q6" id="t2b-Ry-Jg7"/>
+                        <outlet property="statusLabel" destination="Z1o-J3-VeI" id="Q26-It-LcH"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="x5A-6p-PRh" sceneMemberID="firstResponder"/>
             </objects>
+            <point key="canvasLocation" x="1109.5999999999999" y="-608.54572713643188"/>
+        </scene>
+        <!--Navigation Controller-->
+        <scene sceneID="dX7-38-okA">
+            <objects>
+                <navigationController automaticallyAdjustsScrollViewInsets="NO" id="87d-A5-y4t" sceneMemberID="viewController">
+                    <toolbarItems/>
+                    <navigationBar key="navigationBar" contentMode="scaleToFill" id="kve-yI-wh7">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </navigationBar>
+                    <nil name="viewControllers"/>
+                    <connections>
+                        <segue destination="vXZ-lx-hvc" kind="relationship" relationship="rootViewController" id="wpn-wA-fsd"/>
+                    </connections>
+                </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="jEA-mI-XvT" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="272.80000000000001" y="-607.64617691154433"/>
         </scene>
     </scenes>
 </document>

@@ -19,7 +19,7 @@ struct DownloadItemTask {
     var resumeData: Data? = nil
 }
 
-enum DownloaderState {
+enum DownloaderState: String {
     /// Downloader was created but haven't start downloading.
     case new
     /// Downloader is currently downloading items.
@@ -46,10 +46,13 @@ protocol Downloader {
     /// The max allowed concurrent download tasks.
     var maxConcurrentDownloadItemTasks: Int { get }
     
+    /// The related dtg item id
+    var dtgItemId: String { get }
+    
     /// The state of the downloader.
     var state: DownloaderState { get }
     
-    init(tasks: [DownloadItemTask])
+    init(itemId: String, tasks: [DownloadItemTask])
     
     /// Starts the download according to the tasks ordering in the queue.
     /// use this only for the initial start.
@@ -76,6 +79,7 @@ protocol DownloaderDelegate: class {
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask])
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader)
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask)
+    func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState)
     func downloader(_ downloader: Downloader, didBecomeInvalidWithError error: Error?)
     /// Called when downloader failed due to fatal error
     func downloader(_ downloader: Downloader, didFailWithError error: Error)

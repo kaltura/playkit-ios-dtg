@@ -32,7 +32,7 @@ class DefaultDownloader: NSObject, Downloader {
     /// Queue for holding all the download tasks (FIFO)
     fileprivate var downloadItemTasksQueue = Queue<DownloadItemTask>()
     
-    private let synchronizedQueue = DispatchQueue(label: "com.kaltura.dtg.session.synchronizedQueue")
+    fileprivate let synchronizedQueue = DispatchQueue(label: "com.kaltura.dtg.session.synchronizedQueue")
     
     fileprivate var currentTasksCount: Int {
         return synchronizedQueue.sync {
@@ -55,6 +55,8 @@ class DefaultDownloader: NSObject, Downloader {
     
     let maxConcurrentDownloadItemTasks: Int = 4
     
+    let dtgItemId: String
+    
     fileprivate(set) var state: DownloaderState {
         get {
             return synchronizedQueue.sync {
@@ -64,6 +66,7 @@ class DefaultDownloader: NSObject, Downloader {
         set {
             synchronizedQueue.sync {
                 self._state = newValue
+                self.delegate?.downloader(self, didChangeToState: newValue)
             }
         }
     }
@@ -72,7 +75,8 @@ class DefaultDownloader: NSObject, Downloader {
     // MARK: - Initialization
     /************************************************************/
     
-    required init(tasks: [DownloadItemTask]) {
+    required init(itemId: String, tasks: [DownloadItemTask]) {
+        self.dtgItemId = itemId
         super.init()
         self.downloadItemTasksQueue.enqueue(tasks)
         self.setBackgroundURLSession()
@@ -108,10 +112,10 @@ extension DefaultDownloader {
     }
     
     func pause() {
-        let pausedTasks = self.pauseDownloadTasks()
-        self.state = .paused
-        self.invalidateSession()
-        self.delegate?.downloader(self, didPauseDownloadTasks: pausedTasks)
+        self.pauseDownloadTasks { (pausedTasks) in
+            self.state = .paused
+            self.delegate?.downloader(self, didPauseDownloadTasks: pausedTasks)
+        }
     }
     
     func cancel() {
@@ -143,8 +147,6 @@ private extension DefaultDownloader {
                 guard let downloadTask = self.downloadItemTasksQueue.dequeue() else { continue }
                 self.start(downloadTask: downloadTask)
             } while self.currentTasksCount < self.maxConcurrentDownloadItemTasks && self.downloadItemTasksQueue.count > 0
-        } else if downloadItemTasksQueue.count == 0 {
-            self.state = .idle
         }
     }
     
@@ -160,24 +162,33 @@ private extension DefaultDownloader {
         urlSessionDownloadTask.resume()
     }
     
-    func pauseDownloadTasks() -> [DownloadItemTask] {
-        guard self.activeDownloads.count > 0 else { return [] }
+    func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {
+        guard self.activeDownloads.count > 0 else {
+            completionHandler([])
+            return
+        }
         var pausedTasks = [DownloadItemTask]()
-        let semaphore = DispatchSemaphore(value: self.activeDownloads.count)
-        // cancels all active download tasks
+        
+        // make sure to wait for all active downloads to pause by using dispatch queue wait.
+        let dispatchGroup = DispatchGroup()
+        for (_, _) in self.activeDownloads {
+            dispatchGroup.enter()
+        }
         for (sessionTask, downloadTask) in self.activeDownloads {
             sessionTask.cancel { (data) in
                 var downloadTask = downloadTask
                 downloadTask.resumeData = data
                 pausedTasks.append(downloadTask)
-                semaphore.signal()
+                dispatchGroup.leave()
             }
         }
         // waits for all active download tasks to cancel
-        semaphore.wait()
-        self.downloadItemTasksQueue.purge()
-        self.activeDownloads.removeAll()
-        return pausedTasks
+        dispatchGroup.notify(queue: DispatchQueue.global()) {
+            self.invalidateSession()
+            self.downloadItemTasksQueue.purge()
+            self.activeDownloads.removeAll()
+            completionHandler(pausedTasks)
+        }
     }
     
     func cancelDownloadTasks() {
@@ -209,6 +220,8 @@ extension DefaultDownloader: URLSessionDelegate {
             if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] {
                 
             }
+        } else if activeDownloads.count == 0 && self.downloadItemTasksQueue.count == 0 {
+            self.state = .idle
         } else {
             // take next task if available
             self.downloadIfAvailable()

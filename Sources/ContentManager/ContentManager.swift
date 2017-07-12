@@ -2,7 +2,8 @@
 import Foundation
 
 var TODO: Void {
-    fatalError("Not implemented")
+    //fatalError("Not implemented")
+    print("")
 }
 
 public let DTGSharedContentManager: ContentManager = ContentManagerImp()
@@ -11,22 +12,42 @@ enum DTGTrackType {
     case video
     case audio
     case text
+    
+    static var allTypes: [DTGTrackType] {
+        return [.video, .audio, .text]
+    }
+    
+    func asString() -> String {
+        switch self {
+        case .video: return "video"
+        case .audio: return "audio"
+        case .text: return "text"
+        }
+    }
 }
 
 struct MockItem: DTGItem {
+    
+    weak var contentManager: ContentManager?
+    
     var id: String
 
     var remoteUrl: URL
 
-    var state: DTGItemState = .new
+    var state: DTGItemState = .new {
+        didSet {
+            contentManager?.itemDelegate?.item(id: self.id , didChangeToState: state)
+        }
+    }
 
     var estimatedSize: Int64?
 
     var downloadedSize: Int64?
     
-    init(id: String, url: URL) {
+    init(id: String, url: URL, contentManager: ContentManager) {
         self.id = id
         self.remoteUrl = url
+        self.contentManager = contentManager
     }
 }
 
@@ -65,11 +86,11 @@ class MockDb {
 
 class ContentManagerImp: NSObject, ContentManager {
     
-    var itemDelegate: DTGItemDelegate?
+    weak var itemDelegate: DTGItemDelegate?
 
     lazy var storagePath: URL = {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        return libraryDir.appendingPathComponent("KalturaDTG", isDirectory: true)
+        return URL(string: libraryDir.appendingPathComponent("KalturaDTG", isDirectory: true).absoluteString, relativeTo: libraryDir)!
     }()
     
     var maxConcurrentDownloads: Int = 1
@@ -79,7 +100,10 @@ class ContentManagerImp: NSObject, ContentManager {
       
     // TEMP db
     var mockDb = MockDb()
-        
+    
+    // Map of item id and the related downloader
+    fileprivate var downloaders = [String: Downloader]()
+    
     override init() {
         print("*** ContentManager ***")
     }
@@ -101,9 +125,9 @@ class ContentManagerImp: NSObject, ContentManager {
     }
 
     /// Resume downloading of items that were in progress when stop() was called.
-    func resumeInterruptedItems() {
+    func resumeInterruptedItems() throws {
         for item in itemsByState(.inProgress) {
-            startItem(id: item.id)
+            try startItem(id: item.id)
         }
     }
 
@@ -130,8 +154,9 @@ class ContentManagerImp: NSObject, ContentManager {
             return nil
         }
         
-        let mockItem = MockItem(id: id, url: url)
+        var mockItem = MockItem(id: id, url: url, contentManager: self)
         mockDb.updateItem(mockItem)
+
         return mockItem
         
         
@@ -153,6 +178,9 @@ class ContentManagerImp: NSObject, ContentManager {
                 try localizer.loadMetadata()
                 item.state = .metadataLoaded
                 self.mockDb.updateItem(item)
+                print(localizer.duration)
+                print(localizer.tasks)
+                self.mockDb.setTasks(id, tasks: localizer.tasks) // FIXME: remove later if not needed
                 item.estimatedSize = localizer.estimatedSize
                 try localizer.localize()
                 callback(item, localizer.videoTrack, nil)
@@ -172,29 +200,98 @@ class ContentManagerImp: NSObject, ContentManager {
         // store data to db
     }
 
-    func startItem(id: String) {
+    func startItem(id: String) throws {
         TODO
         // find in db
         // tell download manager to start/resume
+        
+        // FIXME: mock implementation
+        guard let tasks = mockDb.tasksForItem(id) else {
+            print("error: no tasks for this id")
+            return
+        }
+        let downloader = DefaultDownloader(itemId: id, tasks: tasks)
+        downloader.delegate = self
+        self.downloaders[id] = downloader
+        try downloader.start()
+        self.itemDelegate?.item(id: id, didChangeToState: .inProgress)
     }
 
     func pauseItem(id: String) {
         TODO
         // find in db
         // if in progress, tell download manager to pause
+        guard let downloader = self.downloaders[id] else {
+            print("error: no downloader for this id")
+            return
+        }
+        downloader.pause()
     }
 
     func removeItem(id: String) {
         TODO
         // find in db
+        guard let item = itemById(id) else { return }
+
         // if in progress, cancel
         // remove all files
         // remove from db
         // notify observers
-        itemDelegate?.item(id: id, didMoveToState: .removed)
+        itemDelegate?.item(id: id, didChangeToState: .removed)
     }
 
     func itemPlaybackUrl(id: String) -> URL? {
         return serverUrl?.appendingPathComponent("\(id)/master.m3u8")
+    }
+}
+
+/************************************************************/
+// MARK: - DownloaderDelegate
+/************************************************************/
+
+extension ContentManagerImp: DownloaderDelegate {
+    
+    func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64) {
+        print("item: \(downloader.dtgItemId), didProgress, bytes written: \(bytesWritten)")
+        let totalBytesEstimated = self.mockDb.itemById(downloader.dtgItemId)?.estimatedSize ?? 0
+        self.itemDelegate?.item(id: downloader.dtgItemId, didDownloadData: bytesWritten, totalBytesEstimated: totalBytesEstimated)
+    }
+    
+    func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
+        print("downloading paused")
+        TODO
+        // save pasued tasks to db
+        self.itemDelegate?.item(id: downloader.dtgItemId, didChangeToState: .paused)
+    }
+    
+    func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
+        TODO
+        // remove all data from db
+        // change item state to removed
+    }
+    
+    func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
+        print("finished downloading: \(String(describing: downloadItemTask))")
+    }
+    
+    func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState) {
+        print("downloader state: \(newState.rawValue)")
+        if newState == .idle {
+            TODO
+            // make sure all handlng has been done, 
+            // DB and whatever before letting to app know the download was finished and now playable
+            if var item = self.mockDb.itemById(downloader.dtgItemId) {
+                item.state = .completed
+                mockDb.updateItem(item)
+            }
+        }
+    }
+    
+    func downloader(_ downloader: Downloader, didBecomeInvalidWithError error: Error?) {
+        
+    }
+    
+    func downloader(_ downloader: Downloader, didFailWithError error: Error) {
+        self.itemDelegate?.item(id: downloader.dtgItemId, didFailWithError: error)
     }
 }

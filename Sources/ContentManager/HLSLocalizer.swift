@@ -368,20 +368,6 @@ private extension M3U8SegmentInfoList {
     }
 }
 
-extension DTGTrackType {
-    func asString() -> String {
-        switch self {
-        case .video:
-            return "video"
-        case .audio:
-            return "audio"
-        case .text:
-            return "text"
-        }
-    }
- 
-}
-
 extension String {
     func md5() -> String {
         return CCBridge.md5(with: self)
