@@ -1,7 +1,7 @@
 PODS:
   - DownloadToGo (0.1.0):
     - GCDWebServer (~> 3.3.3)
-    - M3U8Kit (~> 0.2)
+    - M3U8Kit (= 0.2.1)
   - FBSnapshotTestCase (2.1.4):
     - FBSnapshotTestCase/SwiftSupport (= 2.1.4)
   - FBSnapshotTestCase/Core (2.1.4)
@@ -29,10 +29,10 @@ DEPENDENCIES:
 
 EXTERNAL SOURCES:
   DownloadToGo:
-    :path: ".."
+    :path: ..
 
 SPEC CHECKSUMS:
-  DownloadToGo: f426f757b079af46b06323d51b2696e70f3c437e
+  DownloadToGo: a6b0b747d2b3dc4817b1a7b932be875ee9fb5e40
   FBSnapshotTestCase: 094f9f314decbabe373b87cc339bea235a63e07a
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
   M3U8Kit: 3e0f7feef04a775252b41c0fa91de7e1fe8f188c
@@ -42,4 +42,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: ad7d83bf93bb655436210cce85fc6a016b7cdaf4
 
-COCOAPODS: 1.2.0
+COCOAPODS: 1.2.1
