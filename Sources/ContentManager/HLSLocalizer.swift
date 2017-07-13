@@ -149,7 +149,7 @@ class HLSLocalizer {
         try save(text: oText, as: relativePath + ".orig.txt")
     }
     
-    func localize() throws {
+    func saveLocalFiles() throws {
         
         try createDirectories()
         

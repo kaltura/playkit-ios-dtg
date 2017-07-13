@@ -184,7 +184,7 @@ class ContentManagerImp: NSObject, ContentManager {
                 self.mockDb.setTasks(id, tasks: localizer.tasks) // FIXME: remove later if not needed
                 item.estimatedSize = localizer.estimatedSize
                 self.mockDb.updateItem(item)
-                try localizer.localize()
+                try localizer.saveLocalFiles()
                 callback(item, localizer.videoTrack, nil)
             } catch {
                 callback(nil, nil, error)
