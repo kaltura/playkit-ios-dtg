@@ -75,7 +75,7 @@ class HLSLocalizer {
         self.downloadPath = storagePath.appendingPathComponent(subPath, isDirectory: true)
     }
     
-    func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
+    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
         return MockVideoTrack(width: Int(videoStream.resolution.width), 
                               height: Int(videoStream.resolution.height), 
                               bitrate: videoStream.bandwidth)
@@ -133,18 +133,18 @@ class HLSLocalizer {
         return reducedLines.joined(separator: "\n")
     }
     
-    func createDirectories() throws {
+    private func createDirectories() throws {
         for type in [DTGTrackType.video, DTGTrackType.audio, DTGTrackType.text] {
             try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
         }
     }
     
-    func save(text: String, as relativePath: String) throws {
+    private func save(text: String, as relativePath: String) throws {
         let targetFile = downloadPath.appendingPathComponent(relativePath)
         try text.write(to: targetFile, atomically: false, encoding: .utf8)
     }
     
-    func saveOriginal(text: String, url: URL, as relativePath: String) throws {
+    private func saveOriginal(text: String, url: URL, as relativePath: String) throws {
         let oText = "## Original URL: \(url.absoluteString)\n\(text)"
         try save(text: oText, as: relativePath + ".orig.txt")
     }
@@ -210,7 +210,6 @@ class HLSLocalizer {
     }
     
     private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
-        let baseUrl = originalUrl.deletingLastPathComponent()
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
             try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))

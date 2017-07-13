@@ -97,10 +97,12 @@ class MockDb {
 class ContentManagerImp: NSObject, ContentManager {
     weak var itemDelegate: DTGItemDelegate?
 
-    lazy var storagePath: URL = {
+    static let defaultStoragePath: URL = {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         return URL(string: libraryDir.appendingPathComponent("KalturaDTG", isDirectory: true).absoluteString, relativeTo: libraryDir)!
     }()
+    
+    lazy var storagePath = ContentManagerImp.defaultStoragePath
     
     var maxConcurrentDownloads: Int = 1
     
