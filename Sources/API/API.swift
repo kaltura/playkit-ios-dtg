@@ -5,14 +5,14 @@ import Foundation
 public protocol ContentManager: class {
     
     /// Set download base path. Must be set before start(), otherwise has no effect.
-    var storagePath: URL {get set}
+    var storagePath: URL { get set }
     
     /// Set max concurrent downloads. This relates to download chunks, not DTGItems.
     /// Must be set before start() is called, otherwise has no effect.
-    var maxConcurrentDownloads: Int {get set}
+    var maxConcurrentDownloads: Int { get set }
     
     /// Delegate that will receive download events.
-    var itemDelegate: DTGItemDelegate? {get set} // FIXME: if no other Delegate in the future change the name to `delegate`
+    var itemDelegate: DTGItemDelegate? { get set } // FIXME: if no other Delegate in the future change the name to `delegate`
     
     /// Start the content manager. This also starts the playback server.
     func start() throws
@@ -77,7 +77,7 @@ public protocol DTGItemDelegate: class {
     func item(id: String, didFailWithError error: Error)
     
     /// Some data was downloaded for the item. 
-    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64)
+    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?)
     
     /// Item has changed state.
     func item(id: String, didChangeToState newState: DTGItemState)
@@ -86,31 +86,31 @@ public protocol DTGItemDelegate: class {
 /// A downloadable item.
 public protocol DTGItem {
     /// The item's unique id.
-    var id: String {get}
+    var id: String { get }
     
     /// The items's remote URL.
-    var remoteUrl: URL {get}
+    var remoteUrl: URL { get }
     
     /// The item's current state.
-    var state: DTGItemState {get}
+    var state: DTGItemState { get }
     
     /// Estimated size of the item.
-    var estimatedSize: Int64? {get}
+    var estimatedSize: Int64? { get }
     
     /// Downloaded size in bytes.
-    var downloadedSize: Int64? {get}
+    var downloadedSize: Int64 { get }
 }
 
 /// Information about a Video track.
 public protocol DTGVideoTrack {
     /// Width in pixels.
-    var width: Int? {get}
+    var width: Int? { get }
     
     /// Height in pixels.
-    var height: Int? {get}
+    var height: Int? { get }
     
     /// Bitrate.
-    var bitrate: Int {get}
+    var bitrate: Int { get }
 }
 
 /// Item state.

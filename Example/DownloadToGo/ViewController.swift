@@ -12,6 +12,8 @@ import Toast_Swift
 
 class ViewController: UIViewController {
     
+    let videoViewControllerSegueIdentifier = "videoViewController"
+    
     typealias Item = (id: String, url: URL)
     
     let cm = DTGSharedContentManager
@@ -22,7 +24,7 @@ class ViewController: UIViewController {
         Item(id: "hls-clear", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
         Item(id: "hls-multi-audio", URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
         Item(id: "hls-multi-video", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
-        Item(id: "hls-multi", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!)
+        Item(id: "hls-multi", url: URL(string: "http://cfvod.kaltura.com/hls/p/2035982/sp/203598200/serveFlavor/flavorId/0_,7g9gdulh,g128egxk,nvah9oqb,1fldnkz7,3sixtc6d,etuwtuc0,/name/a.mp4.urlset/master.m3u8")!)
     ]
     
     let itemPickerView: UIPickerView = {
@@ -30,7 +32,19 @@ class ViewController: UIViewController {
         return picker
     }()
     
-    var selectedItem: Item!
+    var selectedItem: Item! {
+        didSet {
+            let item = cm.itemById(selectedItem.id)
+            DispatchQueue.main.async {
+                self.statusLabel.text = item?.state.asString()
+                if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
+                    self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
+                } else {
+                    self.progressView.progress = 0.0
+                }
+            }
+        }
+    }
     
     @IBOutlet weak var statusLabel: UILabel!
     @IBOutlet weak var itemTextField: UITextField!
@@ -82,11 +96,6 @@ class ViewController: UIViewController {
         try! cm.pauseItem(id: self.selectedItem.id)
     }
     
-    @IBAction func playDownloadedItem(_ sender: UIButton) {
-        let id = selectedItem.id
-        print(id, try! cm.itemPlaybackUrl(id: id))
-    }
-    
     @IBAction func remove(_ sender: UIButton) {
         let id = selectedItem.id
         try! cm.removeItem(id: id)
@@ -123,6 +132,40 @@ class ViewController: UIViewController {
 }
 
 /************************************************************/
+// MARK: - Navigation
+/************************************************************/
+
+extension ViewController {
+    
+    override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
+        if identifier == self.videoViewControllerSegueIdentifier {
+            guard let item = cm.itemById(selectedItem.id) else {
+                print("cannot segue to video view controller until download is finished")
+                return false
+            }
+            if item.state == .completed {
+                return true
+            }
+            print("cannot segue to video view controller until download is finished")
+            return false
+        }
+        return true
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == self.videoViewControllerSegueIdentifier {
+            let destinationVC = segue.destination as! VideoViewController
+            // FIXME: catch error if needed
+            do {
+                destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.selectedItem.id)
+            } catch {
+                print("error: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+/************************************************************/
 // MARK: - DTGItemDelegate
 /************************************************************/
 
@@ -133,11 +176,22 @@ extension ViewController: DTGItemDelegate {
         self.statusLabel.text = DTGItemState.failed.asString()
     }
     
-    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64) {
-        if id == self.selectedItem.id && totalBytesEstimated > totalBytesDownloaded { // update the progress for selected id only
-            self.progressView.progress = Float(totalBytesDownloaded / totalBytesEstimated)
+    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
+        print("progress: download:\(totalBytesDownloaded), estimated: \(totalBytesEstimated)")
+        if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
+            if totalBytesEstimated > totalBytesDownloaded {
+                DispatchQueue.main.async {
+                    self.progressView.progress = Float(totalBytesDownloaded) / Float(totalBytesEstimated)
+                }
+            } else if totalBytesDownloaded >= totalBytesEstimated && totalBytesEstimated > 0 {
+                DispatchQueue.main.async {
+                    self.progressView.progress = 1.0
+                }
+            } else {
+                print("issue with calculating progress, estimated: \(totalBytesEstimated), downloaded: \(totalBytesDownloaded)")
+            }
         } else {
-            print("error: totalBytesEstimated is lower than totalBytesDownloaded or 0")
+            print("issue with calculating progress, no estimated size.")
         }
     }
     

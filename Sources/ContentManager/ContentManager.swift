@@ -42,7 +42,7 @@ struct MockItem: DTGItem {
 
     var estimatedSize: Int64?
 
-    var downloadedSize: Int64?
+    var downloadedSize: Int64 = 0
     
     init(id: String, url: URL, contentManager: ContentManager) {
         self.id = id
@@ -179,7 +179,6 @@ class ContentManagerImp: NSObject, ContentManager {
             do {
                 try localizer.loadMetadata()
                 item.state = .metadataLoaded
-                self.db.updateItem(item)
                 self.db.setTasks(id, tasks: localizer.tasks) // FIXME: remove later if not needed
                 item.estimatedSize = localizer.estimatedSize
                 self.db.updateItem(item)
@@ -257,7 +256,7 @@ class ContentManagerImp: NSObject, ContentManager {
     func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
         for (_, downloader) in self.downloaders {
             if downloader.sessionIdentifier == identifier {
-                downloader.backgroundSessionCompetionHandler = completionHandler
+                downloader.backgroundSessionCompletionHandler = completionHandler
                 break
             }
         }
@@ -276,14 +275,18 @@ class ContentManagerImp: NSObject, ContentManager {
 extension ContentManagerImp: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64) {
-        print("item: \(downloader.dtgItemId), didProgress, bytes written: \(bytesWritten)")
-        let totalBytesEstimated = self.db.itemById(downloader.dtgItemId)?.estimatedSize ?? 0
-        self.itemDelegate?.item(id: downloader.dtgItemId, didDownloadData: bytesWritten, totalBytesEstimated: totalBytesEstimated)
+        guard var item = self.db.itemById(downloader.dtgItemId) else {
+            print("error: no item for request id")
+            return
+        }
+        item.downloadedSize += bytesWritten
+        db.updateItem(item)
+        self.itemDelegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
     }
     
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
         print("downloading paused")
-        // TODO
+        // TODO:
         // save pasued tasks to db
         updateItemState(id: downloader.dtgItemId, state: .paused)
     }
@@ -293,14 +296,18 @@ extension ContentManagerImp: DownloaderDelegate {
     }
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
-        print("finished downloading: \(String(describing: downloadItemTask))")
         updateItemState(id: downloader.dtgItemId, state: .completed)
+
+        // TODO:
+        // remove the task from the db tasks objects
+        // add new object in db for downloadedtask with the new location saved
+        // replace location in m3u8
     }
     
     func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState) {
         print("downloader state: \(newState.rawValue)")
         if newState == .idle {
-            // TODO
+            // TODO:
             // make sure all handlng has been done, 
             // DB and whatever before letting to app know the download was finished and now playable
             if var item = self.db.itemById(downloader.dtgItemId) {
