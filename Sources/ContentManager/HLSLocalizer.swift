@@ -191,7 +191,7 @@ class HLSLocalizer {
         }
 }
     
-    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
+    private func _saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
         
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
@@ -207,6 +207,32 @@ class HLSLocalizer {
         
         let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
         try save(text: localText as String, as: target)
+    }
+    
+    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
+        let baseUrl = originalUrl.deletingLastPathComponent()
+        guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
+        #if DEBUG
+            try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
+        #endif
+
+        guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
+        var localLines = [String]()
+        var i = 0
+        for line in originalText.components(separatedBy: CharacterSet.newlines) {
+            if line.isEmpty {
+                continue
+            }
+            if !line.hasPrefix("#") && i < segments.countInt && line == segments[i].uri.absoluteString {
+                localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
+                i += 1
+            } else {
+                localLines.append(line) 
+            }
+        }
+        
+        let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
+        try save(text: localLines.joined(separator: "\n") as String, as: target)
     }
     
     private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
