@@ -27,6 +27,10 @@ enum DTGTrackType {
     }
 }
 
+public enum DTGError: Error {
+    case itemNotFound(itemId: String)
+}
+
 struct MockItem: DTGItem {
     
     weak var contentManager: ContentManager?
@@ -101,7 +105,7 @@ class ContentManagerImp: NSObject, ContentManager {
     }
       
     // TEMP db
-    var mockDb = MockDb()
+    var db = MockDb()
     
     // Map of item id and the related downloader
     fileprivate var downloaders = [String: Downloader]()
@@ -144,7 +148,7 @@ class ContentManagerImp: NSObject, ContentManager {
 
     func itemsByState(_ state: DTGItemState) -> [DTGItem] {
         
-        return mockDb.itemsByState(state)
+        return db.itemsByState(state)
 
         
         // TODO: get from db
@@ -152,19 +156,19 @@ class ContentManagerImp: NSObject, ContentManager {
     
     func itemById(_ id: String) -> DTGItem? {
         
-        return mockDb.itemById(id)
+        return db.itemById(id)
         
         // TODO: get from db
     }
     
     func addItem(id: String, url: URL) -> DTGItem? {
         
-        if mockDb.itemById(id) != nil {
+        if db.itemById(id) != nil {
             return nil
         }
         
         let item = MockItem(id: id, url: url, contentManager: self)
-        mockDb.updateItem(item)
+        db.updateItem(item)
 
         // TODO: add to db
         return item
@@ -172,7 +176,7 @@ class ContentManagerImp: NSObject, ContentManager {
 
     func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void) {
         
-        guard var item = mockDb.itemById(id) else { return }
+        guard var item = db.itemById(id) else { return }
         
         let localizer = HLSLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate, storagePath: storagePath)
         
@@ -180,10 +184,10 @@ class ContentManagerImp: NSObject, ContentManager {
             do {
                 try localizer.loadMetadata()
                 item.state = .metadataLoaded
-                self.mockDb.updateItem(item)
-                self.mockDb.setTasks(id, tasks: localizer.tasks) // FIXME: remove later if not needed
+                self.db.updateItem(item)
+                self.db.setTasks(id, tasks: localizer.tasks) // FIXME: remove later if not needed
                 item.estimatedSize = localizer.estimatedSize
-                self.mockDb.updateItem(item)
+                self.db.updateItem(item)
                 try localizer.saveLocalFiles()
                 callback(item, localizer.videoTrack, nil)
             } catch {
@@ -201,27 +205,38 @@ class ContentManagerImp: NSObject, ContentManager {
         // load relevant media playlists
         // store data to db
     }
-
+    
+    func findItemOrThrow(_ id: String) throws -> MockItem {
+        if let item = db.itemById(id) {
+            return item
+        } else {
+            throw DTGError.itemNotFound(itemId: id)
+        }
+    }
+    
     func startItem(id: String) throws {
-        TODO
         // find in db
+        try findItemOrThrow(id)
+        
         // tell download manager to start/resume
         
         // FIXME: mock implementation
-        guard let tasks = mockDb.tasksForItem(id) else {
+        guard let tasks = db.tasksForItem(id) else {
             print("error: no tasks for this id")
             return
         }
+        
         let downloader = DefaultDownloader(itemId: id, tasks: tasks)
         downloader.delegate = self
         self.downloaders[id] = downloader
         try downloader.start()
+        
         self.itemDelegate?.item(id: id, didChangeToState: .inProgress)
     }
 
     func pauseItem(id: String) {
-        TODO
-        // find in db
+        try findItemOrThrow(id)
+
         // if in progress, tell download manager to pause
         guard let downloader = self.downloaders[id] else {
             print("error: no downloader for this id")
@@ -231,9 +246,7 @@ class ContentManagerImp: NSObject, ContentManager {
     }
 
     func removeItem(id: String) {
-        TODO
-        // find in db
-        guard let item = itemById(id) else { return }
+        try findItemOrThrow(id)
 
         // if in progress, cancel
         // remove all files
@@ -264,7 +277,7 @@ extension ContentManagerImp: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64) {
         print("item: \(downloader.dtgItemId), didProgress, bytes written: \(bytesWritten)")
-        let totalBytesEstimated = self.mockDb.itemById(downloader.dtgItemId)?.estimatedSize ?? 0
+        let totalBytesEstimated = self.db.itemById(downloader.dtgItemId)?.estimatedSize ?? 0
         self.itemDelegate?.item(id: downloader.dtgItemId, didDownloadData: bytesWritten, totalBytesEstimated: totalBytesEstimated)
     }
     
@@ -291,9 +304,9 @@ extension ContentManagerImp: DownloaderDelegate {
             TODO
             // make sure all handlng has been done, 
             // DB and whatever before letting to app know the download was finished and now playable
-            if var item = self.mockDb.itemById(downloader.dtgItemId) {
+            if var item = self.db.itemById(downloader.dtgItemId) {
                 item.state = .completed
-                mockDb.updateItem(item)
+                db.updateItem(item)
             }
         }
     }
