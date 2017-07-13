@@ -42,20 +42,25 @@ public protocol ContentManager: class {
     /// - Parameters:
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void)
+    /// - Throws: DTGError.itemNotFound
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void) throws
     
     /// Start or resume item download.
+    /// - Throws: DTGError.itemNotFound
     func startItem(id: String) throws
     
     /// Pause downloading an item.
-    func pauseItem(id: String)
+    /// - Throws: DTGError.itemNotFound
+    func pauseItem(id: String) throws
     
     /// Remove an existing item from storage, deleting all related files.
-    func removeItem(id: String)
+    /// - Throws: DTGError.itemNotFound
+    func removeItem(id: String) throws
     
     /// Get a playable URL for an item.
     /// - Returns: a playback URL, or nil.
-    func itemPlaybackUrl(id: String) -> URL?
+    /// - Throws: DTGError.itemNotFound
+    func itemPlaybackUrl(id: String) throws -> URL?
     
     
     /// Handles events of a background session waiting to be processed.

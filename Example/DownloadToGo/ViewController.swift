@@ -8,6 +8,7 @@
 
 import UIKit
 import DownloadToGo
+import Toast_Swift
 
 class ViewController: UIViewController {
     
@@ -17,6 +18,7 @@ class ViewController: UIViewController {
     
     // FIXME: change the urls for the correct default ones
     let items = [
+        Item(id: "multi/multi", url: URL(string: "https://cfvod.kaltura.com/hls/p/2035982/sp/203598200/serveFlavor/flavorId/0_,7g9gdulh,g128egxk,nvah9oqb,1fldnkz7,3sixtc6d,etuwtuc0,074dyv4x,ebpk88mk,rc81sa4t,/name/a.mp4.urlset/master.m3u8")!),
         Item(id: "hls-clear", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
         Item(id: "hls-multi-audio", URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
         Item(id: "hls-multi-video", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
@@ -59,8 +61,12 @@ class ViewController: UIViewController {
     }
     
     @IBAction func loadMetadata(_ sender: UIButton) {
-        cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000) { (item, videoTrack, error) in
-            print(item, videoTrack)
+        do {
+            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000) { (item, videoTrack, error) in
+                print(item, videoTrack)
+            }
+        } catch {
+            toastMedium("loadItemMetadata failed \(error)")
         }
     }
     
@@ -73,15 +79,17 @@ class ViewController: UIViewController {
     }
     
     @IBAction func pause(_ sender: UIButton) {
-        cm.pauseItem(id: self.selectedItem.id)
+        try! cm.pauseItem(id: self.selectedItem.id)
     }
     
     @IBAction func playDownloadedItem(_ sender: UIButton) {
-        
+        let id = selectedItem.id
+        print(id, try! cm.itemPlaybackUrl(id: id))
     }
     
     @IBAction func remove(_ sender: UIButton) {
-        
+        let id = selectedItem.id
+        try! cm.removeItem(id: id)
     }
     
     func getAccessoryView() -> UIView {
@@ -96,6 +104,21 @@ class ViewController: UIViewController {
         let item = cm.itemById(self.selectedItem.id)
         self.statusLabel.text = item?.state.asString()
         self.itemTextField.resignFirstResponder()
+    }
+    
+    func toastShort(_ message: String) {
+        print(message)
+        self.view.makeToast(message, duration: 0.6, position: .center)
+    }
+    
+    func toastMedium(_ message: String) {
+        print(message)
+        self.view.makeToast(message, duration: 1.0, position: .center)
+    }
+    
+    func toastLong(_ message: String) {
+        print(message)
+        self.view.makeToast(message, duration: 1.5, position: .center)
     }
 }
 

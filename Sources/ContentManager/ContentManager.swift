@@ -2,11 +2,6 @@
 import Foundation
 import GCDWebServer
 
-var TODO: Void {
-    //fatalError("Not implemented")
-    print("")
-}
-
 public let DTGSharedContentManager: ContentManager = ContentManagerImp()
 
 enum DTGTrackType {
@@ -85,10 +80,21 @@ class MockDb {
     func setTasks(_ itemId: String, tasks: [DownloadItemTask]) {
         taskMap[itemId] = tasks
     }
+    
+    func removeItem(_ id: String) {
+        itemMap.removeValue(forKey: id)
+    }
+    
+    func removeItemTasks(_ id: String) {
+        taskMap.removeValue(forKey: id)
+    }
+    
+    func updateItemState(id: String, state: DTGItemState) {
+        itemMap[id]?.state = state
+    }
 }
 
 class ContentManagerImp: NSObject, ContentManager {
-    
     weak var itemDelegate: DTGItemDelegate?
 
     lazy var storagePath: URL = {
@@ -115,13 +121,10 @@ class ContentManagerImp: NSObject, ContentManager {
         print("*** ContentManager ***")
     }
     
-    /// Start the content manager. This also starts the playback server.
     func start() throws {
         if started {
             return
         }
-        
-        // TODO: prepare db
         
         // start server
         server.addGETHandler(forBasePath: "/", directoryPath: storagePath.appendingPathComponent("items").path, indexFilename: nil, cacheAge: 3600, allowRangeRequests: true)
@@ -132,14 +135,12 @@ class ContentManagerImp: NSObject, ContentManager {
         started = true
     }
     
-    /// Stop the content manager, including the playback server.
     func stop() {
         // stop server
         server.stop()
         started = false
     }
 
-    /// Resume downloading of items that were in progress when stop() was called.
     func resumeInterruptedItems() throws {
         for item in itemsByState(.inProgress) {
             try startItem(id: item.id)
@@ -149,16 +150,11 @@ class ContentManagerImp: NSObject, ContentManager {
     func itemsByState(_ state: DTGItemState) -> [DTGItem] {
         
         return db.itemsByState(state)
-
-        
-        // TODO: get from db
     }
     
     func itemById(_ id: String) -> DTGItem? {
         
         return db.itemById(id)
-        
-        // TODO: get from db
     }
     
     func addItem(id: String, url: URL) -> DTGItem? {
@@ -170,7 +166,6 @@ class ContentManagerImp: NSObject, ContentManager {
         let item = MockItem(id: id, url: url, contentManager: self)
         db.updateItem(item)
 
-        // TODO: add to db
         return item
     }
 
@@ -194,18 +189,9 @@ class ContentManagerImp: NSObject, ContentManager {
                 callback(nil, nil, error)
             }
         }
-        
-        
-        return;
-        
-        
-        TODO
-        // find item in db
-        // load master playlist
-        // load relevant media playlists
-        // store data to db
     }
     
+    @discardableResult
     func findItemOrThrow(_ id: String) throws -> MockItem {
         if let item = db.itemById(id) {
             return item
@@ -234,7 +220,7 @@ class ContentManagerImp: NSObject, ContentManager {
         self.itemDelegate?.item(id: id, didChangeToState: .inProgress)
     }
 
-    func pauseItem(id: String) {
+    func pauseItem(id: String) throws {
         try findItemOrThrow(id)
 
         // if in progress, tell download manager to pause
@@ -245,18 +231,27 @@ class ContentManagerImp: NSObject, ContentManager {
         downloader.pause()
     }
 
-    func removeItem(id: String) {
+    func removeItem(id: String) throws {
         try findItemOrThrow(id)
 
         // if in progress, cancel
+        if let downloader = self.downloaders[id] {
+            downloader.cancel()
+        }
+        
         // remove all files
+        let itemPath = storagePath.appendingPathComponent("items").appendingPathComponent(id.safeItemPathName())
+        try FileManager.default.removeItem(at: itemPath)
+        
         // remove from db
-        // notify observers
+        db.removeItem(id)
+        
+        // notify delegate
         itemDelegate?.item(id: id, didChangeToState: .removed)
     }
 
-    func itemPlaybackUrl(id: String) -> URL? {
-        return serverUrl?.appendingPathComponent("\(id)/master.m3u8")
+    func itemPlaybackUrl(id: String) throws -> URL? {
+        return serverUrl?.appendingPathComponent("\(id.safeItemPathName())/master.m3u8")
     }
     
     func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
@@ -266,6 +261,11 @@ class ContentManagerImp: NSObject, ContentManager {
                 break
             }
         }
+    }
+    
+    func updateItemState(id: String, state: DTGItemState) {
+        db.updateItemState(id: id, state: state)
+        itemDelegate?.item(id: id, didChangeToState: state)
     }
 }
 
@@ -283,25 +283,24 @@ extension ContentManagerImp: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
         print("downloading paused")
-        TODO
+        // TODO
         // save pasued tasks to db
-        self.itemDelegate?.item(id: downloader.dtgItemId, didChangeToState: .paused)
+        updateItemState(id: downloader.dtgItemId, state: .paused)
     }
     
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
-        TODO
-        // remove all data from db
-        // change item state to removed
+        db.removeItemTasks(downloader.dtgItemId)
     }
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
         print("finished downloading: \(String(describing: downloadItemTask))")
+        updateItemState(id: downloader.dtgItemId, state: .completed)
     }
     
     func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState) {
         print("downloader state: \(newState.rawValue)")
         if newState == .idle {
-            TODO
+            // TODO
             // make sure all handlng has been done, 
             // DB and whatever before letting to app know the download was finished and now playable
             if var item = self.db.itemById(downloader.dtgItemId) {
