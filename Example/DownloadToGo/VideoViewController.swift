@@ -49,6 +49,13 @@ class VideoViewController: UIViewController {
         }
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if self.player?.isPlaying == true {
+            self.timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.timerTick), userInfo: nil, repeats: true)
+        }
+    }
+    
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         self.stopTimer()

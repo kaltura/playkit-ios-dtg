@@ -36,7 +36,7 @@ class ViewController: UIViewController {
         didSet {
             let item = cm.itemById(selectedItem.id)
             DispatchQueue.main.async {
-                self.statusLabel.text = item?.state.asString()
+                self.statusLabel.text = item?.state.asString() ?? ""
                 if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
                     self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
                 } else {

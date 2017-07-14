@@ -28,15 +28,13 @@ public enum DTGError: Error {
 
 struct MockItem: DTGItem {
     
-    weak var contentManager: ContentManager?
-    
     var id: String
 
     var remoteUrl: URL
 
     var state: DTGItemState = .new {
         didSet {
-            contentManager?.itemDelegate?.item(id: self.id , didChangeToState: state)
+            DTGSharedContentManager.itemDelegate?.item(id: self.id , didChangeToState: state)
         }
     }
 
@@ -44,10 +42,9 @@ struct MockItem: DTGItem {
 
     var downloadedSize: Int64 = 0
     
-    init(id: String, url: URL, contentManager: ContentManager) {
+    init(id: String, url: URL) {
         self.id = id
         self.remoteUrl = url
-        self.contentManager = contentManager
     }
 }
 
@@ -163,7 +160,7 @@ class ContentManagerImp: NSObject, ContentManager {
             return nil
         }
         
-        let item = MockItem(id: id, url: url, contentManager: self)
+        let item = MockItem(id: id, url: url)
         db.updateItem(item)
 
         return item
@@ -261,11 +258,6 @@ class ContentManagerImp: NSObject, ContentManager {
             }
         }
     }
-    
-    func updateItemState(id: String, state: DTGItemState) {
-        db.updateItemState(id: id, state: state)
-        itemDelegate?.item(id: id, didChangeToState: state)
-    }
 }
 
 /************************************************************/
@@ -288,7 +280,7 @@ extension ContentManagerImp: DownloaderDelegate {
         print("downloading paused")
         // TODO:
         // save pasued tasks to db
-        updateItemState(id: downloader.dtgItemId, state: .paused)
+        db.updateItemState(id: downloader.dtgItemId, state: .paused)
     }
     
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
@@ -296,8 +288,6 @@ extension ContentManagerImp: DownloaderDelegate {
     }
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
-        updateItemState(id: downloader.dtgItemId, state: .completed)
-
         // TODO:
         // remove the task from the db tasks objects
         // add new object in db for downloadedtask with the new location saved
@@ -310,10 +300,7 @@ extension ContentManagerImp: DownloaderDelegate {
             // TODO:
             // make sure all handlng has been done, 
             // DB and whatever before letting to app know the download was finished and now playable
-            if var item = self.db.itemById(downloader.dtgItemId) {
-                item.state = .completed
-                db.updateItem(item)
-            }
+            db.updateItemState(id: downloader.dtgItemId, state: .completed)
         }
     }
     

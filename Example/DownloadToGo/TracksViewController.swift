@@ -88,6 +88,14 @@ class TracksViewController: UITableViewController {
         return cell
     }
    
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        if section == 0 {
+            return "Audio Tracks"
+        } else {
+            return "Text Tracks"
+        }
+    }
+    
     /************************************************************/
     // MARK: - UITableViewDelegate
     /************************************************************/
