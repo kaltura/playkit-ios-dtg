@@ -10,21 +10,31 @@ import UIKit
 import DownloadToGo
 import Toast_Swift
 
+class Item {
+    let id: String
+    let url: URL
+    
+    init(id: String, url: String) {
+        self.id = id
+        self.url = URL(string: url)!
+    }
+}
+
 class ViewController: UIViewController {
     
     let videoViewControllerSegueIdentifier = "videoViewController"
     
-    typealias Item = (id: String, url: URL)
     
     let cm = DTGSharedContentManager
     
     // FIXME: change the urls for the correct default ones
     let items = [
-        Item(id: "multi/multi", url: URL(string: "https://cfvod.kaltura.com/hls/p/2035982/sp/203598200/serveFlavor/flavorId/0_,7g9gdulh,g128egxk,nvah9oqb,1fldnkz7,3sixtc6d,etuwtuc0,074dyv4x,ebpk88mk,rc81sa4t,/name/a.mp4.urlset/master.m3u8")!),
-        Item(id: "hls-clear", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
-        Item(id: "hls-multi-audio", URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
-        Item(id: "hls-multi-video", url: URL(string: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712")!),
-        Item(id: "hls-multi", url: URL(string: "http://cfvod.kaltura.com/hls/p/2035982/sp/203598200/serveFlavor/flavorId/0_,7g9gdulh,g128egxk,nvah9oqb,1fldnkz7,3sixtc6d,etuwtuc0,/name/a.mp4.urlset/master.m3u8")!)
+        Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
+        Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
+        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
+        Item(id: "Kaltura multi captions", url: "https://cdnapisec.kaltura.com/p/811441/sp/81144100/playManifest/entryId/1_mhyj12pj/format/applehttp/protocol/https/a.m3u8"),
+        Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
+        Item(id: "Elephants", url: "https://playertest.longtailvideo.com/adaptive/eleph-audio/playlist.m3u8")
     ]
     
     let itemPickerView: UIPickerView = {

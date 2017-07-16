@@ -22,6 +22,8 @@ class VideoViewController: UIViewController {
     var selectedTextTrack: Track?
     var timer: Timer?
     
+    let localAssetsManager = LocalAssetsManager.managerWithDefaultDataStore()
+    
     @IBOutlet weak var playerView: PlayerView!
     @IBOutlet weak var playheadSlider: UISlider!
     @IBOutlet weak var controlsView: UIVisualEffectView!
@@ -34,7 +36,8 @@ class VideoViewController: UIViewController {
         if let player = try? PlayKitManager.shared.loadPlayer(pluginConfig: nil) {
             self.player = player
             player.view = self.playerView
-            player.prepare(MediaConfig(mediaEntry: MediaEntry("id", sources: [MediaSource("id", contentUrl: contentUrl)])))
+            let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: contentUrl!)
+            player.prepare(MediaConfig(mediaEntry: mediaEntry))
             
             player.addObserver(self, event: PlayerEvent.tracksAvailable) { [weak self] (event) in
                 self?.tracks = event.tracks

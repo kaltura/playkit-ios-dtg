@@ -67,7 +67,7 @@ class TracksViewController: UITableViewController {
         var title: String? = nil
         if indexPath.section == 0 {
             if let audioTrack = self.tracks.audioTracks?[indexPath.row] {
-                if let selectedAudioTrack = self.selectedAudioTrack, selectedAudioTrack.isEqual(rhs: audioTrack) {
+                if let selectedAudioTrack = self.selectedAudioTrack, selectedAudioTrack.isEqual(audioTrack) {
                     cell.accessoryType = .checkmark
                     self.lastSelectedAudioTrackIndexPath = indexPath
                 }
@@ -75,7 +75,7 @@ class TracksViewController: UITableViewController {
             }
         } else {
             if let textTrack = self.tracks.textTracks?[indexPath.row] {
-                if let selectedTextTrack = self.selectedTextTrack, selectedTextTrack.isEqual(rhs: textTrack) {
+                if let selectedTextTrack = self.selectedTextTrack, selectedTextTrack.isEqual(textTrack) {
                     cell.accessoryType = .checkmark
                     self.lastSelectedTextTrackIndexPath = indexPath
                 }
