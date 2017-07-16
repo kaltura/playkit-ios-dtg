@@ -129,6 +129,7 @@ class ContentManagerImp: NSObject, ContentManager {
         server.addGETHandler(forBasePath: "/", directoryPath: storagePath.appendingPathComponent("items").path, indexFilename: nil, cacheAge: 3600, allowRangeRequests: true)
         try server.start(options: [GCDWebServerOption_BindToLocalhost: true,
                                GCDWebServerOption_Port: 0,
+                               GCDWebServerOption_AutomaticallySuspendInBackground: false,
                                ])
         
         started = true
