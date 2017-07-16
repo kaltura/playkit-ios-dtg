@@ -284,7 +284,7 @@ class HLSLocalizer {
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
             .appendingPathExtension(url.pathExtension)
-        return DownloadItemTask(contentUrl: url, trackType: trackType, destinationUrl: destinationUrl, resumeData: nil)
+        return DownloadItemTask(contentUrl: url, trackType: trackType, destinationUrl: destinationUrl)
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {

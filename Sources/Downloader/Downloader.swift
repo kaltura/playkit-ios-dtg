@@ -16,7 +16,14 @@ struct DownloadItemTask {
     /// The destination to save the download item to.
     let destinationUrl: URL
     
+    var retry: Int = 1
     var resumeData: Data? = nil
+    
+    init(contentUrl: URL, trackType: DTGTrackType, destinationUrl: URL) {
+        self.contentUrl = contentUrl
+        self.trackType = trackType
+        self.destinationUrl = destinationUrl
+    }
 }
 
 enum DownloaderState: String {
@@ -41,7 +48,7 @@ protocol Downloader: class {
     
     /// Background completion handler, can be received from application delegate when woken to background.
     /// Should be invoked when `urlSessionDidFinishEvents` is called.
-    var backgroundSessionCompetionHandler: (() -> Void)? { get set }
+    var backgroundSessionCompletionHandler: (() -> Void)? { get set }
     
     /// The max allowed concurrent download tasks.
     var maxConcurrentDownloadItemTasks: Int { get }
@@ -80,7 +87,6 @@ protocol DownloaderDelegate: class {
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader)
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask)
     func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState)
-    func downloader(_ downloader: Downloader, didBecomeInvalidWithError error: Error?)
     /// Called when downloader failed due to fatal error
     func downloader(_ downloader: Downloader, didFailWithError error: Error)
 }

@@ -2,47 +2,52 @@ PODS:
   - DownloadToGo (0.1.0):
     - GCDWebServer (~> 3.3.3)
     - M3U8Kit (= 0.2.1)
-  - FBSnapshotTestCase (2.1.4):
-    - FBSnapshotTestCase/SwiftSupport (= 2.1.4)
-  - FBSnapshotTestCase/Core (2.1.4)
-  - FBSnapshotTestCase/SwiftSupport (2.1.4):
-    - FBSnapshotTestCase/Core
   - GCDWebServer (3.3.3):
     - GCDWebServer/Core (= 3.3.3)
   - GCDWebServer/Core (3.3.3)
+  - KalturaNetKit (0.0.16):
+    - KalturaNetKit/Core (= 0.0.16)
+  - KalturaNetKit/Core (0.0.16):
+    - SwiftyJSON
+  - Log (1.0)
   - M3U8Kit (0.2.1)
-  - Nimble (5.1.1)
-  - Nimble-Snapshots (4.4.0):
-    - Nimble-Snapshots/Core (= 4.4.0)
-  - Nimble-Snapshots/Core (4.4.0):
-    - FBSnapshotTestCase (~> 2.0)
-    - Nimble
-    - Quick
-  - Quick (1.0.0)
+  - Nimble (7.0.1)
+  - PlayKit (3.0.1):
+    - PlayKit/Core (= 3.0.1)
+  - PlayKit/Core (3.0.1):
+    - KalturaNetKit (~> 0.0)
+    - Log (= 1.0)
+    - SwiftyJSON (= 3.1.4)
+    - SwiftyXMLParser (= 3.0.3)
+  - Quick (1.1.0)
+  - SwiftyJSON (3.1.4)
+  - SwiftyXMLParser (3.0.3)
   - Toast-Swift (2.0.0)
 
 DEPENDENCIES:
   - DownloadToGo (from `..`)
-  - FBSnapshotTestCase
-  - Nimble (~> 5.1.1)
-  - Nimble-Snapshots
-  - Quick (~> 1.0.0)
+  - Nimble (= 7.0.1)
+  - PlayKit (= 3.0.1)
+  - Quick (= 1.1.0)
   - Toast-Swift
 
 EXTERNAL SOURCES:
   DownloadToGo:
-    :path: ..
+    :path: ".."
 
 SPEC CHECKSUMS:
   DownloadToGo: a6b0b747d2b3dc4817b1a7b932be875ee9fb5e40
-  FBSnapshotTestCase: 094f9f314decbabe373b87cc339bea235a63e07a
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
+  KalturaNetKit: 7c2ce88fb5eb506891f0bf844970ae5306a2fef5
+  Log: 5e368c9528db07517d18d2d04ff5fe2b6f5a1e21
   M3U8Kit: 3e0f7feef04a775252b41c0fa91de7e1fe8f188c
-  Nimble: 415e3aa3267e7bc2c96b05fa814ddea7bb686a29
-  Nimble-Snapshots: e743439f26c2fa99d8f7e0d7c01c99bcb40aa6f2
-  Quick: 8024e4a47e6cc03a9d5245ef0948264fc6d27cff
+  Nimble: 657d000e11df8aebe27cdaf9d244de7f30ed87f7
+  PlayKit: c6e594d8e6c7f155e5b36f0bff8ddfaaa70b534f
+  Quick: dafc587e21eed9f4cab3249b9f9015b0b7a7f71d
+  SwiftyJSON: c2842d878f95482ffceec5709abc3d05680c0220
+  SwiftyXMLParser: 9c6cc0310e778266a63d8eba50d9e07925aab0fb
   Toast-Swift: 5b2f8f720f7e78e48511f693df1f9c9a6e38a25a
 
-PODFILE CHECKSUM: 2a9f2c4a3100ca61226c8d1ace6170455406d1ca
+PODFILE CHECKSUM: 1555a0d052ee0c04b8a6c9f6b4f033a3c341d79a
 
-COCOAPODS: 1.2.1
+COCOAPODS: 1.2.0

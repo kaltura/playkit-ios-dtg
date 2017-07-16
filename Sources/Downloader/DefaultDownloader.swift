@@ -51,7 +51,7 @@ class DefaultDownloader: NSObject, Downloader {
     
     weak var delegate: DownloaderDelegate?
     
-    var backgroundSessionCompetionHandler: (() -> Void)?
+    var backgroundSessionCompletionHandler: (() -> Void)?
     
     let maxConcurrentDownloadItemTasks: Int = 4
     
@@ -160,6 +160,7 @@ private extension DefaultDownloader {
         }
         self.activeDownloads[urlSessionDownloadTask] = downloadTask
         urlSessionDownloadTask.resume()
+        print("started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
     }
     
     func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {
@@ -214,13 +215,38 @@ private extension DefaultDownloader {
 extension DefaultDownloader: URLSessionDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let e = error as NSError? {
-            // TODO: handle error (maybe return to the queue? add retry params to tasks?)
-            // maybe send progress update with negative amount to substract to amount downloaded?
-            if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] {
-                
+        
+        // inner retry func
+        func retry(downloadTask: URLSessionDownloadTask, resumeData: Data? = nil, receivedError error: NSError) {
+            if var downloadItemTask = self.activeDownloads[downloadTask], downloadItemTask.retry > 0 {
+                downloadItemTask.retry -= 1
+                downloadItemTask.resumeData = resumeData
+                self.downloadItemTasksQueue.enqueueAtHead(downloadItemTask)
+                self.activeDownloads[downloadTask] = nil
+                return
+            } else {
+                self.cancel()
+                self.delegate?.downloader(self, didFailWithError: error)
             }
-        } else if activeDownloads.count == 0 && self.downloadItemTasksQueue.count == 0 {
+        }
+        
+        if let e = error as NSError?, let downloadTask = task as? URLSessionDownloadTask {
+            if let httpResponse = task.response as? HTTPURLResponse, httpResponse.statusCode == 503 {
+                retry(downloadTask: downloadTask, receivedError: e)
+            } else {
+                // TODO: handle error (maybe return to the queue? add retry params to tasks?)
+                // maybe send progress update with negative amount to substract to amount downloaded?
+                if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+                    print("has resumse data from error")
+                    retry(downloadTask: downloadTask, resumeData: resumeData, receivedError: e)
+                }
+                self.cancel()
+                self.delegate?.downloader(self, didFailWithError: e)
+                return
+            }
+        }
+        
+        if activeDownloads.count == 0 && self.downloadItemTasksQueue.count == 0 {
             self.state = .idle
         } else {
             // take next task if available
@@ -229,7 +255,9 @@ extension DefaultDownloader: URLSessionDelegate {
     }
     
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
-        self.delegate?.downloader(self, didBecomeInvalidWithError: error)
+        if let e = error {
+            self.delegate?.downloader(self, didFailWithError: e)
+        }
     }
 }
 
@@ -241,9 +269,10 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let fileManager = FileManager.default
-        
+        print("task identifier = \(downloadTask.taskIdentifier)")
+        print("active task identifiers = \(self.activeDownloads.map { $0.0.taskIdentifier })")
         guard let downloadItemTask = self.activeDownloads[downloadTask] else {
-            print("no active download for this task")
+            print("error: no active download for this task")
             return
         }
         
@@ -274,10 +303,10 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     }
     
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-        if let backgroundSessionCompetionHandler = self.backgroundSessionCompetionHandler {
-            self.backgroundSessionCompetionHandler = nil
-            backgroundSessionCompetionHandler()
+        if let backgroundSessionCompletionHandler = self.backgroundSessionCompletionHandler {
+            self.backgroundSessionCompletionHandler = nil
+            backgroundSessionCompletionHandler()
         }
-        print("all tasks are finished")
+        print("all current background tasks are finished")
     }
 }
