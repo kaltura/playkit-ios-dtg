@@ -292,7 +292,7 @@
                         <color key="backgroundColor" cocoaTouchSystemColor="groupTableViewBackgroundColor"/>
                         <prototypes>
                             <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" selectionStyle="none" indentationWidth="10" reuseIdentifier="trackCell" textLabel="ces-rD-Lnu" style="IBUITableViewCellStyleDefault" id="abc-Ql-ua8">
-                                <rect key="frame" x="0.0" y="55.5" width="375" height="44"/>
+                                <rect key="frame" x="0.0" y="56" width="375" height="44"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="abc-Ql-ua8" id="70V-G3-Hvx">
                                     <rect key="frame" x="0.0" y="0.0" width="375" height="43.5"/>

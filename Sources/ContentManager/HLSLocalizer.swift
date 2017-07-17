@@ -144,7 +144,7 @@ class HLSLocalizer {
     }
     
     private func createDirectories() throws {
-        for type in [DTGTrackType.video, DTGTrackType.audio, DTGTrackType.text] {
+        for type in DTGTrackType.allTypes {
             try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
         }
     }

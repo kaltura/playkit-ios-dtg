@@ -146,6 +146,19 @@ public enum DTGItemState: Int {
     /// Item is removed. This is only a temporary state, as the item is actually removed.
     case removed
     
+    init?(value: String) {
+        switch value {
+        case "new": self = .new
+        case "metadataLoaded": self = .metadataLoaded
+        case "inProgress": self = .inProgress
+        case "paused": self = .paused
+        case "completed": self = .completed
+        case "failed": self = .failed
+        case "removed": self = .removed
+        default: return nil
+        }
+    }
+    
     public func asString() -> String {
         switch self {
         case .new: return "new"

@@ -23,6 +23,15 @@ enum DTGTrackType {
         return [.video, .audio, .text]
     }
     
+    init?(type: String) {
+        switch type {
+        case "video": self = .video
+        case "audio": self = .audio
+        case "text": self = .text
+        default: return nil
+        }
+    }
+    
     func asString() -> String {
         switch self {
         case .video: return "video"

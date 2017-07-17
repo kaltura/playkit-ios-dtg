@@ -13,4 +13,5 @@ Pod::Spec.new do |s|
   
   s.dependency 'M3U8Kit', '0.2.1'
   s.dependency 'GCDWebServer', '~> 3.3.3'
+  s.dependency 'RealmSwift', '2.8.3'
 end
