@@ -44,7 +44,7 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     func asObject() -> DownloadItem {
         let id = self.id
-        let remoteUrl = URL(string: self.remoteUrl, relativeTo: DTGSharedContentManager.storagePath)! // FIXME: make sure it works
+        let remoteUrl = URL(string: self.remoteUrl)!
         var item = DownloadItem(id: id, url: remoteUrl)
         item.state = DTGItemState(value: self.state)!
         item.estimatedSize = self.estimatedSize.value

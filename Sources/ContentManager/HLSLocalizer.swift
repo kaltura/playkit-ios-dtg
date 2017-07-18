@@ -23,8 +23,7 @@ struct MockVideoTrack: DTGVideoTrack {
 enum HLSLocalizerError: Error {
     /// sent when an unknown playlist type was encountered
     case unknownPlaylistType
-    
-    
+
     case invalidState
 }
 
@@ -224,7 +223,7 @@ class HLSLocalizer {
             try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
         #endif
 
-        guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
+        guard let segments = mediaPlaylist.segmentList else { throw HLSLocalizerError.invalidState }
         var localLines = [String]()
         var i = 0
         for line in originalText.components(separatedBy: CharacterSet.newlines) {
@@ -430,7 +429,7 @@ extension NSMutableString {
     }
     
     func replace(segmentUrl: String, relativeTo: URL) throws {
-        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else {throw HLSLocalizerError.invalidState}
+        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else { throw HLSLocalizerError.invalidState }
         self.replaceOccurrences(of: segmentUrl, with: relativeLocalPath, options: [], range: NSMakeRange(0, self.length))
     }
 }

@@ -8,8 +8,9 @@
 
 import Foundation
 
-protocol DB_API {
-    static var shared: DB_API { get }
+protocol DB: class {
+    
+    weak var delegate: DBDelegate? { get set }
     
     /* Items API */
     func update(item: DownloadItem)
@@ -28,31 +29,32 @@ protocol DB_API {
     func update(_ tasks: [DownloadItemTask])
 }
 
-class DB: DB_API {
-    /// The singleton shared db instance
-    static let shared: DB_API = DB()
-    private init() {}
-    
+protocol DBDelegate: class {
+    func db(_ db: DB, didUpdateItemState newState: DTGItemState, forItemId id: String)
+}
+
+class RealmDB: DB {
     /// Dispatch queue to handle all db actions on a background queue to make sure not block main.
     fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.db.dispatch")
     
     fileprivate let dtgItemRealmManager = DTGItemRealmManager()
     
     fileprivate let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
+    
+    weak var delegate: DBDelegate?
 }
 
 /************************************************************/
 // MARK: - DB API - Items
 /************************************************************/
 
-extension DB {
+extension RealmDB {
     
     func update(item: DownloadItem) {
         return self.dispatch.sync {
             let oldItem = self.dtgItemRealmManager.object(for: item.id)
             if oldItem?.state != item.state {
-                // update state change to the item delegate
-                DTGSharedContentManager.itemDelegate?.item(id: item.id , didChangeToState: item.state)
+                self.delegate?.db(self, didUpdateItemState: item.state, forItemId: item.id)
             }
             return self.dtgItemRealmManager.update([item])
         }
@@ -88,8 +90,7 @@ extension DB {
             guard var item = self.dtgItemRealmManager.object(for: id) else { return }
             item.state = itemState
             self.dtgItemRealmManager.update([item])
-            // update state change to the item delegate
-            DTGSharedContentManager.itemDelegate?.item(id: id , didChangeToState: itemState)
+            self.delegate?.db(self, didUpdateItemState: item.state, forItemId: item.id)
         }
     }
 }
@@ -98,7 +99,7 @@ extension DB {
 // MARK: - DB API - Tasks
 /************************************************************/
 
-extension DB {
+extension RealmDB {
     
     func set(tasks: [DownloadItemTask]) {
         self.dispatch.sync {

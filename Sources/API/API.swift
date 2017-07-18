@@ -12,17 +12,13 @@
 import Foundation
 
 /// Main entry point of the library, used to control item download and get their playback URL.
-public protocol ContentManager: class {
+public protocol ContentManagerProtocol: class {
     
     /// Set download base path. Must be set before start(), otherwise has no effect.
     var storagePath: URL { get set }
     
-    /// Set max concurrent downloads. This relates to download chunks, not DTGItems.
-    /// Must be set before start() is called, otherwise has no effect.
-    var maxConcurrentDownloads: Int { get set }
-    
     /// Delegate that will receive download events.
-    var itemDelegate: DTGItemDelegate? { get set } // FIXME: if no other Delegate in the future change the name to `delegate`
+    var delegate: DTGItemDelegate? { get set }
     
     /// Start the content manager. This also starts the playback server.
     func start() throws

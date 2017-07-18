@@ -260,6 +260,7 @@ extension DefaultDownloader: URLSessionDelegate {
         
         if activeDownloads.count == 0 && self.downloadItemTasksQueue.count == 0 {
             self.state = .idle
+            self.invokeBackgroundSessionCompletionHandler()
         } else {
             // take next task if available
             self.downloadIfAvailable()
@@ -281,8 +282,8 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let fileManager = FileManager.default
-        print("task identifier = \(downloadTask.taskIdentifier)")
         print("active task identifiers = \(self.activeDownloads.map { $0.0.taskIdentifier })")
+        print("task finished, identifier = \(downloadTask.taskIdentifier)")
         guard let downloadItemTask = self.activeDownloads[downloadTask] else {
             print("error: no active download for this task")
             return
@@ -316,10 +317,25 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         self.downloadIfAvailable()
+        if self.activeDownloads.count > 0 && self.downloadItemTasksQueue.count == 0 {
+            self.invokeBackgroundSessionCompletionHandler()
+        }
+        print("all current enqueued background tasks are delivered")
+    }
+}
+
+/************************************************************/
+// MARK: - Private Implementation
+/************************************************************/
+
+extension DefaultDownloader {
+    
+    func invokeBackgroundSessionCompletionHandler() {
         if let backgroundSessionCompletionHandler = self.backgroundSessionCompletionHandler {
             self.backgroundSessionCompletionHandler = nil
-            backgroundSessionCompletionHandler()
+            DispatchQueue.main.async {
+                backgroundSessionCompletionHandler()
+            }
         }
-        print("all current background tasks are finished")
     }
 }

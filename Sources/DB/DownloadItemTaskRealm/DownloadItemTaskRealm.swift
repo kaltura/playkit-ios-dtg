@@ -34,7 +34,7 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         self.dtgItemId = object.dtgItemId
         self.contentUrl = object.contentUrl.absoluteString
         self.trackType = object.trackType.asString()
-        self.destinationUrl = object.destinationUrl.absoluteString.substring(from: DTGSharedContentManager.storagePath.absoluteString.endIndex) // FIXME: change this to the relative path
+        self.destinationUrl = object.destinationUrl.absoluteString.substring(from: ContentManager.shared.storagePath.absoluteString.endIndex)
         self.resumeData = object.resumeData
     }
     
@@ -45,7 +45,7 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     func asObject() -> DownloadItemTask {
         let contentUrl = URL(string: self.contentUrl)!
         let trackType = DTGTrackType(type: self.trackType)!
-        let destinationUrl = URL(string: self.destinationUrl, relativeTo: DTGSharedContentManager.storagePath)! // FIXME: change this to the full path from relative path
+        let destinationUrl = URL(string: self.destinationUrl, relativeTo: ContentManager.shared.storagePath)!
         var downloadItemTask = DownloadItemTask(dtgItemId: self.dtgItemId, contentUrl: contentUrl, trackType: trackType, destinationUrl: destinationUrl)
         if let resumeData = self.resumeData {
             downloadItemTask.resumeData = resumeData
