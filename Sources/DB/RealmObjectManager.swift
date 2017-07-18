@@ -18,7 +18,7 @@ extension RealmObjectManager {
     func update(_ objects: [RealmObject]) {
         let realm = try! Realm()
         try! realm.write {
-            realm.add(objects)
+            realm.add(objects, update: true)
         }
     }
     
@@ -51,11 +51,12 @@ extension RealmObjectManager where RealmObject: RealmObjectProtocol, RealmObject
         self.update(objects.map { RealmObject.initialize(with: $0) })
     }
     
-    func remove(_ objects: [RealmObject.ObjectType]) {
-        self.remove(objects.map { RealmObject.initialize(with: $0) })
+    func object<Key>(for key: Key) -> RealmObject.ObjectType? {
+        let object: RealmObject? = self.object(for: key)
+        return object?.asObject()
     }
     
-    func object<K>(for key: K) -> RealmObject.ObjectType {
-        return self.object(for: key)
+    func allObjects() -> [RealmObject.ObjectType] {
+        return self.get().map { $0.asObject() }
     }
 }

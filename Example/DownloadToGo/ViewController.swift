@@ -187,7 +187,6 @@ extension ViewController: DTGItemDelegate {
     }
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
-        print("progress: download:\(totalBytesDownloaded), estimated: \(totalBytesEstimated)")
         if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
             if totalBytesEstimated > totalBytesDownloaded {
                 DispatchQueue.main.async {

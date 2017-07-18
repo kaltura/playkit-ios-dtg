@@ -9,7 +9,17 @@
 import Foundation
 import RealmSwift
 
-protocol RealmObjectProtocol: class {
+protocol RealmCascadeDeleteable {
+    associatedtype RealmObject: Object
+    func cascadeDelete(_ objects: [RealmObject])
+}
+
+protocol PrimaryKeyable {
+    associatedtype KeyType
+    var pk: KeyType { get }
+}
+
+protocol RealmObjectProtocol {
     associatedtype RealmObject: Object
     associatedtype ObjectType
     

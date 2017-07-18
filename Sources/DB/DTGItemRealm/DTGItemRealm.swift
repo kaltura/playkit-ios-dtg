@@ -9,7 +9,7 @@
 import Foundation
 import RealmSwift
 
-class DTGItemRealm: Object, RealmObjectProtocol {
+class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     dynamic var id: String = ""
     /// The items's remote URL.
@@ -21,29 +21,31 @@ class DTGItemRealm: Object, RealmObjectProtocol {
     /// Downloaded size in bytes.
     dynamic var downloadedSize: Int64 = 0
     
-    let downloadItemTasks = List<DownloadItemTaskRealm>()
-    
     override static func primaryKey() -> String? {
         return "id"
     }
     
-    convenience required init(object: DTGItem) {
+    var pk: String {
+        return self.id
+    }
+    
+    convenience required init(object: DownloadItem) {
         self.init()
         self.id = object.id
-        self.remoteUrl = object.remoteUrl.absoluteString.substring(to: DTGSharedContentManager.storagePath.absoluteString.endIndex) // FIXME: make sure it works
+        self.remoteUrl = object.remoteUrl.absoluteString
         self.state = object.state.asString()
         self.estimatedSize = RealmOptional<Int64>(object.estimatedSize)
         self.downloadedSize = object.downloadedSize
     }
     
-    static func initialize(with object: DTGItem) -> DTGItemRealm {
+    static func initialize(with object: DownloadItem) -> DTGItemRealm {
         return DTGItemRealm(object: object)
     }
     
-    func asObject() -> DTGItem {
+    func asObject() -> DownloadItem {
         let id = self.id
         let remoteUrl = URL(string: self.remoteUrl, relativeTo: DTGSharedContentManager.storagePath)! // FIXME: make sure it works
-        var item = MockItem(id: id, url: remoteUrl)
+        var item = DownloadItem(id: id, url: remoteUrl)
         item.state = DTGItemState(value: self.state)!
         item.estimatedSize = self.estimatedSize.value
         item.downloadedSize = self.downloadedSize

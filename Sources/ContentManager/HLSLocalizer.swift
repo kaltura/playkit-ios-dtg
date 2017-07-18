@@ -77,12 +77,11 @@ class HLSLocalizer {
     var selectedAudioStreams = [MediaStream]()
     var selectedTextStreams = [MediaStream]()
 
-    init(id: String, url: URL, preferredVideoBitrate: Int?, storagePath: URL) {
+    init(id: String, url: URL, preferredVideoBitrate: Int?) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
-        let subPath = "items/\(id.safeItemPathName())"
-        self.downloadPath = storagePath.appendingPathComponent(subPath, isDirectory: true)
+        self.downloadPath = DTGFilePaths.itemDirUrl(forItemId: id)
     }
     
     private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
@@ -294,7 +293,7 @@ class HLSLocalizer {
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
             .appendingPathExtension(url.pathExtension)
-        return DownloadItemTask(contentUrl: url, trackType: trackType, destinationUrl: destinationUrl)
+        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, trackType: trackType, destinationUrl: destinationUrl)
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {

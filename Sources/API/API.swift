@@ -148,13 +148,13 @@ public enum DTGItemState: Int {
     
     init?(value: String) {
         switch value {
-        case "new": self = .new
-        case "metadataLoaded": self = .metadataLoaded
-        case "inProgress": self = .inProgress
-        case "paused": self = .paused
-        case "completed": self = .completed
-        case "failed": self = .failed
-        case "removed": self = .removed
+        case DTGItemState.new.asString(): self = .new
+        case DTGItemState.metadataLoaded.asString(): self = .metadataLoaded
+        case DTGItemState.inProgress.asString(): self = .inProgress
+        case DTGItemState.paused.asString(): self = .paused
+        case DTGItemState.completed.asString(): self = .completed
+        case DTGItemState.failed.asString(): self = .failed
+        case DTGItemState.removed.asString(): self = .removed
         default: return nil
         }
     }
