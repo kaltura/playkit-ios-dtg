@@ -234,12 +234,12 @@ public class ContentManager: NSObject, ContentManagerProtocol {
             return
         }
         
+        self.update(itemState: .inProgress, byId: id)
+        
         let downloader = DefaultDownloader(itemId: id, tasks: tasks)
         downloader.delegate = self
         self.downloaders[id] = downloader
         try downloader.start()
-        
-        self.update(itemState: .inProgress, byId: id)
     }
 
     public func pauseItem(id: String) throws {
@@ -250,6 +250,9 @@ public class ContentManager: NSObject, ContentManagerProtocol {
             log.warning("no downloader for this id")
             return
         }
+        // update state, changed before downloader delegate called
+        // to make sure every call to db to get item will be with the updated state.
+        self.update(itemState: .paused, byId: downloader.dtgItemId)
         // pause the downloads and remove the downloader
         downloader.pause()
     }
@@ -299,17 +302,20 @@ extension ContentManager: DownloaderDelegate {
             log.warning("no item for request id")
             return
         }
+        // when we receive progress for downloads when downloader is pasued make sure item state is pasued
+        // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
+        if downloader.state == .paused {
+            item.state = .paused
+        }
         item.downloadedSize += bytesWritten
         self.update(item: item)
         self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
     }
     
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
-        log.debug("downloading paused")
+        log.info("downloading paused")
         // save pasued tasks to db
         self.db.update(tasks)
-        // update state
-        self.update(itemState: .paused, byId: downloader.dtgItemId)
         self.downloaders[downloader.dtgItemId] = nil
     }
     
