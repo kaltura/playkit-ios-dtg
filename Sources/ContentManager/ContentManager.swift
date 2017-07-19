@@ -11,6 +11,9 @@
 
 import Foundation
 import GCDWebServer
+import XCGLogger
+
+let log = XCGLogger.default
 
 /************************************************************/
 // MARK: - DTGTrackType
@@ -81,13 +84,15 @@ struct DownloadItem: DTGItem {
 
 class DTGFilePaths {
     
-    static let mainDirName = "KalturaDTG"
-    static let itemsDirName = "items"
+    private static let mainDirName = "KalturaDTG"
+    private static let itemsDirName = "items"
     
-    static let defaultStoragePath: URL = {
+    private static let defaultStoragePath: URL = {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        return URL(string: libraryDir.appendingPathComponent(mainDirName, isDirectory: true).absoluteString, relativeTo: libraryDir)!
+        return libraryDir.appendingPathComponent(mainDirName, isDirectory: true)
     }()
+    
+    static var storagePath = DTGFilePaths.defaultStoragePath
     
     class var itemsDirUrl: URL {
         return ContentManager.shared.storagePath.appendingPathComponent(itemsDirName, isDirectory: true)
@@ -106,23 +111,39 @@ public class ContentManager: NSObject, ContentManagerProtocol {
     /// shared singleton object
     public static let shared: ContentManagerProtocol = ContentManager()
     private override init() {
+        self.db = RealmDB(dispatchQueue: dispatch)
         super.init()
-        self.db.delegate = self
-        print("*** ContentManager ***")
+        #if DEBUG
+            let logLevel: XCGLogger.Level = .debug
+        #else
+            let logLevel: XCGLogger.Level = .info
+        #endif
+        log.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
+        log.debug("*** ContentManager ***")
     }
     
     public weak var delegate: DTGItemDelegate?
 
-    public lazy var storagePath = DTGFilePaths.defaultStoragePath
+    public var storagePath: URL {
+        get {
+            return DTGFilePaths.storagePath
+        }
+        set {
+            DTGFilePaths.storagePath = newValue
+        }
+    }
     
     var started = false
     var server = GCDWebServer()!
     var serverUrl: URL? {
         return server.isRunning ? server.serverURL : nil
     }
-      
+    
+    /// Dispatch queue to handle all actions on a background queue to make sure not block main.
+    fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.content-manager")
+    
     // db interface instance
-    let db: DB = RealmDB()
+    let db: DB
     
     // Map of item id and the related downloader
     fileprivate var downloaders = [String: Downloader]()
@@ -171,29 +192,28 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         }
         
         let item = DownloadItem(id: id, url: url)
-        db.update(item: item)
+        self.update(item: item)
 
         return item
     }
 
-    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void) {
+    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
         
-        guard var item = self.db.item(byId: id) else { return }
+        var item = try findItemOrThrow(id)
         
         let localizer = HLSLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate)
         
         DispatchQueue.global().async {
             do {
                 try localizer.loadMetadata()
+                try localizer.saveLocalFiles()
+                // when localizer finished add the tasks and update the item
                 self.db.set(tasks: localizer.tasks)
                 item.state = .metadataLoaded
                 item.estimatedSize = localizer.estimatedSize
-                self.db.update(item: item)
-                try localizer.saveLocalFiles()
-                callback(item, localizer.videoTrack, nil)
+                self.update(item: item)
             } catch {
-                self.db.update(itemState: .failed, byId: id)
-                callback(nil, nil, error)
+                self.update(itemState: .failed, byId: id, error: error)
             }
         }
     }
@@ -203,14 +223,14 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         let item = try findItemOrThrow(id)
         
         // for item to start downloading state must be metadataLoaded/paused or inProgress + no active downloader for the selected id.
-        guard item.state == .metadataLoaded || item.state == .paused || (item.state == .inProgress && self.downloaders[id] == nil) else {
+        guard item.state == .metadataLoaded || item.state == .paused || item.state == .interrupted || (item.state == .inProgress && self.downloaders[id] == nil) else {
             throw DTGError.invalidState(itemId: id)
         }
         
         // make sure we have tasks to perform
         let tasks = db.tasks(forItemId: id)
         guard tasks.count > 0 else {
-            print("error: no tasks for this id")
+            log.warning("no tasks for this id")
             return
         }
         
@@ -219,7 +239,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         self.downloaders[id] = downloader
         try downloader.start()
         
-        db.update(itemState: .inProgress, byId: id)
+        self.update(itemState: .inProgress, byId: id)
     }
 
     public func pauseItem(id: String) throws {
@@ -227,7 +247,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
 
         // if in progress, tell download manager to pause
         guard let downloader = self.downloaders[id] else {
-            print("error: no downloader for this id")
+            log.warning("no downloader for this id")
             return
         }
         // pause the downloads and remove the downloader
@@ -251,7 +271,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         db.removeItem(byId: id)
         
         // notify delegate
-        self.delegate?.item(id: id, didChangeToState: .removed)
+        self.delegate?.item(id: id, didChangeToState: .removed, error: nil)
     }
 
     public func itemPlaybackUrl(id: String) throws -> URL? {
@@ -276,20 +296,20 @@ extension ContentManager: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64) {
         guard var item = self.db.item(byId: downloader.dtgItemId) else {
-            print("error: no item for request id")
+            log.warning("no item for request id")
             return
         }
         item.downloadedSize += bytesWritten
-        self.db.update(item: item)
+        self.update(item: item)
         self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
     }
     
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
-        print("downloading paused")
+        log.debug("downloading paused")
         // save pasued tasks to db
         self.db.update(tasks)
         // update state
-        self.db.update(itemState: .paused, byId: downloader.dtgItemId)
+        self.update(itemState: .paused, byId: downloader.dtgItemId)
         self.downloaders[downloader.dtgItemId] = nil
     }
     
@@ -306,31 +326,25 @@ extension ContentManager: DownloaderDelegate {
     }
     
     func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState) {
-        print("downloader state: \(newState.rawValue)")
+        log.debug("downloader state: \(newState.rawValue)")
         if newState == .idle {
-            // TODO:
-            // make sure all handlng has been done, 
-            // DB and whatever before letting to app know the download was finished and now playable
-            self.db.update(itemState: .completed, byId: downloader.dtgItemId)
+            self.update(itemState: .completed, byId: downloader.dtgItemId)
             // remove the downloader, no longer needed
             self.downloaders[downloader.dtgItemId] = nil
         }
     }
     
     func downloader(_ downloader: Downloader, didFailWithError error: Error) {
-        self.delegate?.item(id: downloader.dtgItemId, didFailWithError: error)
-    }
-}
-
-/************************************************************/
-// MARK: - DBDelegate
-/************************************************************/
-
-extension ContentManager: DBDelegate {
-    
-    func db(_ db: DB, didUpdateItemState newState: DTGItemState, forItemId id: String) {
-        // update state change to the item delegate
-        self.delegate?.item(id: id , didChangeToState: newState)
+        switch error {
+        case DownloaderError.http(let statusCode, let rootError):
+            if statusCode >= 500 {
+                self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: rootError)
+            } else {
+                self.update(itemState: .failed, byId: downloader.dtgItemId, error: error)
+            }
+        default: self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
+        }
+        
     }
 }
 
@@ -339,6 +353,23 @@ extension ContentManager: DBDelegate {
 /************************************************************/
 
 extension ContentManager {
+    
+    fileprivate func update(item: DownloadItem) {
+        let oldItem = self.db.item(byId: item.id)
+        db.update(item: item)
+        if oldItem?.state != item.state {
+            self.dispatch.sync {
+                self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
+            }
+        }
+    }
+    
+    fileprivate func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
+        self.db.update(itemState: itemState, byId: id)
+        self.dispatch.sync {
+            self.delegate?.item(id: id, didChangeToState: itemState, error: error)
+        }
+    }
     
     @discardableResult
     fileprivate func findItemOrThrow(_ id: String) throws -> DownloadItem {

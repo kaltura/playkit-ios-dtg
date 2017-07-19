@@ -10,7 +10,7 @@ import Foundation
 
 protocol DB: class {
     
-    weak var delegate: DBDelegate? { get set }
+    init(dispatchQueue: DispatchQueue)
     
     /* Items API */
     func update(item: DownloadItem)
@@ -29,19 +29,17 @@ protocol DB: class {
     func update(_ tasks: [DownloadItemTask])
 }
 
-protocol DBDelegate: class {
-    func db(_ db: DB, didUpdateItemState newState: DTGItemState, forItemId id: String)
-}
-
 class RealmDB: DB {
-    /// Dispatch queue to handle all db actions on a background queue to make sure not block main.
-    fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.db.dispatch")
     
     fileprivate let dtgItemRealmManager = DTGItemRealmManager()
     
     fileprivate let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
     
-    weak var delegate: DBDelegate?
+    let dispatch: DispatchQueue
+    
+    required init(dispatchQueue: DispatchQueue) {
+        self.dispatch = dispatchQueue
+    }
 }
 
 /************************************************************/
@@ -52,10 +50,6 @@ extension RealmDB {
     
     func update(item: DownloadItem) {
         return self.dispatch.sync {
-            let oldItem = self.dtgItemRealmManager.object(for: item.id)
-            if oldItem?.state != item.state {
-                self.delegate?.db(self, didUpdateItemState: item.state, forItemId: item.id)
-            }
             return self.dtgItemRealmManager.update([item])
         }
     }
@@ -90,7 +84,6 @@ extension RealmDB {
             guard var item = self.dtgItemRealmManager.object(for: id) else { return }
             item.state = itemState
             self.dtgItemRealmManager.update([item])
-            self.delegate?.db(self, didUpdateItemState: item.state, forItemId: item.id)
         }
     }
 }

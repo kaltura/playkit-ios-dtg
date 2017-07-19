@@ -10,6 +10,7 @@
 
 
 import Foundation
+import XCGLogger
 
 /// Main entry point of the library, used to control item download and get their playback URL.
 public protocol ContentManagerProtocol: class {
@@ -19,6 +20,9 @@ public protocol ContentManagerProtocol: class {
     
     /// Delegate that will receive download events.
     var delegate: DTGItemDelegate? { get set }
+    
+    /// set log level for viewing logs.
+    func setLogLevel(_ logLevel: LogLevel)
     
     /// Start the content manager. This also starts the playback server.
     func start() throws
@@ -49,7 +53,7 @@ public protocol ContentManagerProtocol: class {
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
     /// - Throws: DTGError.itemNotFound
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, callback: @escaping (DTGItem?, DTGVideoTrack?, Error?) -> Void) throws
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws
     
     /// Start or resume item download.
     /// - Throws: DTGError.itemNotFound
@@ -77,16 +81,20 @@ public protocol ContentManagerProtocol: class {
     func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void)
 }
 
+extension ContentManagerProtocol {
+    
+    public func setLogLevel(_ logLevel: LogLevel) {
+        log.outputLevel = logLevel.asXCGLoggerLevel()
+    }
+}
+
 /// Delegate that will receive download events.
 public protocol DTGItemDelegate: class {
-    /// Item download has failed.
-    func item(id: String, didFailWithError error: Error)
-    
     /// Some data was downloaded for the item. 
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?)
     
-    /// Item has changed state.
-    func item(id: String, didChangeToState newState: DTGItemState)
+    /// Item has changed state. in case state will be failed, the error will be provided (interupted state could also provide error).
+    func item(id: String, didChangeToState newState: DTGItemState, error: Error?)
 }
 
 /// A downloadable item.
@@ -136,8 +144,13 @@ public enum DTGItemState: Int {
     /// Item has finished downloading and processing.
     case completed
     
-    /// Item download has failed.
+    /// Item download has failed (fatal error cannot use this item again).
     case failed
+    
+    /// Item download was interrupted (can be casued by error that we can recover from)
+    /// 
+    /// For example: when we can call start item again after this state.
+    case interrupted
     
     /// Item is removed. This is only a temporary state, as the item is actually removed.
     case removed
@@ -150,6 +163,7 @@ public enum DTGItemState: Int {
         case DTGItemState.paused.asString(): self = .paused
         case DTGItemState.completed.asString(): self = .completed
         case DTGItemState.failed.asString(): self = .failed
+        case DTGItemState.interrupted.asString(): self = .interrupted
         case DTGItemState.removed.asString(): self = .removed
         default: return nil
         }
@@ -163,7 +177,26 @@ public enum DTGItemState: Int {
         case .paused: return "paused"
         case .completed: return "completed"
         case .failed: return "failed"
+        case .interrupted: return "interrupted"
         case .removed: return "removed"
+        }
+    }
+}
+
+public enum LogLevel {
+    case verbose
+    case debug
+    case info
+    case warning
+    case error
+    
+    func asXCGLoggerLevel() -> XCGLogger.Level {
+        switch self {
+        case .verbose: return .verbose
+        case .debug: return .debug
+        case .info: return .info
+        case .warning: return .warning
+        case .error: return .error
         }
     }
 }

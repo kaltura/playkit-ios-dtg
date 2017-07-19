@@ -38,9 +38,12 @@ class VideoViewController: UIViewController {
             player.view = self.playerView
             let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: contentUrl!)
             player.prepare(MediaConfig(mediaEntry: mediaEntry))
+            player.play()
             
             player.addObserver(self, event: PlayerEvent.tracksAvailable) { [weak self] (event) in
-                self?.tracks = event.tracks
+                guard let strongSelf = self else { return }
+                strongSelf.tracks = event.tracks
+                strongSelf.player?.removeObserver(strongSelf, event: PlayerEvent.tracksAvailable)
             }
             player.addObserver(self, event: PlayerEvent.playing) { [weak self] (event) in
                 guard let strongSelf = self else { return }
@@ -153,8 +156,6 @@ extension VideoViewController: UIPopoverPresentationControllerDelegate {
     func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle {
         return .fullScreen
     }
-    
-    
 }
 
 /************************************************************/

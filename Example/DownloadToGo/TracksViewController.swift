@@ -28,7 +28,7 @@ class TracksViewController: UITableViewController {
         super.viewDidLoad()
         self.navigationItem.setRightBarButton(UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissTracksVC)), animated: false)
     }
-
+    
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         self.delegate?.trackViewControllerDidSelectAudioTrack(self.selectedAudioTrack, andTextTrack: self.selectedTextTrack)
@@ -67,7 +67,7 @@ class TracksViewController: UITableViewController {
         var title: String? = nil
         if indexPath.section == 0 {
             if let audioTrack = self.tracks.audioTracks?[indexPath.row] {
-                if let selectedAudioTrack = self.selectedAudioTrack, selectedAudioTrack.isEqual(audioTrack) {
+                if let selectedAudioTrack = self.selectedAudioTrack, selectedAudioTrack.id == audioTrack.id {
                     cell.accessoryType = .checkmark
                     self.lastSelectedAudioTrackIndexPath = indexPath
                 }
@@ -75,7 +75,7 @@ class TracksViewController: UITableViewController {
             }
         } else {
             if let textTrack = self.tracks.textTracks?[indexPath.row] {
-                if let selectedTextTrack = self.selectedTextTrack, selectedTextTrack.isEqual(textTrack) {
+                if let selectedTextTrack = self.selectedTextTrack, selectedTextTrack.id == textTrack.id {
                     cell.accessoryType = .checkmark
                     self.lastSelectedTextTrackIndexPath = indexPath
                 }

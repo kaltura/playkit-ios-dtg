@@ -18,6 +18,7 @@ func ==(lhs: DefaultDownloader, rhs: DefaultDownloader) -> Bool {
 enum DownloaderError: Error {
     case downloadAlreadyStarted
     case cannotAddDownloads
+    case http(statusCode: Int, rootError: NSError)
 }
 
 /// `Downloader` object is responsible for downloading files locally and reporting progres.
@@ -106,8 +107,8 @@ extension DefaultDownloader {
     
     func addDownloadItemTasks(_ tasks: [DownloadItemTask]) throws {
         let state = self.state
-        guard state == .downloading || state == .idle else {
-            print("error: cannot add downloads make sure you started the downloader")
+        guard state == .downloading else {
+            log.error("cannot add downloads make sure you started the downloader")
             throw DownloaderError.cannotAddDownloads
         }
         
@@ -169,7 +170,7 @@ private extension DefaultDownloader {
         }
         self.activeDownloads[urlSessionDownloadTask] = downloadTask
         urlSessionDownloadTask.resume()
-        print("started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
+        log.debug("started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
     }
     
     func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {
@@ -225,8 +226,15 @@ extension DefaultDownloader: URLSessionDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         
+        func cancel(with error: Error?) {
+            self.cancel()
+            if let e = error {
+                self.delegate?.downloader(self, didFailWithError: e)
+            }
+        }
+        
         // inner retry func
-        func retry(downloadTask: URLSessionDownloadTask, resumeData: Data? = nil, receivedError error: NSError) {
+        func retry(downloadTask: URLSessionDownloadTask, resumeData: Data? = nil, receivedError error: Error) {
             if var downloadItemTask = self.activeDownloads[downloadTask], downloadItemTask.retry > 0 {
                 downloadItemTask.retry -= 1
                 downloadItemTask.resumeData = resumeData
@@ -234,8 +242,7 @@ extension DefaultDownloader: URLSessionDelegate {
                 self.activeDownloads[downloadTask] = nil
                 return
             } else {
-                self.cancel()
-                self.delegate?.downloader(self, didFailWithError: error)
+                cancel(with: error)
             }
         }
         
@@ -244,15 +251,19 @@ extension DefaultDownloader: URLSessionDelegate {
             guard e.code != NSURLErrorCancelled else { return }
             
             // if http response type and error code is 503 retry
-            if let httpResponse = task.response as? HTTPURLResponse, httpResponse.statusCode == 503 {
-                retry(downloadTask: downloadTask, receivedError: e)
+            if let httpResponse = task.response as? HTTPURLResponse {
+                let httpError = DownloaderError.http(statusCode: httpResponse.statusCode, rootError: e)
+                if httpResponse.statusCode >= 500 {
+                    retry(downloadTask: downloadTask, receivedError: httpError)
+                } else {
+                    cancel(with: httpError)
+                }
             } else {
                 if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
-                    print("has resumse data from error")
+                    log.debug("has resumse data from error, retrying")
                     retry(downloadTask: downloadTask, resumeData: resumeData, receivedError: e)
                 } else {
-                    self.cancel()
-                    self.delegate?.downloader(self, didFailWithError: e)
+                    cancel(with: e)
                 }
                 return
             }
@@ -282,17 +293,17 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let fileManager = FileManager.default
-        print("active task identifiers = \(self.activeDownloads.map { $0.0.taskIdentifier })")
-        print("task finished, identifier = \(downloadTask.taskIdentifier)")
+        log.debug("active task identifiers = \(self.activeDownloads.map { $0.0.taskIdentifier })")
+        log.debug("task finished, identifier = \(downloadTask.taskIdentifier)")
         guard let downloadItemTask = self.activeDownloads[downloadTask] else {
-            print("error: no active download for this task")
+            log.debug("no active download for this task")
             return
         }
         
         do {
             // if the file exists for some reason, rewrite it.
             if fileManager.fileExists(atPath: downloadItemTask.destinationUrl.path) {
-                print("warning: file exists rewriting")
+                log.warning("did finish downloading, file exists at location, rewriting")
                 try fileManager.removeItem(at: downloadItemTask.destinationUrl)
             }
             try fileManager.moveItem(at: location, to: downloadItemTask.destinationUrl)
@@ -300,7 +311,7 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
             self.activeDownloads[downloadTask] = nil
             self.delegate?.downloader(self, didFinishDownloading: downloadItemTask)
         } catch let error {
-            print("error: \(error)")
+            log.error("error: \(error)")
             self.delegate?.downloader(self, didFailWithError: error)
         }
     }
@@ -320,7 +331,7 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
         if self.activeDownloads.count > 0 && self.downloadItemTasksQueue.count == 0 {
             self.invokeBackgroundSessionCompletionHandler()
         }
-        print("all current enqueued background tasks are delivered")
+        log.debug("all current enqueued background tasks are delivered")
     }
 }
 
@@ -334,6 +345,7 @@ extension DefaultDownloader {
         if let backgroundSessionCompletionHandler = self.backgroundSessionCompletionHandler {
             self.backgroundSessionCompletionHandler = nil
             DispatchQueue.main.async {
+                log.info("backgroundSessionCompletionHandler will invoke")
                 backgroundSessionCompletionHandler()
             }
         }

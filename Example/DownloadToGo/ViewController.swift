@@ -85,9 +85,7 @@ class ViewController: UIViewController {
     
     @IBAction func loadMetadata(_ sender: UIButton) {
         do {
-            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000) { (item, videoTrack, error) in
-                print(item, videoTrack)
-            }
+            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
         } catch {
             toastMedium("loadItemMetadata failed \(error)")
         }
@@ -202,12 +200,14 @@ extension ViewController: DTGItemDelegate {
         }
     }
     
-    func item(id: String, didChangeToState newState: DTGItemState) {
+    func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
         DispatchQueue.main.async {
             if newState == .completed && id == self.selectedItem.id {
                 self.progressView.progress = 1.0
             } else if newState == .removed && id == self.selectedItem.id {
                 self.progressView.progress = 0.0
+            } else if newState == .failed {
+                print("error: \(String(describing: error?.localizedDescription))")
             }
             self.statusLabel.text = newState.asString()
         }
@@ -244,5 +244,3 @@ extension ViewController: UIPickerViewDelegate {
         self.selectedItem = items[row]
     }
 }
-
-
