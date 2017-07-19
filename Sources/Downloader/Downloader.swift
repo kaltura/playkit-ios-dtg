@@ -13,6 +13,7 @@ import Foundation
 
 /// `DownloadItemTask` represents one file to download (could be video, audio or captions)
 struct DownloadItemTask {
+    let dtgItemId: String
     /// The content url, should be unique!
     let contentUrl: URL
     let trackType: DTGTrackType
@@ -22,7 +23,8 @@ struct DownloadItemTask {
     var retry: Int = 1
     var resumeData: Data? = nil
     
-    init(contentUrl: URL, trackType: DTGTrackType, destinationUrl: URL) {
+    init(dtgItemId: String, contentUrl: URL, trackType: DTGTrackType, destinationUrl: URL) {
+        self.dtgItemId = dtgItemId
         self.contentUrl = contentUrl
         self.trackType = trackType
         self.destinationUrl = destinationUrl

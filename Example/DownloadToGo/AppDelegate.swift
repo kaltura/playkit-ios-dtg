@@ -19,7 +19,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         print("Home dir:", NSHomeDirectory())
         
-        try! DTGSharedContentManager.start()
+        try! ContentManager.shared.start()
         
         return true
     }
@@ -48,7 +48,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
         print("handleEventsForBackgroundURLSession for identifier: \(identifier)")
-        DTGSharedContentManager.handleEventsForBackgroundURLSession(identifier: identifier, completionHandler: completionHandler)
+        ContentManager.shared.handleEventsForBackgroundURLSession(identifier: identifier, completionHandler: completionHandler)
     }
 
 }

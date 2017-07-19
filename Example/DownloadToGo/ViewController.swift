@@ -24,8 +24,7 @@ class ViewController: UIViewController {
     
     let videoViewControllerSegueIdentifier = "videoViewController"
     
-    
-    let cm = DTGSharedContentManager
+    let cm = ContentManager.shared
     
     // FIXME: change the urls for the correct default ones
     let items = [
@@ -71,7 +70,7 @@ class ViewController: UIViewController {
         self.itemTextField.inputAccessoryView = getAccessoryView()
         
         // setup content manager
-        cm.itemDelegate = self
+        cm.delegate = self
     }
 
     override func didReceiveMemoryWarning() {
@@ -165,7 +164,6 @@ extension ViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == self.videoViewControllerSegueIdentifier {
             let destinationVC = segue.destination as! VideoViewController
-            // FIXME: catch error if needed
             do {
                 destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.selectedItem.id)
             } catch {
@@ -187,7 +185,6 @@ extension ViewController: DTGItemDelegate {
     }
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
-        print("progress: download:\(totalBytesDownloaded), estimated: \(totalBytesEstimated)")
         if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
             if totalBytesEstimated > totalBytesDownloaded {
                 DispatchQueue.main.async {
@@ -209,6 +206,8 @@ extension ViewController: DTGItemDelegate {
         DispatchQueue.main.async {
             if newState == .completed && id == self.selectedItem.id {
                 self.progressView.progress = 1.0
+            } else if newState == .removed && id == self.selectedItem.id {
+                self.progressView.progress = 0.0
             }
             self.statusLabel.text = newState.asString()
         }

@@ -23,8 +23,7 @@ struct MockVideoTrack: DTGVideoTrack {
 enum HLSLocalizerError: Error {
     /// sent when an unknown playlist type was encountered
     case unknownPlaylistType
-    
-    
+
     case invalidState
 }
 
@@ -77,12 +76,11 @@ class HLSLocalizer {
     var selectedAudioStreams = [MediaStream]()
     var selectedTextStreams = [MediaStream]()
 
-    init(id: String, url: URL, preferredVideoBitrate: Int?, storagePath: URL) {
+    init(id: String, url: URL, preferredVideoBitrate: Int?) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
-        let subPath = "items/\(id.safeItemPathName())"
-        self.downloadPath = storagePath.appendingPathComponent(subPath, isDirectory: true)
+        self.downloadPath = DTGFilePaths.itemDirUrl(forItemId: id)
     }
     
     private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
@@ -144,7 +142,7 @@ class HLSLocalizer {
     }
     
     private func createDirectories() throws {
-        for type in [DTGTrackType.video, DTGTrackType.audio, DTGTrackType.text] {
+        for type in DTGTrackType.allTypes {
             try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
         }
     }
@@ -225,7 +223,7 @@ class HLSLocalizer {
             try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
         #endif
 
-        guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
+        guard let segments = mediaPlaylist.segmentList else { throw HLSLocalizerError.invalidState }
         var localLines = [String]()
         var i = 0
         for line in originalText.components(separatedBy: CharacterSet.newlines) {
@@ -294,7 +292,7 @@ class HLSLocalizer {
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
             .appendingPathExtension(url.pathExtension)
-        return DownloadItemTask(contentUrl: url, trackType: trackType, destinationUrl: destinationUrl)
+        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, trackType: trackType, destinationUrl: destinationUrl)
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
@@ -431,7 +429,7 @@ extension NSMutableString {
     }
     
     func replace(segmentUrl: String, relativeTo: URL) throws {
-        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else {throw HLSLocalizerError.invalidState}
+        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else { throw HLSLocalizerError.invalidState }
         self.replaceOccurrences(of: segmentUrl, with: relativeLocalPath, options: [], range: NSMakeRange(0, self.length))
     }
 }
