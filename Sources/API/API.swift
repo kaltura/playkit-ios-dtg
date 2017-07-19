@@ -19,7 +19,7 @@ public protocol ContentManagerProtocol: class {
     var storagePath: URL { get set }
     
     /// Delegate that will receive download events.
-    var delegate: DTGItemDelegate? { get set }
+    weak var delegate: ContentManagerDelegate? { get set }
     
     /// set log level for viewing logs.
     func setLogLevel(_ logLevel: LogLevel)
@@ -89,7 +89,7 @@ extension ContentManagerProtocol {
 }
 
 /// Delegate that will receive download events.
-public protocol DTGItemDelegate: class {
+public protocol ContentManagerDelegate: class {
     /// Some data was downloaded for the item. 
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?)
     

@@ -172,10 +172,10 @@ extension ViewController {
 }
 
 /************************************************************/
-// MARK: - DTGItemDelegate
+// MARK: - ContentManagerDelegate
 /************************************************************/
 
-extension ViewController: DTGItemDelegate {
+extension ViewController: ContentManagerDelegate {
     
     func item(id: String, didFailWithError error: Error) {
         print("item: \(id) failed with error: \(error)")

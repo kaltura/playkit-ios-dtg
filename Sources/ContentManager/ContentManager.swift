@@ -122,7 +122,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         log.debug("*** ContentManager ***")
     }
     
-    public weak var delegate: DTGItemDelegate?
+    public weak var delegate: ContentManagerDelegate?
 
     public var storagePath: URL {
         get {
