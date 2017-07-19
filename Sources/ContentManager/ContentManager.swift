@@ -138,6 +138,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
     var serverUrl: URL? {
         return server.isRunning ? server.serverURL : nil
     }
+    var serverPort: UInt?
     
     /// Dispatch queue to handle all actions on a background queue to make sure not block main.
     fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.content-manager")
@@ -148,18 +149,31 @@ public class ContentManager: NSObject, ContentManagerProtocol {
     // Map of item id and the related downloader
     fileprivate var downloaders = [String: Downloader]()
     
+    private func startServer() throws {
+        // start server
+        server.addGETHandler(forBasePath: "/", directoryPath: DTGFilePaths.itemsDirUrl.path, indexFilename: nil, cacheAge: 3600, allowRangeRequests: true)
+        try server.start(options: [
+            GCDWebServerOption_BindToLocalhost: true,
+            GCDWebServerOption_Port: 0,
+            ])
+
+        serverPort = server.port
+        
+        // Stop the server, then restart it on a fixed port. 
+        server.stop()
+        try server.start(options: [
+            GCDWebServerOption_BindToLocalhost: true,
+            GCDWebServerOption_Port: serverPort!,
+            ])        
+    }
+    
     public func start() throws {
         if started {
             return
         }
-        
-        // start server
-        server.addGETHandler(forBasePath: "/", directoryPath: DTGFilePaths.itemsDirUrl.path, indexFilename: nil, cacheAge: 3600, allowRangeRequests: true)
-        try server.start(options: [GCDWebServerOption_BindToLocalhost: true,
-                               GCDWebServerOption_Port: 0,
-                               GCDWebServerOption_AutomaticallySuspendInBackground: false,
-                               ])
-        
+
+        try startServer()
+
         started = true
     }
     
