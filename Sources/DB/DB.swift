@@ -34,7 +34,7 @@ class RealmDB: DB {
     fileprivate let dtgItemRealmManager = DTGItemRealmManager()
     
     fileprivate let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
-    
+
     let dispatch: DispatchQueue
     
     required init(dispatchQueue: DispatchQueue) {

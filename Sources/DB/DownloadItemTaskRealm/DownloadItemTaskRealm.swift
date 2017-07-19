@@ -16,7 +16,7 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     dynamic var contentUrl: String = ""
 
     dynamic var trackType: String = ""
-    
+
     /// The destination to save the download item to.
     dynamic var destinationUrl: String = ""
     

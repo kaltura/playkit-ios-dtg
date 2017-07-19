@@ -344,7 +344,6 @@ extension ContentManager: DownloaderDelegate {
             }
         default: self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
         }
-        
     }
 }
 

@@ -15,4 +15,5 @@ Pod::Spec.new do |s|
   s.dependency 'GCDWebServer', '~> 3.3.3'
   s.dependency 'RealmSwift', '2.8.3'
   s.dependency 'XCGLogger', '5.0.1'
+
 end
