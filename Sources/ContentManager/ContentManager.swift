@@ -139,6 +139,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         return server.isRunning ? server.serverURL : nil
     }
     var serverPort: UInt?
+    var startCompletionHandler: (() -> Void)?
     
     /// Dispatch queue to handle all actions on a background queue to make sure not block main.
     fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.content-manager")
@@ -161,17 +162,20 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         
         // Stop the server, then restart it on a fixed port. 
         server.stop()
+        server.delegate = self
         try server.start(options: [
             GCDWebServerOption_BindToLocalhost: true,
             GCDWebServerOption_Port: serverPort!,
             ])        
     }
     
-    public func start() throws {
+    public func start(completionHandler: (() -> Void)?) throws {
         if started {
             return
         }
 
+        self.startCompletionHandler = completionHandler
+        
         try startServer()
 
         started = true
@@ -304,6 +308,19 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         }
     }
 }
+
+/************************************************************/
+// MARK: - GCDWebServerDelegate
+/************************************************************/
+
+extension ContentManager: GCDWebServerDelegate {
+    
+    public func webServerDidStart(_ server: GCDWebServer!) {
+        self.startCompletionHandler?()
+        self.startCompletionHandler = nil
+    }
+}
+
 
 /************************************************************/
 // MARK: - DownloaderDelegate

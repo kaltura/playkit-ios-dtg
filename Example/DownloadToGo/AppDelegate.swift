@@ -19,7 +19,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         print("Home dir:", NSHomeDirectory())
         
-        try! ContentManager.shared.start()
+        try! ContentManager.shared.start() {
+            print("server started")
+        }
         
         return true
     }

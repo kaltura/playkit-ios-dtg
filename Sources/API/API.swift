@@ -25,7 +25,7 @@ public protocol ContentManagerProtocol: class {
     func setLogLevel(_ logLevel: LogLevel)
     
     /// Start the content manager. This also starts the playback server.
-    func start() throws
+    func start(completionHandler: (() -> Void)?) throws
     
     /// Stop the content manager, including the playback server.
     func stop()
