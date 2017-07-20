@@ -1,8 +1,9 @@
 PODS:
-  - DownloadToGo (0.1.0):
+  - DownloadToGo (3.0.0.rc2):
     - GCDWebServer (~> 3.3.3)
     - M3U8Kit (= 0.2.1)
     - RealmSwift (= 2.8.3)
+    - XCGLogger (= 5.0.1)
   - GCDWebServer (3.3.3):
     - GCDWebServer/Core (= 3.3.3)
   - GCDWebServer/Core (3.3.3)
@@ -13,6 +14,9 @@ PODS:
   - Log (1.0)
   - M3U8Kit (0.2.1)
   - Nimble (7.0.1)
+  - ObjcExceptionBridging (1.0.1):
+    - ObjcExceptionBridging/ObjcExceptionBridging (= 1.0.1)
+  - ObjcExceptionBridging/ObjcExceptionBridging (1.0.1)
   - PlayKit (3.0.1):
     - PlayKit/Core (= 3.0.1)
   - PlayKit/Core (3.0.1):
@@ -29,6 +33,10 @@ PODS:
   - SwiftyJSON (3.1.4)
   - SwiftyXMLParser (3.0.3)
   - Toast-Swift (2.0.0)
+  - XCGLogger (5.0.1):
+    - XCGLogger/Core (= 5.0.1)
+  - XCGLogger/Core (5.0.1):
+    - ObjcExceptionBridging
 
 DEPENDENCIES:
   - DownloadToGo (from `..`)
@@ -42,12 +50,13 @@ EXTERNAL SOURCES:
     :path: ..
 
 SPEC CHECKSUMS:
-  DownloadToGo: 86a7e0fdf40efd1d2324665137eeb33b0d7a56ff
+  DownloadToGo: 10c6ee456cbb80e48b0bb697e73d9293de04596a
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
   KalturaNetKit: 7c2ce88fb5eb506891f0bf844970ae5306a2fef5
   Log: 5e368c9528db07517d18d2d04ff5fe2b6f5a1e21
   M3U8Kit: 3e0f7feef04a775252b41c0fa91de7e1fe8f188c
   Nimble: 657d000e11df8aebe27cdaf9d244de7f30ed87f7
+  ObjcExceptionBridging: c30e00eb3700467e695faeea30e26e18bd445001
   PlayKit: c6e594d8e6c7f155e5b36f0bff8ddfaaa70b534f
   Quick: dafc587e21eed9f4cab3249b9f9015b0b7a7f71d
   Realm: 3601ef091c8c499a31101d8563b991e75546cdce
@@ -55,6 +64,7 @@ SPEC CHECKSUMS:
   SwiftyJSON: c2842d878f95482ffceec5709abc3d05680c0220
   SwiftyXMLParser: 9c6cc0310e778266a63d8eba50d9e07925aab0fb
   Toast-Swift: 5b2f8f720f7e78e48511f693df1f9c9a6e38a25a
+  XCGLogger: 0b43697155d41e4a1b15fc776f319c2141646b09
 
 PODFILE CHECKSUM: 1555a0d052ee0c04b8a6c9f6b4f033a3c341d79a
 
