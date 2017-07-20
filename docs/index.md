@@ -30,7 +30,9 @@ pod 'DownloadToGo'
 
 ![](Resources/simple-flow-uml.png)
 
->Note: There is also `Removed` state which is not displayed here. `Removed` is a temporary state indicated an item was removed (can be considered as an event). You can remove an item from all states. 
+>Note: 
+* Failed is a temp state, the delegate will notify and item has failed and content manager will remove this item. In addition, keep in mind that when receiving failed state an error will also be provided in the delegate to indicate the reason.
+* There is also `Removed` state which is not displayed here. `Removed` is a temporary state indicated an item was removed (can be considered as an event). You can remove an item from all states. 
 
 ### Download Sequence:
 

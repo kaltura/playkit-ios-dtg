@@ -1,8 +1,9 @@
 Pod::Spec.new do |s|
+  
   s.name             = 'DownloadToGo'
-  s.version          = '0.1.1'
-  s.summary          = 'A short description of DownloadToGo.'
-  s.homepage         = 'https://github.com/noamtamim/DownloadToGo'
+  s.version          = '3.0.0.rc1'
+  s.summary          = 'DownloadToGo -- download manager for HLS'
+  s.homepage         = 'https://github.com/kaltura/DownloadToGo'
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
   s.author           = { 'Kaltura' => 'community@kaltura.com' }
   s.source           = { :git => 'https://github.com/kaltura/DownloadToGo.git', :tag => s.version.to_s }

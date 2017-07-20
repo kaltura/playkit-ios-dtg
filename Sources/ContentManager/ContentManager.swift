@@ -286,12 +286,23 @@ public class ContentManager: NSObject, DTGContentManager {
             self.downloaders[id] = nil
         }
         
-        // remove all files
-        let itemPath = DTGFilePaths.itemDirUrl(forItemId: id)
-        try FileManager.default.removeItem(at: itemPath)
-        
         // remove from db
         db.removeItem(byId: id)
+        
+        // remove all files
+        let itemPath = DTGFilePaths.itemDirUrl(forItemId: id)
+        let fileManager = FileManager.default
+        var isDir : ObjCBool = false
+        if fileManager.fileExists(atPath: itemPath.absoluteString, isDirectory:&isDir) {
+            if isDir.boolValue {
+                // file exists and is a directory
+                try fileManager.removeItem(at: itemPath)
+            } else {
+                // file exists and is not a directory
+            }
+        } else {
+            // file does not exist
+        }
         
         // notify delegate
         DispatchQueue.main.async {
@@ -396,21 +407,33 @@ extension ContentManager: DownloaderDelegate {
 extension ContentManager {
     
     fileprivate func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
-        let oldItem = self.db.item(byId: item.id)
-        db.update(item: item) {
-            if oldItem?.state != item.state {
-                DispatchQueue.main.async {
-                    self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
-                }
-            }
+        if item.state == .failed {
+            try? self.removeItem(id: item.id)
             DispatchQueue.main.async {
-                completionHandler?()
+                self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
+            }
+        } else {
+            let oldItem = self.db.item(byId: item.id)
+            db.update(item: item) {
+                if oldItem?.state != item.state {
+                    DispatchQueue.main.async {
+                        self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
+                    }
+                }
+                DispatchQueue.main.async {
+                    completionHandler?()
+                }
             }
         }
     }
     
     fileprivate func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
-        self.db.update(itemState: itemState, byId: id)
+        if itemState == .failed {
+            try? self.removeItem(id: id)
+        } else {
+            self.db.update(itemState: itemState, byId: id)
+        }
+        
         self.dispatch.sync {
             DispatchQueue.main.async {
                 self.delegate?.item(id: id, didChangeToState: itemState, error: error)
