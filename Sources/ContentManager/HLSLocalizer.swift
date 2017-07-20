@@ -12,6 +12,8 @@
 import Foundation
 import M3U8Kit
 
+fileprivate let defaultAudioBitrate = 160*1024
+
 struct MockVideoTrack: DTGVideoTrack {
     var width: Int?
     
@@ -302,10 +304,11 @@ class HLSLocalizer {
             
             let stream = try MediaStream(streamInfo: streams[i], mediaUrl: streams[i].m3u8URL(), type: type)
             try addAllSegments(segmentList: stream.mediaPlaylist.segmentList, type: type)
-            aggregateTrackSize(bitrate: streams[i].bandwidth())
             
             switch type {
             case M3U8MediaPlaylistTypeAudio:
+                let bitrate = streams[i].bandwidth()
+                aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : defaultAudioBitrate)
                 selectedAudioStreams.append(stream)
             case M3U8MediaPlaylistTypeSubtitle:
                 selectedTextStreams.append(stream)
