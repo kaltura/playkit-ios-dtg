@@ -179,11 +179,6 @@ extension ViewController {
 
 extension ViewController: ContentManagerDelegate {
     
-    func item(id: String, didFailWithError error: Error) {
-        print("item: \(id) failed with error: \(error)")
-        self.statusLabel.text = DTGItemState.failed.asString()
-    }
-    
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
             if totalBytesEstimated > totalBytesDownloaded {
