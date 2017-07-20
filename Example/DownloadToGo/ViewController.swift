@@ -102,12 +102,12 @@ class ViewController: UIViewController {
     }
     
     @IBAction func pause(_ sender: UIButton) {
-        try! cm.pauseItem(id: self.selectedItem.id)
+        try? cm.pauseItem(id: self.selectedItem.id)
     }
     
     @IBAction func remove(_ sender: UIButton) {
         let id = selectedItem.id
-        try! cm.removeItem(id: id)
+        try? cm.removeItem(id: id)
     }
     
     func getAccessoryView() -> UIView {
