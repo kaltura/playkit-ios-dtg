@@ -294,7 +294,9 @@ public class ContentManager: NSObject, DTGContentManager {
         db.removeItem(byId: id)
         
         // notify delegate
-        self.delegate?.item(id: id, didChangeToState: .removed, error: nil)
+        DispatchQueue.main.async {
+            self.delegate?.item(id: id, didChangeToState: .removed, error: nil)
+        }
     }
 
     public func itemPlaybackUrl(id: String) throws -> URL? {
@@ -341,8 +343,9 @@ extension ContentManager: DownloaderDelegate {
             item.state = .paused
         }
         item.downloadedSize += bytesWritten
-        self.update(item: item)
-        self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
+        self.update(item: item) {
+            self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
+        }
     }
     
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
