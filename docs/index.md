@@ -114,11 +114,13 @@ class VideoViewController: UIViewController {
             self.player = player
             player.view = self.playerView
 
-            if let localUrl = downloadManager.playbackUrl(id: "myLocalId") {
-                let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: localUrl)
-                player.prepare(MediaConfig(mediaEntry: mediaEntry))
-                // you can now call prepare when you want (in case no error)
-            }
+            ContentManager.shared.start() {
+                if let localUrl = downloadManager.playbackUrl(id: "myLocalId") {
+                    let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: localUrl)
+                    player.prepare(MediaConfig(mediaEntry: mediaEntry))
+                    // you can now call prepare when you want (in case no error)
+                }
+            }            
         } catch {
             // handle errors
         }
@@ -126,5 +128,6 @@ class VideoViewController: UIViewController {
 }
 ```
 
+>Note: Make sure to call `ContentManager.shared.stop()` when finished with playback.
 
 [cocoapods]: https://cocoapods.org/
