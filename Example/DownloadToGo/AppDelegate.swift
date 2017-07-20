@@ -23,6 +23,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("server started")
         }
         
+        try? ContentManager.shared.resumeInterruptedItems()
+        
         return true
     }
 

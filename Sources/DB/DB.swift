@@ -79,7 +79,7 @@ extension RealmDB {
     
     func items(byState state: DTGItemState) -> [DownloadItem] {
         return self.dispatch.sync {
-            return self.allItems().filter { $0.state == state }
+            return self.dtgItemRealmManager.allObjects().filter { $0.state == state }
         }
     }
     
