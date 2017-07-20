@@ -13,7 +13,7 @@ import Foundation
 import XCGLogger
 
 /// Main entry point of the library, used to control item download and get their playback URL.
-public protocol ContentManagerProtocol: class {
+public protocol DTGContentManager: class {
     
     /// Set download base path. Must be set before start(), otherwise has no effect.
     var storagePath: URL { get set }
@@ -53,7 +53,7 @@ public protocol ContentManagerProtocol: class {
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
     /// - Throws: DTGError.itemNotFound
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, completionHandler: (() -> Void)?) throws
     
     /// Start or resume item download.
     /// - Throws: DTGError.itemNotFound
@@ -81,7 +81,7 @@ public protocol ContentManagerProtocol: class {
     func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void)
 }
 
-extension ContentManagerProtocol {
+extension DTGContentManager {
     
     public func setLogLevel(_ logLevel: LogLevel) {
         log.outputLevel = logLevel.asXCGLoggerLevel()

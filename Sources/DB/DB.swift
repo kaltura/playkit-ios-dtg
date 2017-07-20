@@ -13,7 +13,7 @@ protocol DB: class {
     init(dispatchQueue: DispatchQueue)
     
     /* Items API */
-    func update(item: DownloadItem)
+    func update(item: DownloadItem, completionHandler: (() -> Void)?)
     func item(byId id: String) -> DownloadItem?
     func removeItem(byId id: String)
     func allItems() -> [DownloadItem]
@@ -48,9 +48,10 @@ class RealmDB: DB {
 
 extension RealmDB {
     
-    func update(item: DownloadItem) {
-        return self.dispatch.sync {
-            return self.dtgItemRealmManager.update([item])
+    func update(item: DownloadItem, completionHandler: (() -> Void)?) {
+        self.dispatch.sync {
+            self.dtgItemRealmManager.update([item])
+            completionHandler?()
         }
     }
     

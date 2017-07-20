@@ -107,9 +107,9 @@ class DTGFilePaths {
 // MARK: - ContentManager
 /************************************************************/
 
-public class ContentManager: NSObject, ContentManagerProtocol {
+public class ContentManager: NSObject, DTGContentManager {
     /// shared singleton object
-    public static let shared: ContentManagerProtocol = ContentManager()
+    public static let shared: DTGContentManager = ContentManager()
     private override init() {
         self.db = RealmDB(dispatchQueue: dispatch)
         super.init()
@@ -215,7 +215,7 @@ public class ContentManager: NSObject, ContentManagerProtocol {
         return item
     }
 
-    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
+    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?, completionHandler: (() -> Void)?) throws {
         
         var item = try findItemOrThrow(id)
         
@@ -229,7 +229,9 @@ public class ContentManager: NSObject, ContentManagerProtocol {
                 self.db.set(tasks: localizer.tasks)
                 item.state = .metadataLoaded
                 item.estimatedSize = localizer.estimatedSize
-                self.update(item: item)
+                self.update(item: item) {
+                    completionHandler?()
+                }
             } catch {
                 self.update(itemState: .failed, byId: id, error: error)
             }
@@ -390,12 +392,16 @@ extension ContentManager: DownloaderDelegate {
 
 extension ContentManager {
     
-    fileprivate func update(item: DownloadItem) {
+    fileprivate func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
         let oldItem = self.db.item(byId: item.id)
-        db.update(item: item)
-        if oldItem?.state != item.state {
-            self.dispatch.sync {
-                self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
+        db.update(item: item) {
+            if oldItem?.state != item.state {
+                DispatchQueue.main.async {
+                    self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
+                }
+            }
+            DispatchQueue.main.async {
+                completionHandler?()
             }
         }
     }
@@ -403,7 +409,9 @@ extension ContentManager {
     fileprivate func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
         self.db.update(itemState: itemState, byId: id)
         self.dispatch.sync {
-            self.delegate?.item(id: id, didChangeToState: itemState, error: error)
+            DispatchQueue.main.async {
+                self.delegate?.item(id: id, didChangeToState: itemState, error: error)
+            }
         }
     }
     

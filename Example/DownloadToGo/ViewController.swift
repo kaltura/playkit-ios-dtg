@@ -85,7 +85,9 @@ class ViewController: UIViewController {
     
     @IBAction func loadMetadata(_ sender: UIButton) {
         do {
-            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
+            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000) {
+                print("Item Metadata Loaded")
+            }
         } catch {
             toastMedium("loadItemMetadata failed \(error)")
         }
