@@ -299,8 +299,8 @@ public class ContentManager: NSObject, DTGContentManager {
         // remove all files
         let itemPath = DTGFilePaths.itemDirUrl(forItemId: id)
         let fileManager = FileManager.default
-        var isDir : ObjCBool = false
-        if fileManager.fileExists(atPath: itemPath.absoluteString, isDirectory:&isDir) {
+        var isDir: ObjCBool = true
+        if fileManager.fileExists(atPath: itemPath.path, isDirectory:&isDir) {
             if isDir.boolValue {
                 // file exists and is a directory
                 try fileManager.removeItem(at: itemPath)
@@ -308,13 +308,11 @@ public class ContentManager: NSObject, DTGContentManager {
                 // file exists and is not a directory
             }
         } else {
-            // file does not exist
+            log.warning("can't remove item files, dir doesn't exist")
         }
         
-        // notify delegate
-        DispatchQueue.main.async {
-            self.delegate?.item(id: id, didChangeToState: .removed, error: nil)
-        }
+        // notify state change
+        self.notifyItemState(id, newState: .removed, error: nil)
     }
 
     public func itemPlaybackUrl(id: String) throws -> URL? {
@@ -411,21 +409,17 @@ extension ContentManager: DownloaderDelegate {
 // MARK: - Private Implementation
 /************************************************************/
 
-extension ContentManager {
+private extension ContentManager {
     
-    fileprivate func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
+    func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
         if item.state == .failed {
             try? self.removeItem(id: item.id)
-            DispatchQueue.main.async {
-                self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
-            }
+            self.notifyItemState(item.id, newState: item.state, error: nil)
         } else {
             let oldItem = self.db.item(byId: item.id)
             db.update(item: item) {
                 if oldItem?.state != item.state {
-                    DispatchQueue.main.async {
-                        self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
-                    }
+                    self.notifyItemState(item.id, newState: item.state, error: nil)
                 }
                 DispatchQueue.main.async {
                     completionHandler?()
@@ -434,24 +428,28 @@ extension ContentManager {
         }
     }
     
-    fileprivate func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
+    func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
         if itemState == .failed {
             try? self.removeItem(id: id)
         } else {
             self.db.update(itemState: itemState, byId: id)
         }
-        
-        DispatchQueue.main.async {
-            self.delegate?.item(id: id, didChangeToState: itemState, error: error)
-        }
+        self.notifyItemState(id, newState: itemState, error: error)
     }
     
     @discardableResult
-    fileprivate func findItemOrThrow(_ id: String) throws -> DownloadItem {
+    func findItemOrThrow(_ id: String) throws -> DownloadItem {
         if let item = db.item(byId: id) {
             return item
         } else {
             throw DTGError.itemNotFound(itemId: id)
+        }
+    }
+    
+    func notifyItemState(_ id: String, newState: DTGItemState, error: Error? = nil) {
+        log.info("item: \(id), state updated, new state: \(newState.asString())")
+        DispatchQueue.main.async {
+            self.delegate?.item(id: id, didChangeToState: newState, error: error)
         }
     }
 }

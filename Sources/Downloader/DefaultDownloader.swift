@@ -229,7 +229,7 @@ extension DefaultDownloader: URLSessionDelegate {
         func cancel(with error: Error?) {
             self.cancel()
             if let e = error {
-                self.delegate?.downloader(self, didFailWithError: e)
+                self.failed(with: e)
             }
         }
         
@@ -280,7 +280,7 @@ extension DefaultDownloader: URLSessionDelegate {
     
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
         if let e = error {
-            self.delegate?.downloader(self, didFailWithError: e)
+            self.failed(with: e)
         }
     }
 }
@@ -312,7 +312,7 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
             self.delegate?.downloader(self, didFinishDownloading: downloadItemTask)
         } catch let error {
             log.error("error: \(error)")
-            self.delegate?.downloader(self, didFailWithError: error)
+            self.failed(with: error)
         }
     }
     
@@ -339,7 +339,7 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
 // MARK: - Private Implementation
 /************************************************************/
 
-extension DefaultDownloader {
+private extension DefaultDownloader {
     
     func invokeBackgroundSessionCompletionHandler() {
         if let backgroundSessionCompletionHandler = self.backgroundSessionCompletionHandler {
@@ -349,5 +349,11 @@ extension DefaultDownloader {
                 backgroundSessionCompletionHandler()
             }
         }
+    }
+    
+    func failed(with error: Error) {
+        log.error("failed downloading, error: \(error.localizedDescription)")
+        self.invokeBackgroundSessionCompletionHandler()
+        self.delegate?.downloader(self, didFailWithError: error)
     }
 }
