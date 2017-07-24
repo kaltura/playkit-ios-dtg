@@ -15,8 +15,8 @@ import XCGLogger
 /// Main entry point of the library, used to control item download and get their playback URL.
 public protocol DTGContentManager: class {
     
-    /// Set download base path. Must be set before start(), otherwise has no effect.
-    var storagePath: URL { get set }
+    /// The storage path for directories and files.
+    var storagePath: URL { get }
     
     /// Delegate that will receive download events.
     weak var delegate: ContentManagerDelegate? { get set }

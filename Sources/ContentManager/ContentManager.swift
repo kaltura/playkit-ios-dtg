@@ -87,12 +87,10 @@ class DTGFilePaths {
     private static let mainDirName = "KalturaDTG"
     private static let itemsDirName = "items"
     
-    private static let defaultStoragePath: URL = {
+    static let storagePath: URL = {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         return libraryDir.appendingPathComponent(mainDirName, isDirectory: true)
     }()
-    
-    static var storagePath = DTGFilePaths.defaultStoragePath
     
     class var itemsDirUrl: URL {
         return ContentManager.shared.storagePath.appendingPathComponent(itemsDirName, isDirectory: true)
@@ -108,11 +106,28 @@ class DTGFilePaths {
 /************************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
+    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
+    
     private override init() {
-        self.db = RealmDB(dispatchQueue: dispatch)
+        /// create main directory
+        try! FileManager.default.createDirectory(at: DTGFilePaths.storagePath, withIntermediateDirectories: true, attributes: nil)
+        
+        /// exclude url from from backup
+        var url: URL = DTGFilePaths.storagePath
+        do {
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            try url.setResourceValues(resourceValues)
+        } catch let error as NSError {
+            print("Error excluding \(url.lastPathComponent) from backup \(error)");
+        }
+        
+        // initialize db
+        self.db = RealmDB()
         super.init()
+        // setup log default log level
         #if DEBUG
             let logLevel: XCGLogger.Level = .debug
         #else
@@ -125,12 +140,7 @@ public class ContentManager: NSObject, DTGContentManager {
     public weak var delegate: ContentManagerDelegate?
 
     public var storagePath: URL {
-        get {
-            return DTGFilePaths.storagePath
-        }
-        set {
-            DTGFilePaths.storagePath = newValue
-        }
+        return DTGFilePaths.storagePath
     }
     
     var started = false
@@ -140,9 +150,6 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     var serverPort: UInt?
     var startCompletionHandler: (() -> Void)?
-    
-    /// Dispatch queue to handle all actions on a background queue to make sure not block main.
-    fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.content-manager")
     
     // db interface instance
     let db: DB
@@ -434,10 +441,8 @@ extension ContentManager {
             self.db.update(itemState: itemState, byId: id)
         }
         
-        self.dispatch.sync {
-            DispatchQueue.main.async {
-                self.delegate?.item(id: id, didChangeToState: itemState, error: error)
-            }
+        DispatchQueue.main.async {
+            self.delegate?.item(id: id, didChangeToState: itemState, error: error)
         }
     }
     

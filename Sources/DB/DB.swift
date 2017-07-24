@@ -10,12 +10,12 @@
 
 
 import Foundation
+import RealmSwift
 
 protocol DB: class {
     
-    init(dispatchQueue: DispatchQueue)
-    
     /* Items API */
+    
     func update(item: DownloadItem, completionHandler: (() -> Void)?)
     func item(byId id: String) -> DownloadItem?
     func removeItem(byId id: String)
@@ -25,6 +25,7 @@ protocol DB: class {
     func update(itemState: DTGItemState, byId id: String)
     
     /* Tasks API */
+    
     func set(tasks: [DownloadItemTask])
     func tasks(forItemId id: String) -> [DownloadItemTask]
     func removeTasks(withItemId id: String)
@@ -34,14 +35,18 @@ protocol DB: class {
 
 class RealmDB: DB {
     
+    private let realmFileName = "downloadToGo.realm"
     fileprivate let dtgItemRealmManager = DTGItemRealmManager()
-    
     fileprivate let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
 
-    let dispatch: DispatchQueue
+    /// Dispatch queue to handle all actions on a background queue to make sure not to block main thread.
+    /// use only for db actions and to synchornized changes
+    let dispatch = DispatchQueue(label: "com.kaltura.dtg.db")
     
-    required init(dispatchQueue: DispatchQueue) {
-        self.dispatch = dispatchQueue
+    init() {
+        var config = Realm.Configuration.defaultConfiguration
+        config.fileURL = DTGFilePaths.storagePath.appendingPathComponent(realmFileName)
+        Realm.Configuration.defaultConfiguration = config
     }
 }
 
