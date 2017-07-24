@@ -87,12 +87,10 @@ class DTGFilePaths {
     private static let mainDirName = "KalturaDTG"
     private static let itemsDirName = "items"
     
-    private static let defaultStoragePath: URL = {
+    static let storagePath: URL = {
         let libraryDir = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         return libraryDir.appendingPathComponent(mainDirName, isDirectory: true)
     }()
-    
-    static var storagePath = DTGFilePaths.defaultStoragePath
     
     class var itemsDirUrl: URL {
         return ContentManager.shared.storagePath.appendingPathComponent(itemsDirName, isDirectory: true)
@@ -108,11 +106,28 @@ class DTGFilePaths {
 /************************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
+    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
+    
     private override init() {
-        self.db = RealmDB(dispatchQueue: dispatch)
+        /// create main directory
+        try! FileManager.default.createDirectory(at: DTGFilePaths.storagePath, withIntermediateDirectories: true, attributes: nil)
+        
+        /// exclude url from from backup
+        var url: URL = DTGFilePaths.storagePath
+        do {
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            try url.setResourceValues(resourceValues)
+        } catch let error as NSError {
+            print("Error excluding \(url.lastPathComponent) from backup \(error)");
+        }
+        
+        // initialize db
+        self.db = RealmDB()
         super.init()
+        // setup log default log level
         #if DEBUG
             let logLevel: XCGLogger.Level = .debug
         #else
@@ -125,12 +140,7 @@ public class ContentManager: NSObject, DTGContentManager {
     public weak var delegate: ContentManagerDelegate?
 
     public var storagePath: URL {
-        get {
-            return DTGFilePaths.storagePath
-        }
-        set {
-            DTGFilePaths.storagePath = newValue
-        }
+        return DTGFilePaths.storagePath
     }
     
     var started = false
@@ -140,9 +150,6 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     var serverPort: UInt?
     var startCompletionHandler: (() -> Void)?
-    
-    /// Dispatch queue to handle all actions on a background queue to make sure not block main.
-    fileprivate let dispatch = DispatchQueue(label: "com.kaltura.dtg.content-manager")
     
     // db interface instance
     let db: DB
@@ -292,8 +299,8 @@ public class ContentManager: NSObject, DTGContentManager {
         // remove all files
         let itemPath = DTGFilePaths.itemDirUrl(forItemId: id)
         let fileManager = FileManager.default
-        var isDir : ObjCBool = false
-        if fileManager.fileExists(atPath: itemPath.absoluteString, isDirectory:&isDir) {
+        var isDir: ObjCBool = true
+        if fileManager.fileExists(atPath: itemPath.path, isDirectory:&isDir) {
             if isDir.boolValue {
                 // file exists and is a directory
                 try fileManager.removeItem(at: itemPath)
@@ -301,13 +308,11 @@ public class ContentManager: NSObject, DTGContentManager {
                 // file exists and is not a directory
             }
         } else {
-            // file does not exist
+            log.warning("can't remove item files, dir doesn't exist")
         }
         
-        // notify delegate
-        DispatchQueue.main.async {
-            self.delegate?.item(id: id, didChangeToState: .removed, error: nil)
-        }
+        // notify state change
+        self.notifyItemState(id, newState: .removed, error: nil)
     }
 
     public func itemPlaybackUrl(id: String) throws -> URL? {
@@ -404,21 +409,17 @@ extension ContentManager: DownloaderDelegate {
 // MARK: - Private Implementation
 /************************************************************/
 
-extension ContentManager {
+private extension ContentManager {
     
-    fileprivate func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
+    func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
         if item.state == .failed {
             try? self.removeItem(id: item.id)
-            DispatchQueue.main.async {
-                self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
-            }
+            self.notifyItemState(item.id, newState: item.state, error: nil)
         } else {
             let oldItem = self.db.item(byId: item.id)
             db.update(item: item) {
                 if oldItem?.state != item.state {
-                    DispatchQueue.main.async {
-                        self.delegate?.item(id: item.id, didChangeToState: item.state, error: nil)
-                    }
+                    self.notifyItemState(item.id, newState: item.state, error: nil)
                 }
                 DispatchQueue.main.async {
                     completionHandler?()
@@ -427,26 +428,28 @@ extension ContentManager {
         }
     }
     
-    fileprivate func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
+    func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
         if itemState == .failed {
             try? self.removeItem(id: id)
         } else {
             self.db.update(itemState: itemState, byId: id)
         }
-        
-        self.dispatch.sync {
-            DispatchQueue.main.async {
-                self.delegate?.item(id: id, didChangeToState: itemState, error: error)
-            }
-        }
+        self.notifyItemState(id, newState: itemState, error: error)
     }
     
     @discardableResult
-    fileprivate func findItemOrThrow(_ id: String) throws -> DownloadItem {
+    func findItemOrThrow(_ id: String) throws -> DownloadItem {
         if let item = db.item(byId: id) {
             return item
         } else {
             throw DTGError.itemNotFound(itemId: id)
+        }
+    }
+    
+    func notifyItemState(_ id: String, newState: DTGItemState, error: Error? = nil) {
+        log.info("item: \(id), state updated, new state: \(newState.asString())")
+        DispatchQueue.main.async {
+            self.delegate?.item(id: id, didChangeToState: newState, error: error)
         }
     }
 }
