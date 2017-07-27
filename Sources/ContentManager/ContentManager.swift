@@ -226,7 +226,7 @@ public class ContentManager: NSObject, DTGContentManager {
         
         var item = try findItemOrThrow(id)
         
-        let localizer = HLSLocalizer(id: id, url: item.remoteUrl, preferredVideoBitrate: preferredVideoBitrate)
+        let localizer = HLSLocalizer(id: id, url: item.remoteUrl, downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
         
         DispatchQueue.global().async {
             do {
