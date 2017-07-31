@@ -78,11 +78,11 @@ class HLSLocalizer {
     var selectedAudioStreams = [MediaStream]()
     var selectedTextStreams = [MediaStream]()
 
-    init(id: String, url: URL, preferredVideoBitrate: Int?) {
+    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
-        self.downloadPath = DTGFilePaths.itemDirUrl(forItemId: id)
+        self.downloadPath = downloadPath
     }
     
     private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
