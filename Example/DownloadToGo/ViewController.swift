@@ -33,7 +33,7 @@ class ViewController: UIViewController {
         Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Kaltura multi captions", url: "https://cdnapisec.kaltura.com/p/811441/sp/81144100/playManifest/entryId/1_mhyj12pj/format/applehttp/protocol/https/a.m3u8"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
-        Item(id: "Elephants", url: "https://playertest.longtailvideo.com/adaptive/eleph-audio/playlist.m3u8")
+        Item(id: "Empty", url: "https://cdnapisec.kaltura.com/p/2215841/playManifest/entryId/1_58e88ugs/format/applehttp/protocol/https/a.m3u8"),
     ]
     
     let itemPickerView: UIPickerView = {
