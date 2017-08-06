@@ -25,6 +25,8 @@ struct MockVideoTrack: DTGVideoTrack {
 enum HLSLocalizerError: Error {
     /// sent when an unknown playlist type was encountered
     case unknownPlaylistType
+    
+    case malformedPlaylist
 
     case invalidState
 }
@@ -32,12 +34,22 @@ enum HLSLocalizerError: Error {
 
 func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
     let text = try String.init(contentsOf: url)
-    return M3U8MasterPlaylist(content: text, baseURL: url.deletingLastPathComponent())
+    
+    if let playlist = M3U8MasterPlaylist(content: text, baseURL: url.deletingLastPathComponent()) {
+        return playlist
+    } else {
+        throw HLSLocalizerError.malformedPlaylist
+    }
 }
 
 func loadMediaPlaylist(url: URL, type: M3U8MediaPlaylistType) throws -> M3U8MediaPlaylist {
     let text = try String.init(contentsOf: url)
-    return M3U8MediaPlaylist(content: text, type: type, baseURL: url.deletingLastPathComponent())
+
+    if let playlist = M3U8MediaPlaylist(content: text, type: type, baseURL: url.deletingLastPathComponent()) {
+        return playlist
+    } else {
+        throw HLSLocalizerError.malformedPlaylist
+    }
 }
 
 class Stream<T> {
@@ -302,18 +314,23 @@ class HLSLocalizer {
         
         for i in 0 ..< streams.countInt {
             
-            let stream = try MediaStream(streamInfo: streams[i], mediaUrl: streams[i].m3u8URL(), type: type)
-            try addAllSegments(segmentList: stream.mediaPlaylist.segmentList, type: type)
-            
-            switch type {
-            case M3U8MediaPlaylistTypeAudio:
-                let bitrate = streams[i].bandwidth()
-                aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : defaultAudioBitrate)
-                selectedAudioStreams.append(stream)
-            case M3U8MediaPlaylistTypeSubtitle:
-                selectedTextStreams.append(stream)
-            default:
-                throw HLSLocalizerError.unknownPlaylistType
+            let url: URL! = streams[i].m3u8URL()
+            do {
+                let stream = try MediaStream(streamInfo: streams[i], mediaUrl: url, type: type)
+                try addAllSegments(segmentList: stream.mediaPlaylist.segmentList, type: type)
+                
+                switch type {
+                case M3U8MediaPlaylistTypeAudio:
+                    let bitrate = streams[i].bandwidth()
+                    aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : defaultAudioBitrate)
+                    selectedAudioStreams.append(stream)
+                case M3U8MediaPlaylistTypeSubtitle:
+                    selectedTextStreams.append(stream)
+                default:
+                    throw HLSLocalizerError.unknownPlaylistType
+                }
+            } catch {
+                log.warning("Skipping malformed playlist")
             }
         }
     }
