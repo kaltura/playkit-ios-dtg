@@ -91,6 +91,10 @@ class DefaultDownloader: NSObject, Downloader {
         self.downloadItemTasksQueue.enqueue(tasks)
         self.setBackgroundURLSession()
     }
+    
+    deinit {
+        self.invokeBackgroundSessionCompletionHandler()
+    }
 }
 
 /************************************************************/
