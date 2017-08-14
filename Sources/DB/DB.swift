@@ -12,6 +12,11 @@
 import Foundation
 import RealmSwift
 
+/// returns a configured realm object.
+func getRealm() -> Realm {
+    return try! Realm(configuration: Realm.Configuration(fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm")))
+}
+
 protocol DB: class {
     
     /* Items API */
@@ -35,19 +40,12 @@ protocol DB: class {
 
 class RealmDB: DB {
     
-    private let realmFileName = "downloadToGo.realm"
     fileprivate let dtgItemRealmManager = DTGItemRealmManager()
     fileprivate let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
-
+    
     /// Dispatch queue to handle all actions on a background queue to make sure not to block main thread.
     /// use only for db actions and to synchornized changes
     let dispatch = DispatchQueue(label: "com.kaltura.dtg.db")
-    
-    init() {
-        var config = Realm.Configuration.defaultConfiguration
-        config.fileURL = DTGFilePaths.storagePath.appendingPathComponent(realmFileName)
-        Realm.Configuration.defaultConfiguration = config
-    }
 }
 
 /************************************************************/

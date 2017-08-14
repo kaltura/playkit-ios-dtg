@@ -19,27 +19,26 @@ protocol RealmObjectManager {
 extension RealmObjectManager {
     
     func update(_ objects: [RealmObject]) {
-        let realm = try! Realm()
+        let realm = getRealm()
         try! realm.write {
             realm.add(objects, update: true)
         }
     }
     
     func remove(_ objects: [RealmObject]) {
-        let realm = try! Realm()
+        let realm = getRealm()
         try! realm.write {
             realm.delete(objects)
         }
     }
     
     func object<K>(for key: K) -> RealmObject? {
-        let realm = try! Realm()
-        return realm.object(ofType: RealmObject.self, forPrimaryKey: key)
+        return getRealm().object(ofType: RealmObject.self, forPrimaryKey: key)
     }
     
     /// Queries the db, if sent with no parameters gets all the realm object of type `RealmObject`.
     func get(_ predicateFormat: String? = nil, _ args: Any...) -> Results<RealmObject> {
-        let realm = try! Realm()
+        let realm = getRealm()
         if let pf = predicateFormat {
             return realm.objects(RealmObject.self).filter(pf, args)
         } else {
