@@ -30,9 +30,6 @@ public protocol DTGContentManager: class {
     /// Stop the content manager, including the playback server.
     func stop()
     
-    /// Resume downloading of items that were in progress when stop() was called.
-    func resumeInterruptedItems() throws
-    
     /// Return all items in the specified state.
     func itemsByState(_ state: DTGItemState) -> [DTGItem]
     
@@ -58,6 +55,18 @@ public protocol DTGContentManager: class {
     /// Start or resume item download.
     /// - Throws: DTGError.itemNotFound
     func startItem(id: String) throws
+    
+    /// Start items download in specified states.
+    /// can be used to resume inProgress (after force quit) / interrupted / paused items, can use multiple selection or just one.
+    ///
+    /// ````
+    /// try startItems(inStates: .inProgress)
+    /// // or like this:
+    /// try startItems(inStates: [.inProgress, .paused])
+    /// ````
+    ///
+    /// - Parameter states: Option set of the states to start.
+    func startItems(inStates states: DTGStartItemStates) throws
     
     /// Pause downloading an item.
     /// - Throws: DTGError.itemNotFound
@@ -125,6 +134,15 @@ public protocol DTGVideoTrack {
     
     /// Bitrate.
     var bitrate: Int { get }
+}
+
+public struct DTGStartItemStates: OptionSet {
+    public let rawValue: Int
+    public init(rawValue: Int) { self.rawValue = rawValue }
+    
+    public static let paused = DTGStartItemStates(rawValue: 1)
+    public static let inProgress = DTGStartItemStates(rawValue: 2)
+    public static let interrupted = DTGStartItemStates(rawValue: 4)
 }
 
 /// Item state.

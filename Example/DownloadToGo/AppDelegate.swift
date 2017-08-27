@@ -23,8 +23,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("server started")
         }
         
-        try? ContentManager.shared.resumeInterruptedItems()
-        
+        // resume all interrupted downloads that were stopped in progress
+        try? ContentManager.shared.startItems(inStates: .inProgress)
         return true
     }
 
