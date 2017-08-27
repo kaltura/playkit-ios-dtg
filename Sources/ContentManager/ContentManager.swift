@@ -194,7 +194,7 @@ public class ContentManager: NSObject, DTGContentManager {
         started = false
     }
 
-    public func startItems(inStates states: DTGStartItemStates) throws {
+    public func startItems(inStates states: DTGItemStartableState...) throws {
         if states.contains(.inProgress) {
             for item in itemsByState(.inProgress) {
                 try startItem(id: item.id)

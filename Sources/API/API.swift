@@ -62,11 +62,11 @@ public protocol DTGContentManager: class {
     /// ````
     /// try startItems(inStates: .inProgress)
     /// // or like this:
-    /// try startItems(inStates: [.inProgress, .paused])
+    /// try startItems(inStates: .inProgress, .paused)
     /// ````
     ///
-    /// - Parameter states: Option set of the states to start.
-    func startItems(inStates states: DTGStartItemStates) throws
+    /// - Parameter states: The states to start.
+    func startItems(inStates states: DTGItemStartableState...) throws
     
     /// Pause downloading an item.
     /// - Throws: DTGError.itemNotFound
@@ -136,13 +136,9 @@ public protocol DTGVideoTrack {
     var bitrate: Int { get }
 }
 
-public struct DTGStartItemStates: OptionSet {
-    public let rawValue: Int
-    public init(rawValue: Int) { self.rawValue = rawValue }
-    
-    public static let paused = DTGStartItemStates(rawValue: 1)
-    public static let inProgress = DTGStartItemStates(rawValue: 2)
-    public static let interrupted = DTGStartItemStates(rawValue: 4)
+/// `DTGItemStartableState` represents startable states
+public enum DTGItemStartableState {
+    case inProgress, paused, interrupted
 }
 
 /// Item state.
