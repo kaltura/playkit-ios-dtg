@@ -22,7 +22,7 @@ struct MockVideoTrack: DTGVideoTrack {
     var bitrate: Int
 }
 
-enum HLSLocalizerError: Error {
+public enum HLSLocalizerError: Error {
     /// sent when an unknown playlist type was encountered
     case unknownPlaylistType
     
