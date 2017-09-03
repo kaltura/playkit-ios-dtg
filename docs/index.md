@@ -6,6 +6,8 @@ title: Download-to-Go for iOS
 
 Download to Go (DTG) is an iOS library that facilitates the download of HLS video assets.
 
+{:toc}
+
 ## Supported Features 
 - Downloading Kaltura HLS assets (Clear only)
 - Background downloading.
