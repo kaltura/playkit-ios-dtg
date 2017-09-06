@@ -194,14 +194,26 @@ public class ContentManager: NSObject, DTGContentManager {
         started = false
     }
 
-    public func resumeInterruptedItems() throws {
-        for item in itemsByState(.inProgress) {
-            try startItem(id: item.id)
+    public func startItems(inStates states: DTGItemStartableState...) throws {
+        if states.contains(.inProgress) {
+            for item in itemsByState(.inProgress) {
+                try startItem(id: item.id)
+            }
+        }
+        if states.contains(.paused) {
+            for item in itemsByState(.paused) {
+                try startItem(id: item.id)
+            }
+        }
+        if states.contains(.interrupted) {
+            for item in itemsByState(.interrupted) {
+                try startItem(id: item.id)
+            }
         }
     }
 
     public func itemsByState(_ state: DTGItemState) -> [DTGItem] {
-        
+
         return db.items(byState: state)
     }
     
@@ -225,6 +237,8 @@ public class ContentManager: NSObject, DTGContentManager {
     public func loadItemMetadata(id: String, preferredVideoBitrate: Int?, completionHandler: (() -> Void)?) throws {
         
         var item = try findItemOrThrow(id)
+        // can only load metadata on item in `.new` state.
+        guard item.state == .new else { throw DTGError.invalidState(itemId: id) }
         
         let localizer = HLSLocalizer(id: id, url: item.remoteUrl, downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
         
@@ -368,14 +382,14 @@ extension ContentManager: DownloaderDelegate {
         log.info("downloading paused")
         // save pasued tasks to db
         self.db.update(tasks)
-        self.downloaders[downloader.dtgItemId] = nil
+        self.removeDownloader(withId: downloader.dtgItemId)
     }
     
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
         // removes all tasks from the db
         self.db.removeTasks(withItemId: downloader.dtgItemId)
         // clear the downloader instance
-        self.downloaders[downloader.dtgItemId] = nil
+        self.removeDownloader(withId: downloader.dtgItemId)
     }
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
@@ -388,7 +402,7 @@ extension ContentManager: DownloaderDelegate {
         if newState == .idle {
             self.update(itemState: .completed, byId: downloader.dtgItemId)
             // remove the downloader, no longer needed
-            self.downloaders[downloader.dtgItemId] = nil
+            self.removeDownloader(withId: downloader.dtgItemId)
         }
     }
     
@@ -451,5 +465,11 @@ private extension ContentManager {
         DispatchQueue.main.async {
             self.delegate?.item(id: id, didChangeToState: newState, error: error)
         }
+    }
+    
+    func removeDownloader(withId itemId: String) {
+        let downloader = self.downloaders[itemId]
+        downloader?.invalidateSession()
+        self.downloaders[itemId] = nil
     }
 }

@@ -15,7 +15,7 @@ func ==(lhs: DefaultDownloader, rhs: DefaultDownloader) -> Bool {
     return lhs.sessionIdentifier == rhs.sessionIdentifier
 }
 
-enum DownloaderError: Error {
+public enum DownloaderError: Error {
     case downloadAlreadyStarted
     case cannotAddDownloads
     case http(statusCode: Int, rootError: NSError)
