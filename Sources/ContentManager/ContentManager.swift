@@ -382,14 +382,14 @@ extension ContentManager: DownloaderDelegate {
         log.info("downloading paused")
         // save pasued tasks to db
         self.db.update(tasks)
-        self.downloaders[downloader.dtgItemId] = nil
+        self.removeDownloader(withId: downloader.dtgItemId)
     }
     
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
         // removes all tasks from the db
         self.db.removeTasks(withItemId: downloader.dtgItemId)
         // clear the downloader instance
-        self.downloaders[downloader.dtgItemId] = nil
+        self.removeDownloader(withId: downloader.dtgItemId)
     }
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
@@ -402,7 +402,7 @@ extension ContentManager: DownloaderDelegate {
         if newState == .idle {
             self.update(itemState: .completed, byId: downloader.dtgItemId)
             // remove the downloader, no longer needed
-            self.downloaders[downloader.dtgItemId] = nil
+            self.removeDownloader(withId: downloader.dtgItemId)
         }
     }
     
@@ -465,5 +465,11 @@ private extension ContentManager {
         DispatchQueue.main.async {
             self.delegate?.item(id: id, didChangeToState: newState, error: error)
         }
+    }
+    
+    func removeDownloader(withId itemId: String) {
+        let downloader = self.downloaders[itemId]
+        downloader?.invalidateSession()
+        self.downloaders[itemId] = nil
     }
 }
