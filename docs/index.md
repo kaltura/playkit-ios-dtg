@@ -30,7 +30,7 @@ pod 'DownloadToGo'
 
 ## Overview
 
-### Simple Flow:
+### Simple Flow
 
 ![](Resources/simple-flow-uml.png)
 
@@ -38,11 +38,11 @@ pod 'DownloadToGo'
 * Failed is a temp state, the delegate will notify and item has failed and content manager will remove this item. In addition, keep in mind that when receiving failed state an error will also be provided in the delegate to indicate the reason.
 * There is also `Removed` state which is not displayed here. `Removed` is a temporary state indicated an item was removed (can be considered as an event). You can remove an item from all states. 
 
-### Download Sequence:
+### Download Sequence
 
 ![](Resources/download-sequence.png)
 
-### Simple Playing Sequence (Using PlayKit Player):
+### Simple Playing Sequence (Using PlayKit Player)
 
 ![](Resources/playing-sequence.png)
 
