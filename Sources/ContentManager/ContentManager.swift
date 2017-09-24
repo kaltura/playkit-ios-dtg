@@ -12,6 +12,7 @@
 import Foundation
 import GCDWebServer
 import XCGLogger
+import PlayKitUtils
 
 let log = XCGLogger.default
 
@@ -61,15 +62,10 @@ public enum DTGError: Error {
 /************************************************************/
 
 struct DownloadItem: DTGItem {
-    
     var id: String
-
     var remoteUrl: URL
-
     var state: DTGItemState = .new
-
     var estimatedSize: Int64?
-
     var downloadedSize: Int64 = 0
     
     init(id: String, url: URL) {
@@ -110,6 +106,35 @@ public class ContentManager: NSObject, DTGContentManager {
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
     
+    /// Version string
+    public static let versionString: String = Bundle(for: ContentManager.self).object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
+    /// The client tag
+    public static let clientTag = "playkit-dtg/ios-\(versionString)"
+    /// session id, lives as long as the app is alive.
+    let sessionId = UUID()
+    /// A custom referrer, used for requesting the play manifest, if no referrer is set app id is used.
+    public var referrer: String?
+    
+    public weak var delegate: ContentManagerDelegate?
+
+    public var storagePath: URL {
+        return DTGFilePaths.storagePath
+    }
+    
+    var started = false
+    var server = GCDWebServer()!
+    var serverUrl: URL? {
+        return server.isRunning ? server.serverURL : nil
+    }
+    var serverPort: UInt?
+    var startCompletionHandler: (() -> Void)?
+    
+    // db interface instance
+    let db: DB
+    
+    // Map of item id and the related downloader
+    fileprivate var downloaders = [String: Downloader]()
+    
     private override init() {
         /// create main directory
         try! FileManager.default.createDirectory(at: DTGFilePaths.storagePath, withIntermediateDirectories: true, attributes: nil)
@@ -136,26 +161,6 @@ public class ContentManager: NSObject, DTGContentManager {
         log.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
         log.debug("*** ContentManager ***")
     }
-    
-    public weak var delegate: ContentManagerDelegate?
-
-    public var storagePath: URL {
-        return DTGFilePaths.storagePath
-    }
-    
-    var started = false
-    var server = GCDWebServer()!
-    var serverUrl: URL? {
-        return server.isRunning ? server.serverURL : nil
-    }
-    var serverPort: UInt?
-    var startCompletionHandler: (() -> Void)?
-    
-    // db interface instance
-    let db: DB
-    
-    // Map of item id and the related downloader
-    fileprivate var downloaders = [String: Downloader]()
     
     private func startServer() throws {
         // start server
@@ -240,7 +245,9 @@ public class ContentManager: NSObject, DTGContentManager {
         // can only load metadata on item in `.new` state.
         guard item.state == .new else { throw DTGError.invalidState(itemId: id) }
         
-        let localizer = HLSLocalizer(id: id, url: item.remoteUrl, downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
+        let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
+        let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
+        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
         
         DispatchQueue.global().async {
             do {
