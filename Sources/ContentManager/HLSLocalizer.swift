@@ -121,6 +121,8 @@ class HLSLocalizer {
         self.selectedTextStreams.removeAll()
         try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
         
+        // Add encryption keys download tasks
+        
         
         // Save the selected streams
         self.masterPlaylist = master
@@ -156,7 +158,7 @@ class HLSLocalizer {
     }
     
     private func createDirectories() throws {
-        for type in DTGTrackType.allTypes {
+        for type in DownloadItemTaskType.allTypes {
             try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
         }
     }
@@ -213,7 +215,7 @@ class HLSLocalizer {
         }
 }
     
-    private func _saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
+    private func _saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
         
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
@@ -231,7 +233,7 @@ class HLSLocalizer {
         try save(text: localText as String, as: target)
     }
     
-    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DTGTrackType) throws {
+    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
             try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
@@ -300,13 +302,19 @@ class HLSLocalizer {
     }
     
     private func downloadItemTask(url: URL, type: M3U8MediaPlaylistType) throws -> DownloadItemTask {
-        guard let trackType = type.asDTGTrackType() else {
+        guard let trackType = type.asDownloadItemTaskType() else {
             throw HLSLocalizerError.unknownPlaylistType
         }
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
             .appendingPathExtension(url.pathExtension)
-        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, trackType: trackType, destinationUrl: destinationUrl)
+        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, type: trackType, destinationUrl: destinationUrl)
+    }
+    
+    private func addEncryptionKeyDownloadTasks(playlistText: String) {
+        var downloadItemTasks = [DownloadItemTask]()
+        
+        self.tasks.append(contentsOf: downloadItemTasks)
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
@@ -341,7 +349,10 @@ class HLSLocalizer {
     }
 }
 
-// M3U8Kit convenience extensions
+
+/************************************************************/
+// MARK: - M3U8Kit convenience extensions
+/************************************************************/
 
 typealias MasterPlaylist = M3U8MasterPlaylist
 typealias MediaPlaylist = M3U8MediaPlaylist
@@ -360,7 +371,7 @@ private extension M3U8MediaPlaylistType {
         }
     }
     
-    func asDTGTrackType() -> DTGTrackType? {
+    func asDownloadItemTaskType() -> DownloadItemTaskType? {
         switch self {
         case M3U8MediaPlaylistTypeVideo:
             return .video
@@ -432,7 +443,7 @@ extension String {
 }
 
 extension URL {
-    func mediaPlaylistRelativeLocalPath(as type: DTGTrackType) -> String {
+    func mediaPlaylistRelativeLocalPath(as type: DownloadItemTaskType) -> String {
         return "\(type.asString())/\(absoluteString.md5()).\(pathExtension)"
     }
     
@@ -442,7 +453,7 @@ extension URL {
 }
 
 extension NSMutableString {
-    func replace(playlistUrl: URL?, type: DTGTrackType) {
+    func replace(playlistUrl: URL?, type: DownloadItemTaskType) {
         if let url = playlistUrl {
             self.replaceOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type), options: [], range: NSMakeRange(0, self.length))
         }

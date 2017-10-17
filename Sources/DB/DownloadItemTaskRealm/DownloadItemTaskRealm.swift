@@ -18,7 +18,7 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     dynamic var contentUrl: String = ""
 
-    dynamic var trackType: String = ""
+    dynamic var type: String = ""
 
     /// The destination to save the download item to.
     dynamic var destinationUrl: String = ""
@@ -37,7 +37,7 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         self.init()
         self.dtgItemId = object.dtgItemId
         self.contentUrl = object.contentUrl.absoluteString
-        self.trackType = object.trackType.asString()
+        self.type = object.type.asString()
         self.destinationUrl = object.destinationUrl.absoluteString.substring(from: DTGFilePaths.storagePath.absoluteString.endIndex)
         self.resumeData = object.resumeData
     }
@@ -48,9 +48,9 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     func asObject() -> DownloadItemTask {
         let contentUrl = URL(string: self.contentUrl)!
-        let trackType = DTGTrackType(type: self.trackType)!
+        let type = DownloadItemTaskType(type: self.type)!
         let destinationUrl = URL(string: self.destinationUrl, relativeTo: DTGFilePaths.storagePath)!
-        var downloadItemTask = DownloadItemTask(dtgItemId: self.dtgItemId, contentUrl: contentUrl, trackType: trackType, destinationUrl: destinationUrl)
+        var downloadItemTask = DownloadItemTask(dtgItemId: self.dtgItemId, contentUrl: contentUrl, type: type, destinationUrl: destinationUrl)
         if let resumeData = self.resumeData {
             downloadItemTask.resumeData = resumeData
         }

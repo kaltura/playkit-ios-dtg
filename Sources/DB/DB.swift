@@ -14,7 +14,20 @@ import RealmSwift
 
 /// returns a configured realm object.
 func getRealm() -> Realm {
-    return try! Realm(configuration: Realm.Configuration(fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm")))
+    return try! Realm(configuration: getRealmConfiguration())
+}
+
+func getRealmConfiguration() -> Realm.Configuration {
+    return Realm.Configuration(
+        fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
+        schemaVersion: 1,
+        migrationBlock: { migration, oldSchemaVersion in
+            // We haven’t migrated anything yet, so oldSchemaVersion == 0
+            if (oldSchemaVersion < 1) {
+                // The renaming operation should be done outside of calls to `enumerateObjects(ofType: _:)`.
+                migration.renameProperty(onType: DownloadItemTaskRealm.className(), from: "trackType", to: "type")
+            }
+    })
 }
 
 protocol DB: class {
