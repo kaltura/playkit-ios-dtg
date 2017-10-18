@@ -24,9 +24,10 @@ enum DownloadItemTaskType {
     case video
     case audio
     case text
+    case key
     
     static var allTypes: [DownloadItemTaskType] {
-        return [.video, .audio, .text]
+        return [.video, .audio, .text, .key]
     }
     
     init?(type: String) {
@@ -34,6 +35,7 @@ enum DownloadItemTaskType {
         case "video": self = .video
         case "audio": self = .audio
         case "text": self = .text
+        case "key": self = .key
         default: return nil
         }
     }
@@ -43,6 +45,7 @@ enum DownloadItemTaskType {
         case .video: return "video"
         case .audio: return "audio"
         case .text: return "text"
+        case .key: return "key"
         }
     }
 }
@@ -349,9 +352,6 @@ public class ContentManager: NSObject, DTGContentManager {
         }
     }
     
-    /// handles all the setup needed by the content manager, must be called on AppDelegate in:
-    ///
-    /// ```func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool```
     public func setup() {
         // gets the realm instance, when migration is needed sets up the new scheme and migration block.
         _ = getRealm()

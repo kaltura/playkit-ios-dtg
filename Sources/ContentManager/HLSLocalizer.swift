@@ -74,6 +74,11 @@ typealias MediaStream = Stream<M3U8ExtXMedia>
 
 class HLSLocalizer {
     
+    enum Constants {
+        static let EXT_X_KEY = "#EXT-X-KEY"
+        static let EXT_X_KEY_URI = "URI"
+    }
+    
     let itemId: String
     let masterUrl: URL
     let preferredVideoBitrate: Int?
@@ -121,8 +126,11 @@ class HLSLocalizer {
         self.selectedTextStreams.removeAll()
         try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
         
-        // Add encryption keys download tasks
-        
+        // Add encryption keys download tasks for all streams
+        self.addEncryptionKeyDownloadTasks(from: videoStream)
+        for audioStream in self.selectedAudioStreams {
+            self.addEncryptionKeyDownloadTasks(from: audioStream)
+        }
         
         // Save the selected streams
         self.masterPlaylist = master
@@ -183,7 +191,7 @@ class HLSLocalizer {
         try saveOriginal(text: masterText, url: masterUrl, as: "master.m3u8")
 #endif
         let localText = NSMutableString(string: masterText)
-        
+
         guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
         
         localText.replace(playlistUrl: videoStream.mediaUrl, type: .video)
@@ -249,8 +257,31 @@ class HLSLocalizer {
             if !line.hasPrefix("#") && i < segments.countInt && line == segments[i].uri.absoluteString {
                 localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
                 i += 1
+            } else if line.hasPrefix(Constants.EXT_X_KEY) { // has AES-128 key replace uri with local path
+                let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY + ":", seperatedBy: ",")
+                var updatedLine = Constants.EXT_X_KEY + ":"
+                for (index, attribute) in keyAttributes.enumerated() {
+                    var updatedAttribute = attribute
+                    if attribute.hasPrefix(Constants.EXT_X_KEY_URI) {
+                        var mutableAttribute = attribute
+                        // remove the url attribute tag
+                        mutableAttribute = mutableAttribute.replacingOccurrences(of: Constants.EXT_X_KEY_URI + "=", with: "")
+                        // remove quotation marks
+                        let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
+                        // create the content url
+                        let mediaUrl: URL = segments[i].mediaURL()
+                        guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
+                        updatedAttribute = "\(Constants.EXT_X_KEY_URI)=\"../key/\(url.segmentRelativeLocalPath())\""
+                    }
+                    if index != keyAttributes.count - 1 {
+                        updatedLine.append("\(updatedAttribute),")
+                    } else {
+                        updatedLine.append(updatedAttribute)
+                    }
+                }
+                localLines.append(updatedLine)
             } else {
-                localLines.append(line) 
+                localLines.append(line)
             }
         }
         
@@ -291,7 +322,10 @@ class HLSLocalizer {
         for i in 0 ..< segmentList.countInt {
             duration += segmentList[i].duration
             
-            try downloadItemTasks.append(downloadItemTask(url: segmentList[i].mediaURL(), type: type))
+            guard let trackType = type.asDownloadItemTaskType() else {
+                throw HLSLocalizerError.unknownPlaylistType
+            }
+            downloadItemTasks.append(downloadItemTask(url: segmentList[i].mediaURL(), type: trackType))
         }
         
         if setDuration {
@@ -301,20 +335,69 @@ class HLSLocalizer {
         self.tasks.append(contentsOf: downloadItemTasks)
     }
     
-    private func downloadItemTask(url: URL, type: M3U8MediaPlaylistType) throws -> DownloadItemTask {
-        guard let trackType = type.asDownloadItemTaskType() else {
-            throw HLSLocalizerError.unknownPlaylistType
-        }
+    private func downloadItemTask(url: URL, type: DownloadItemTaskType) -> DownloadItemTask {
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
             .appendingPathExtension(url.pathExtension)
-        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, type: trackType, destinationUrl: destinationUrl)
+        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, type: type, destinationUrl: destinationUrl)
     }
     
-    private func addEncryptionKeyDownloadTasks(playlistText: String) {
+    /// Adds download tasks for all encrpytion keys from the provided playlist.
+    private func addEncryptionKeyDownloadTasks<T>(from stream: Stream<T>) {
         var downloadItemTasks = [DownloadItemTask]()
         
+        let mediaUrl = stream.mediaUrl
+        let keySegmentTagPrefix = Constants.EXT_X_KEY + ":"
+        let uriAttributePrefix = Constants.EXT_X_KEY_URI + "="
+        let lines = stream.mediaPlaylist.originalText.components(separatedBy: .newlines)
+        
+        for line in lines {
+            if line.hasPrefix(Constants.EXT_X_KEY) {
+                // the attributes of the key are seperated by commas, need to seperate and get the URI to create the download task.
+                let keyAttributes = self.getSegmentAttributes(fromSegment: line, segmentPrefix: keySegmentTagPrefix, seperatedBy: ",")
+                for attribute in keyAttributes {
+                    if attribute.hasPrefix(uriAttributePrefix) { // extract the uri
+                        var mutableAttribute = attribute
+                        // can force unwrap because we check the prefix on the start.
+                        let urlAttributeRange = mutableAttribute.range(of: uriAttributePrefix)!
+                        // remove the url attribute tag
+                        mutableAttribute = mutableAttribute.replacingCharacters(in: urlAttributeRange, with: "")
+                        // remove quotation marks
+                        let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
+                        // create the content url
+                        guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
+                        // create and add download task
+                        let downloadTask = downloadItemTask(url: url, type: .key)
+                        downloadItemTasks.append(downloadTask)
+                    }
+                }
+            }
+        }
+        
         self.tasks.append(contentsOf: downloadItemTasks)
+    }
+    
+    /// gets a segment attributes.
+    /// - Attention: Need to make sure the prefix exists before calling this method!.
+    private func getSegmentAttributes(fromSegment segment: String, segmentPrefix: String, seperatedBy seperator: String) -> [String] {
+        // a mutable copy of the line so we can extract data from it.
+        var mutableSegment = segment
+        // can force unwrap because we check the prefix on the start.
+        let segmentTagRange = mutableSegment.range(of: segmentPrefix)!
+        mutableSegment = mutableSegment.replacingCharacters(in: segmentTagRange, with: "")
+        // the params of the key are seperated by commas, need to seperate and get the URI to create the download task.
+        return mutableSegment.components(separatedBy: seperator)
+    }
+    
+    private func createContentUrl(from uri: String, originalContentUrl: URL) -> URL? {
+        let url: URL
+        if uri.hasPrefix("http") {
+            guard let httpUrl = URL(string: uri) else { return nil }
+            url = httpUrl
+        } else {
+            url = originalContentUrl.deletingLastPathComponent().appendingPathComponent(uri, isDirectory: false)
+        }
+        return url
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
