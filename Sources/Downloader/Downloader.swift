@@ -16,17 +16,17 @@ struct DownloadItemTask {
     let dtgItemId: String
     /// The content url, should be unique!
     let contentUrl: URL
-    let trackType: DTGTrackType
+    let type: DownloadItemTaskType
     /// The destination to save the download item to.
     let destinationUrl: URL
     
     var retry: Int = 1
     var resumeData: Data? = nil
     
-    init(dtgItemId: String, contentUrl: URL, trackType: DTGTrackType, destinationUrl: URL) {
+    init(dtgItemId: String, contentUrl: URL, type: DownloadItemTaskType, destinationUrl: URL) {
         self.dtgItemId = dtgItemId
         self.contentUrl = contentUrl
-        self.trackType = trackType
+        self.type = type
         self.destinationUrl = destinationUrl
     }
 }

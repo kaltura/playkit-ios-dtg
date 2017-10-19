@@ -88,6 +88,11 @@ public protocol DTGContentManager: class {
     ///   - identifier: The background url session identifier.
     ///   - completionHandler: the completionHandler to call when finished handling the events.
     func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void)
+    
+    /// handles all the setup needed by the content manager, must be called on AppDelegate in:
+    ///
+    /// ```func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool```
+    func setup()
 }
 
 extension DTGContentManager {

@@ -33,7 +33,7 @@ class HLSLocalizerTests: QuickSpec {
                     let contentFileName = task.contentUrl.absoluteString.md5()
                     // test file names are ok
                     expect(tasks.contains { $0.destinationUrl.deletingPathExtension().lastPathComponent == contentFileName }).to(beTrue())
-                    let expectedDestinationUrl = downloadPath.appendingPathComponent(task.trackType.asString(), isDirectory: true)
+                    let expectedDestinationUrl = downloadPath.appendingPathComponent(task.type.asString(), isDirectory: true)
                         .appendingPathComponent(task.contentUrl.absoluteString.md5())
                         .appendingPathExtension(task.contentUrl.pathExtension)
                     // test destination url is ok

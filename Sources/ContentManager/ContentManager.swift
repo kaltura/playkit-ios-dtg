@@ -17,16 +17,17 @@ import PlayKitUtils
 let log = XCGLogger.default
 
 /************************************************************/
-// MARK: - DTGTrackType
+// MARK: - DownloadItemTaskType
 /************************************************************/
 
-enum DTGTrackType {
+enum DownloadItemTaskType {
     case video
     case audio
     case text
+    case key
     
-    static var allTypes: [DTGTrackType] {
-        return [.video, .audio, .text]
+    static var allTypes: [DownloadItemTaskType] {
+        return [.video, .audio, .text, .key]
     }
     
     init?(type: String) {
@@ -34,6 +35,7 @@ enum DTGTrackType {
         case "video": self = .video
         case "audio": self = .audio
         case "text": self = .text
+        case "key": self = .key
         default: return nil
         }
     }
@@ -43,6 +45,7 @@ enum DTGTrackType {
         case .video: return "video"
         case .audio: return "audio"
         case .text: return "text"
+        case .key: return "key"
         }
     }
 }
@@ -347,6 +350,11 @@ public class ContentManager: NSObject, DTGContentManager {
                 break
             }
         }
+    }
+    
+    public func setup() {
+        // gets the realm instance, when migration is needed sets up the new scheme and migration block.
+        _ = getRealm()
     }
 }
 
