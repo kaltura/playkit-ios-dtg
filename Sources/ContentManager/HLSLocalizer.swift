@@ -75,7 +75,8 @@ typealias MediaStream = Stream<M3U8ExtXMedia>
 class HLSLocalizer {
     
     enum Constants {
-        static let EXT_X_KEY = "#EXT-X-KEY"
+        static let EXTINF = "#EXTINF:"
+        static let EXT_X_KEY = "#EXT-X-KEY:"
         static let EXT_X_KEY_URI = "URI"
     }
     
@@ -119,7 +120,7 @@ class HLSLocalizer {
         
         self.videoTrack = videoTrack(videoStream: videoStream.streamInfo)
     
-        aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
+        // TODO: return this when duration bug is fixed: aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
         
         self.selectedAudioStreams.removeAll()
         try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
@@ -127,10 +128,13 @@ class HLSLocalizer {
         try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
         
         // Add encryption keys download tasks for all streams
-        self.addEncryptionKeyDownloadTasks(from: videoStream)
+        let shouldCalculateDuration = self.duration == 0
+        self.addKeyDownloadTasks(from: videoStream, shouldCalculateDuration: shouldCalculateDuration)
         for audioStream in self.selectedAudioStreams {
-            self.addEncryptionKeyDownloadTasks(from: audioStream)
+            self.addKeyDownloadTasks(from: audioStream, shouldCalculateDuration: false)
         }
+        // TODO: for now calculate the track size after calculating the duration when bug is fixed remove this.
+        aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
         
         // Save the selected streams
         self.masterPlaylist = master
@@ -258,8 +262,8 @@ class HLSLocalizer {
                 localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
                 i += 1
             } else if line.hasPrefix(Constants.EXT_X_KEY) { // has AES-128 key replace uri with local path
-                let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY + ":", seperatedBy: ",")
-                var updatedLine = Constants.EXT_X_KEY + ":"
+                let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY, seperatedBy: ",")
+                var updatedLine = Constants.EXT_X_KEY
                 for (index, attribute) in keyAttributes.enumerated() {
                     var updatedAttribute = attribute
                     if attribute.hasPrefix(Constants.EXT_X_KEY_URI) {
@@ -343,13 +347,13 @@ class HLSLocalizer {
     }
     
     /// Adds download tasks for all encrpytion keys from the provided playlist.
-    private func addEncryptionKeyDownloadTasks<T>(from stream: Stream<T>) {
-        var downloadItemTasks = [DownloadItemTask]()
-        
-        let mediaUrl = stream.mediaUrl
-        let keySegmentTagPrefix = Constants.EXT_X_KEY + ":"
+    private func addKeyDownloadTasks<T>(from stream: Stream<T>, shouldCalculateDuration: Bool) {
+        let keySegmentTagPrefix = Constants.EXT_X_KEY
         let uriAttributePrefix = Constants.EXT_X_KEY_URI + "="
         let lines = stream.mediaPlaylist.originalText.components(separatedBy: .newlines)
+        
+        var downloadItemTasks = [DownloadItemTask]()
+        var duration: TimeInterval = 0
         
         for line in lines {
             if line.hasPrefix(Constants.EXT_X_KEY) {
@@ -365,27 +369,40 @@ class HLSLocalizer {
                         // remove quotation marks
                         let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
                         // create the content url
-                        guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
+                        guard let url = createContentUrl(from: uri, originalContentUrl: stream.mediaUrl) else { break }
                         // create and add download task
                         let downloadTask = downloadItemTask(url: url, type: .key)
                         downloadItemTasks.append(downloadTask)
                     }
                 }
             }
+            // duration calculation of the m3u8 kit has a bug, until a fix is inserted we have to extract
+            // the duration from EXTINF tags only if duration still 0 after all video segments were loaded.
+            // so only when both the duration is 0 (meaning duration calculation failed) and extinf tag exists calculate the duration here.
+            else if shouldCalculateDuration && line.hasPrefix(Constants.EXTINF) {
+                var mutableLine = line
+                mutableLine = mutableLine.replacingOccurrences(of: Constants.EXTINF, with: "")
+                if let durationValue = TimeInterval(mutableLine.replacingOccurrences(of: ",", with: "")) {
+                    duration += durationValue
+                }
+            }
+        }
+        // if a new duration was calcualted use it.
+        if duration > 0 && shouldCalculateDuration {
+            self.duration = duration
         }
         
         self.tasks.append(contentsOf: downloadItemTasks)
     }
     
     /// gets a segment attributes.
-    /// - Attention: Need to make sure the prefix exists before calling this method!.
     private func getSegmentAttributes(fromSegment segment: String, segmentPrefix: String, seperatedBy seperator: String) -> [String] {
         // a mutable copy of the line so we can extract data from it.
         var mutableSegment = segment
         // can force unwrap because we check the prefix on the start.
-        let segmentTagRange = mutableSegment.range(of: segmentPrefix)!
+        guard let segmentTagRange = mutableSegment.range(of: segmentPrefix) else { return [] }
         mutableSegment = mutableSegment.replacingCharacters(in: segmentTagRange, with: "")
-        // the params of the key are seperated by commas, need to seperate and get the URI to create the download task.
+        // seperate the attributes by the seperator
         return mutableSegment.components(separatedBy: seperator)
     }
     
