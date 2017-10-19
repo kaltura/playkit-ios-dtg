@@ -132,6 +132,29 @@ class VideoViewController: UIViewController {
 }
 ```
 
+On `AppDelegate`:
+* Make sure to call `ContentManager.shared.setup()`
+* (Optional) This is a good place to call `ContentManager.shared.startItems(inStates: _)` to resume interrupted or in progress downloads.
+
+```swift
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+        // setup the content manager - THIS IS A MUST!
+        ContentManager.shared.setup()
+        
+        // this can be a good place to call:
+        // ContentManager.shared.startItems(inStates: _)
+        // With the needed states (inProgress/paused/interrupted)
+        return true
+    }
+
+    ...
+
+}
+```
+
 >Note: Make sure to call `ContentManager.shared.stop()` when finished with playback.
 
 [cocoapods]: https://cocoapods.org/
