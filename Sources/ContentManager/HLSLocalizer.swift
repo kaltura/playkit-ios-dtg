@@ -75,7 +75,6 @@ typealias MediaStream = Stream<M3U8ExtXMedia>
 class HLSLocalizer {
     
     enum Constants {
-        static let EXTINF = "#EXTINF:"
         static let EXT_X_KEY = "#EXT-X-KEY:"
         static let EXT_X_KEY_URI = "URI"
     }
@@ -120,7 +119,7 @@ class HLSLocalizer {
         
         self.videoTrack = videoTrack(videoStream: videoStream.streamInfo)
     
-        // TODO: return this when duration bug is fixed: aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
+        aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
         
         self.selectedAudioStreams.removeAll()
         try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
@@ -128,13 +127,10 @@ class HLSLocalizer {
         try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
         
         // Add encryption keys download tasks for all streams
-        let shouldCalculateDuration = self.duration == 0
-        self.addKeyDownloadTasks(from: videoStream, shouldCalculateDuration: shouldCalculateDuration)
+        self.addKeyDownloadTasks(from: videoStream)
         for audioStream in self.selectedAudioStreams {
-            self.addKeyDownloadTasks(from: audioStream, shouldCalculateDuration: false)
+            self.addKeyDownloadTasks(from: audioStream)
         }
-        // TODO: for now calculate the track size after calculating the duration when bug is fixed remove this.
-        aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
         
         // Save the selected streams
         self.masterPlaylist = master
@@ -347,13 +343,12 @@ class HLSLocalizer {
     }
     
     /// Adds download tasks for all encrpytion keys from the provided playlist.
-    private func addKeyDownloadTasks<T>(from stream: Stream<T>, shouldCalculateDuration: Bool) {
+    private func addKeyDownloadTasks<T>(from stream: Stream<T>) {
         let keySegmentTagPrefix = Constants.EXT_X_KEY
         let uriAttributePrefix = Constants.EXT_X_KEY_URI + "="
         let lines = stream.mediaPlaylist.originalText.components(separatedBy: .newlines)
         
         var downloadItemTasks = [DownloadItemTask]()
-        var duration: TimeInterval = 0
         
         for line in lines {
             if line.hasPrefix(Constants.EXT_X_KEY) {
@@ -376,20 +371,6 @@ class HLSLocalizer {
                     }
                 }
             }
-            // duration calculation of the m3u8 kit has a bug, until a fix is inserted we have to extract
-            // the duration from EXTINF tags only if duration still 0 after all video segments were loaded.
-            // so only when both the duration is 0 (meaning duration calculation failed) and extinf tag exists calculate the duration here.
-            else if shouldCalculateDuration && line.hasPrefix(Constants.EXTINF) {
-                var mutableLine = line
-                mutableLine = mutableLine.replacingOccurrences(of: Constants.EXTINF, with: "")
-                if let durationValue = TimeInterval(mutableLine.replacingOccurrences(of: ",", with: "")) {
-                    duration += durationValue
-                }
-            }
-        }
-        // if a new duration was calcualted use it.
-        if duration > 0 && shouldCalculateDuration {
-            self.duration = duration
         }
         
         self.tasks.append(contentsOf: downloadItemTasks)
