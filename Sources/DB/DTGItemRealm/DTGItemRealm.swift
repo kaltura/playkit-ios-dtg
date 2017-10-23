@@ -14,15 +14,15 @@ import RealmSwift
 
 class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
-    dynamic var id: String = ""
+    @objc dynamic var id: String = ""
     /// The items's remote URL.
-    dynamic var remoteUrl: String = ""
+    @objc dynamic var remoteUrl: String = ""
     /// The item's current state.
-    dynamic var state: String = ""
+    @objc dynamic var state: String = ""
     /// Estimated size of the item.
     var estimatedSize = RealmOptional<Int64>()
     /// Downloaded size in bytes.
-    dynamic var downloadedSize: Int64 = 0
+    @objc dynamic var downloadedSize: Int64 = 0
     
     override static func primaryKey() -> String? {
         return "id"
