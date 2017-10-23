@@ -51,8 +51,6 @@ DEPENDENCIES:
 EXTERNAL SOURCES:
   DownloadToGo:
     :path: ..
-<<<<<<< HEAD
-=======
   M3U8Kit:
     :commit: 9973646296b8d48108f9862429b013e8e170ebdb
     :git: https://github.com/surrenderios/M3U8Paser.git
@@ -61,7 +59,6 @@ CHECKOUT OPTIONS:
   M3U8Kit:
     :commit: 9973646296b8d48108f9862429b013e8e170ebdb
     :git: https://github.com/surrenderios/M3U8Paser.git
->>>>>>> develop
 
 SPEC CHECKSUMS:
   DownloadToGo: 6a6096e40e3a195c2ea31d25ea1d773732352824
