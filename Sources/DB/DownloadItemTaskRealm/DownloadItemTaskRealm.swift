@@ -14,16 +14,16 @@ import RealmSwift
 
 class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
-    dynamic var dtgItemId: String = ""
+    @objc dynamic var dtgItemId: String = ""
     
-    dynamic var contentUrl: String = ""
+    @objc dynamic var contentUrl: String = ""
 
-    dynamic var type: String = ""
+    @objc dynamic var type: String = ""
 
     /// The destination to save the download item to.
-    dynamic var destinationUrl: String = ""
+    @objc dynamic var destinationUrl: String = ""
     
-    dynamic var resumeData: Data? = nil
+    @objc dynamic var resumeData: Data? = nil
     
     override static func primaryKey() -> String? {
         return "contentUrl"
@@ -38,7 +38,7 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         self.dtgItemId = object.dtgItemId
         self.contentUrl = object.contentUrl.absoluteString
         self.type = object.type.asString()
-        self.destinationUrl = object.destinationUrl.absoluteString.substring(from: DTGFilePaths.storagePath.absoluteString.endIndex)
+        self.destinationUrl = String(object.destinationUrl.absoluteString[DTGFilePaths.storagePath.absoluteString.endIndex...])
         self.resumeData = object.resumeData
     }
     
