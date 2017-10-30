@@ -5,7 +5,7 @@ platform :ios, '9.0'
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
   pod 'Toast-Swift'
-  pod 'PlayKit', '3.2.1'
+  pod 'PlayKit', '3.3.0'
   pod 'M3U8Kit', :git => 'https://github.com/surrenderios/M3U8Paser.git', :commit => '9973646296b8d48108f9862429b013e8e170ebdb'
   target 'DownloadToGo_Tests' do
     inherit! :search_paths
@@ -13,4 +13,15 @@ target 'DownloadToGo_Example' do
     pod 'Quick', '1.1.0'
     pod 'Nimble', '7.0.1'
   end
+end
+
+post_install do |installer|
+    installer.pods_project.targets.each do |target|
+        target.build_configurations.each do |config|
+            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'NO'
+            if target.name == 'DownloadToGo_Example' || target.name == 'XCGLogger' || target.name == 'PlayKit'
+                config.build_settings['SWIFT_VERSION'] = '4.0'
+            end
+        end
+    end
 end
