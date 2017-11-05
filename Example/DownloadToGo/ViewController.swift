@@ -44,14 +44,19 @@ class ViewController: UIViewController {
     
     var selectedItem: Item! {
         didSet {
-            let item = cm.itemById(selectedItem.id)
-            DispatchQueue.main.async {
-                self.statusLabel.text = item?.state.asString() ?? ""
-                if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
-                    self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
-                } else {
-                    self.progressView.progress = 0.0
+            do {
+                let item = try cm.itemById(selectedItem.id)
+                DispatchQueue.main.async {
+                    self.statusLabel.text = item?.state.asString() ?? ""
+                    if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
+                        self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
+                    } else {
+                        self.progressView.progress = 0.0
+                    }
                 }
+            } catch {
+                // handle error here
+                print("error: \(error.localizedDescription)")
             }
         }
     }
@@ -80,17 +85,23 @@ class ViewController: UIViewController {
     }
 
     @IBAction func addItem(_ sender: UIButton) {
-        _ = cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
-        self.statusLabel.text = cm.itemById(selectedItem.id)?.state.asString()
+        do {
+            _ = try cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
+            self.statusLabel.text = try cm.itemById(selectedItem.id)?.state.asString()
+        } catch {
+            // handle db issues here...
+            print(error.localizedDescription)
+        }
     }
     
     @IBAction func loadMetadata(_ sender: UIButton) {
-        do {
-            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000) {
+        DispatchQueue.global().async {
+            do {
+                try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
+            } catch {
+                self.toastMedium("loadItemMetadata failed \(error)")
             }
-        } catch {
-            toastMedium("loadItemMetadata failed \(error)")
         }
     }
     
@@ -103,7 +114,11 @@ class ViewController: UIViewController {
     }
     
     @IBAction func pause(_ sender: UIButton) {
-        try? cm.pauseItem(id: self.selectedItem.id)
+        do {
+            try cm.pauseItem(id: self.selectedItem.id)
+        } catch let e {
+            print("error: \(e.localizedDescription)")
+        }
     }
     
     @IBAction func remove(_ sender: UIButton) {
@@ -120,9 +135,14 @@ class ViewController: UIViewController {
     }
     
     func doneButtonTapped(button: UIBarButtonItem) -> Void {
-        let item = cm.itemById(self.selectedItem.id)
-        self.statusLabel.text = item?.state.asString()
-        self.itemTextField.resignFirstResponder()
+        do {
+            let item = try cm.itemById(self.selectedItem.id)
+            self.statusLabel.text = item?.state.asString()
+            self.itemTextField.resignFirstResponder()
+        } catch {
+            // handle db issues here...
+            print("error: \(error.localizedDescription)")
+        }
     }
     
     func toastShort(_ message: String) {
@@ -148,16 +168,21 @@ class ViewController: UIViewController {
 extension ViewController {
     
     override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
-        if identifier == self.videoViewControllerSegueIdentifier {
-            guard let item = cm.itemById(selectedItem.id) else {
+        do {
+            if identifier == self.videoViewControllerSegueIdentifier {
+                guard let item = try cm.itemById(selectedItem.id) else {
+                    print("cannot segue to video view controller until download is finished")
+                    return false
+                }
+                if item.state == .completed {
+                    return true
+                }
                 print("cannot segue to video view controller until download is finished")
                 return false
             }
-            if item.state == .completed {
-                return true
-            }
-            print("cannot segue to video view controller until download is finished")
-            return false
+        } catch {
+            // handle db issues here...
+            print("error: \(error.localizedDescription)")
         }
         return true
     }

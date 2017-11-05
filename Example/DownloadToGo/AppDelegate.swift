@@ -15,16 +15,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // setup the content manager.
-        ContentManager.shared.setup()
-        print("Home dir:", NSHomeDirectory())
-        
-        try! ContentManager.shared.start() {
-            print("server started")
+        do {
+            // setup the content manager.
+            try ContentManager.shared.setup()
+            print("Home dir:", NSHomeDirectory())
+            
+            try ContentManager.shared.start() {
+                print("server started")
+            }
+            // resume all interrupted downloads that were stopped in progress
+            try ContentManager.shared.startItems(inStates: .inProgress)
+        } catch {
+            // handle error here
+            print(error.localizedDescription)
         }
         
-        // resume all interrupted downloads that were stopped in progress
-        try? ContentManager.shared.startItems(inStates: .inProgress)
         return true
     }
 

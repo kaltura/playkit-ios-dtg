@@ -31,26 +31,29 @@ public protocol DTGContentManager: class {
     func stop()
     
     /// Return all items in the specified state.
-    func itemsByState(_ state: DTGItemState) -> [DTGItem]
+    func itemsByState(_ state: DTGItemState) throws -> [DTGItem]
     
     /// Find an existing item.
     /// - Parameter id: the item's unique id.
     /// - Returns: an item, or nil if not found.
-    func itemById(_ id: String) -> DTGItem?
+    func itemById(_ id: String) throws -> DTGItem?
     
     /// Add a new item.
     /// - Parameters:
     ///     - id: a unique id for the new item
     ///     - url: the remote URL of the item.
     /// - Returns: the newly allocated item or nil if already exists.
-    func addItem(id: String, url: URL) -> DTGItem?
+    func addItem(id: String, url: URL) throws -> DTGItem?
     
     /// Load metadata for the given item id.
+    /// - Attention:
+    /// This method executes on the thread it is called and takes time to finish,
+    /// the **best practice is to call this method from a background queue**.
     /// - Parameters:
     ///     - id: the item's unique id.
     ///     - callback: block that takes the updated item.
     /// - Throws: DTGError.itemNotFound
-    func loadItemMetadata(id: String, preferredVideoBitrate: Int?, completionHandler: (() -> Void)?) throws
+    func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws
     
     /// Start or resume item download.
     /// - Throws: DTGError.itemNotFound
@@ -92,7 +95,7 @@ public protocol DTGContentManager: class {
     /// handles all the setup needed by the content manager, must be called on AppDelegate in:
     ///
     /// ```func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool```
-    func setup()
+    func setup() throws
 }
 
 extension DTGContentManager {
@@ -174,6 +177,17 @@ public enum DTGItemState: Int {
     /// Item is removed. This is only a temporary state, as the item is actually removed.
     case removed
     
+    /// Item had a failure related to db access.
+    /// If this state is sent make sure to save the id of the item to later try again.
+    ///
+    /// - Attention:
+    /// It is important to keep this state seperatly because usually this will happen in a rare case
+    /// where the device is out of storage and actions can't be made,
+    /// meaning we cannot update item progress and its real state will be the last state that is was,
+    /// for example for an item in the middle of a download that last state will be "in progress".
+    /// if the storage will be available again we recommand removing the item and starting it again.
+    case dbFailure
+    
     init?(value: String) {
         switch value {
         case DTGItemState.new.asString(): self = .new
@@ -184,6 +198,7 @@ public enum DTGItemState: Int {
         case DTGItemState.failed.asString(): self = .failed
         case DTGItemState.interrupted.asString(): self = .interrupted
         case DTGItemState.removed.asString(): self = .removed
+        case DTGItemState.dbFailure.asString(): self = .dbFailure
         default: return nil
         }
     }
@@ -198,6 +213,7 @@ public enum DTGItemState: Int {
         case .failed: return "failed"
         case .interrupted: return "interrupted"
         case .removed: return "removed"
+        case .dbFailure: return "dbFailure"
         }
     }
 }

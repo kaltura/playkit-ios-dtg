@@ -65,6 +65,7 @@ class VideoViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         self.stopTimer()
+        self.player?.destroy()
     }
     
     @IBAction func playerViewTapped(_ sender: UITapGestureRecognizer) {
