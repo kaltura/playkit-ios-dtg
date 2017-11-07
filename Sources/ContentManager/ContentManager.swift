@@ -289,10 +289,18 @@ public class ContentManager: NSObject, DTGContentManager {
         if let freeDiskSpace = ContentManager.getFreeDiskSpaceInBytes() {
             let minimumDiskSpaceInBytes = Int64(ContentManager.downloadMinimumDiskSpaceInMegabytes) * ContentManager.megabyteInBytes
             if let estimatedSize = item.estimatedSize {
-                if (item.state == .inProgress || item.state == .interrupted || item.state == .paused) &&
-                    freeDiskSpace <= minimumDiskSpaceInBytes / ContentManager.megabyteInBytes { // resuming a downloaded
-                    throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
-                } else if item.state == .metadataLoaded && freeDiskSpace <= (estimatedSize + minimumDiskSpaceInBytes) { // starting a new download
+                // resuming a downloaded, make sure we have enough space and a we have more that the minimum we allow
+                if (item.state == .inProgress || item.state == .interrupted || item.state == .paused) {
+                    // for a rare case where we might have that download interrupted serveral times and we downloaded more than the estimate,
+                    // use 0 as the new estimate instead of negative number.
+                    let resumeEstimatedSize = estimatedSize - item.downloadedSize < 0 ? 0 : estimatedSize - item.downloadedSize
+                    if freeDiskSpace <= minimumDiskSpaceInBytes ||
+                        freeDiskSpace <= resumeEstimatedSize + minimumDiskSpaceInBytes {
+                        throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
+                    }
+                }
+                // starting a new download
+                else if item.state == .metadataLoaded && freeDiskSpace <= (estimatedSize + minimumDiskSpaceInBytes) {
                     throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
                 }
             }
