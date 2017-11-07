@@ -100,7 +100,9 @@ class ViewController: UIViewController {
                 try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
             } catch {
-                self.toastMedium("loadItemMetadata failed \(error)")
+                DispatchQueue.main.async {
+                    self.toastMedium("loadItemMetadata failed \(error)")
+                }
             }
         }
     }

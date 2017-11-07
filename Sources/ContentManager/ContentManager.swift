@@ -467,6 +467,14 @@ extension ContentManager: DownloaderDelegate {
             try? self.update(itemState: .completed, byId: downloader.dtgItemId)
             // remove the downloader, no longer needed
             self.removeDownloader(withId: downloader.dtgItemId)
+        } else if newState == .paused {
+            do {
+                try self.update(itemState: .paused, byId: downloader.dtgItemId)
+            } catch {
+                // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+                self.removeDownloader(withId: downloader.dtgItemId)
+                self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+            }
         }
     }
     
