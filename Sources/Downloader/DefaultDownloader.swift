@@ -10,6 +10,7 @@
 
 
 import Foundation
+import PlayKitUtils
 
 func ==(lhs: DefaultDownloader, rhs: DefaultDownloader) -> Bool {
     return lhs.sessionIdentifier == rhs.sessionIdentifier
@@ -19,6 +20,7 @@ public enum DownloaderError: Error {
     case downloadAlreadyStarted
     case cannotAddDownloads
     case http(statusCode: Int, rootError: NSError)
+    case noSpaceLeftOnDevice
 }
 
 /// `Downloader` object is responsible for downloading files locally and reporting progres.
@@ -44,8 +46,6 @@ class DefaultDownloader: NSObject, Downloader {
         }
     }
     
-    private var _state: DownloaderState = .new
-    
     /************************************************************/
     // MARK: - Downloader Properties
     /************************************************************/
@@ -67,19 +67,7 @@ class DefaultDownloader: NSObject, Downloader {
     
     let dtgItemId: String
     
-    fileprivate(set) var state: DownloaderState {
-        get {
-            return synchronizedQueue.sync {
-                return self._state
-            }
-        }
-        set {
-            synchronizedQueue.sync {
-                self._state = newValue
-                self.delegate?.downloader(self, didChangeToState: newValue)
-            }
-        }
-    }
+    fileprivate(set) var state = SynchronizedProperty<DownloaderState>(initialValue: .new)
     
     /************************************************************/
     // MARK: - Initialization
@@ -90,6 +78,10 @@ class DefaultDownloader: NSObject, Downloader {
         super.init()
         self.downloadItemTasksQueue.enqueue(tasks)
         self.setBackgroundURLSession()
+        self.state.onChange { [weak self] (state) in
+            guard let strongSelf = self else { return }
+            strongSelf.delegate?.downloader(strongSelf, didChangeToState: state)
+        }
     }
     
     deinit {
@@ -104,13 +96,13 @@ class DefaultDownloader: NSObject, Downloader {
 extension DefaultDownloader {
     
     func start() throws {
-        guard self.state == .new else { throw DownloaderError.downloadAlreadyStarted }
-        self.state = .downloading
+        guard self.state.value == .new else { throw DownloaderError.downloadAlreadyStarted }
+        self.state.value = .downloading
         self.downloadIfAvailable()
     }
     
     func addDownloadItemTasks(_ tasks: [DownloadItemTask]) throws {
-        let state = self.state
+        let state = self.state.value
         guard state == .downloading else {
             log.error("cannot add downloads make sure you started the downloader")
             throw DownloaderError.cannotAddDownloads
@@ -118,7 +110,7 @@ extension DefaultDownloader {
         
         if self.downloadItemTasksQueue.count == 0 { // if no downloads were active start downloading
             self.downloadItemTasksQueue.enqueue(tasks)
-            self.state = .downloading
+            self.state.value = .downloading
             self.downloadIfAvailable()
         } else { // if downloads are active just add more tasks to the queue
             self.downloadItemTasksQueue.enqueue(tasks)
@@ -127,14 +119,14 @@ extension DefaultDownloader {
     
     func pause() {
         self.pauseDownloadTasks { (pausedTasks) in
-            self.state = .paused
+            self.state.value = .paused
             self.delegate?.downloader(self, didPauseDownloadTasks: pausedTasks)
         }
     }
     
     func cancel() {
         self.cancelDownloadTasks()
-        self.state = .cancelled
+        self.state.value = .cancelled
         self.invalidateSession()
     }
     
@@ -144,7 +136,7 @@ extension DefaultDownloader {
     
     func refreshSession() {
         self.setBackgroundURLSession()
-        self.state = .new
+        self.state.value = .new
     }
 }
 
@@ -231,6 +223,9 @@ extension DefaultDownloader: URLSessionDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         
         func cancel(with error: Error?) {
+            if self.state.value == .cancelled {
+                return
+            }
             self.cancel()
             if let e = error {
                 self.failed(with: e)
@@ -253,6 +248,9 @@ extension DefaultDownloader: URLSessionDelegate {
         if let e = error as NSError?, let downloadTask = task as? URLSessionDownloadTask {
             // if cancelled no need to handle error
             guard e.code != NSURLErrorCancelled else { return }
+            if e.domain == NSPOSIXErrorDomain && e.code == 28 {
+                cancel(with: DownloaderError.noSpaceLeftOnDevice)
+            }
             
             // if http response type and error code is 503 retry
             if let httpResponse = task.response as? HTTPURLResponse {
@@ -260,7 +258,7 @@ extension DefaultDownloader: URLSessionDelegate {
                 if httpResponse.statusCode >= 500 {
                     retry(downloadTask: downloadTask, receivedError: httpError)
                 } else {
-                    cancel(with: httpError)
+                    cancel(with: e)
                 }
             } else {
                 if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
@@ -274,11 +272,17 @@ extension DefaultDownloader: URLSessionDelegate {
         }
         
         if activeDownloads.count == 0 && self.downloadItemTasksQueue.count == 0 {
-            self.state = .idle
+            self.state.value = .idle
             self.invokeBackgroundSessionCompletionHandler()
         } else {
-            // take next task if available
-            self.downloadIfAvailable()
+            // make sure there is enough disk space to keep downloading otherwise cancel the download with interruption.
+            let allowedFreeDiskSpace = ContentManager.megabyteInBytes * Int64(ContentManager.downloadMinimumDiskSpaceInMegabytes)
+            if let freeDiskSpace = ContentManager.getFreeDiskSpaceInBytes(), freeDiskSpace <= allowedFreeDiskSpace {
+                cancel(with: DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace / ContentManager.megabyteInBytes)))
+            } else {
+                // take next task if available
+                self.downloadIfAvailable()
+            }
         }
     }
     

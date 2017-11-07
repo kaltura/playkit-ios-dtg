@@ -54,10 +54,23 @@ enum DownloadItemTaskType {
 // MARK: - DTGError
 /************************************************************/
 
-public enum DTGError: Error {
+public enum DTGError: LocalizedError {
     case itemNotFound(itemId: String)
     /// sent when item cannot be started (casued when item state is other than metadata loaded)
     case invalidState(itemId: String)
+    /// insufficient disk space to start or continue the download
+    case insufficientDiskSpace(freeSpaceInMegabytes: Int)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .itemNotFound(let itemId):
+            return "The item (id: \(itemId)) of the action was not found"
+        case .invalidState(let itemId):
+            return "try to make an action with an invalid state (item id: \(itemId))"
+        case .insufficientDiskSpace(let freeSpaceInMegabytes):
+            return "insufficient disk space to start or continue the download, only have \(freeSpaceInMegabytes)MB free..."
+        }
+    }
 }
 
 /************************************************************/
@@ -135,6 +148,10 @@ public class ContentManager: NSObject, DTGContentManager {
     // db interface instance
     let db: DB
     
+    static let megabyteInBytes: Int64 = 1000000
+    /// the minimum free space we need to have in addition to the estimated size, to prevent no disk space issues.
+    static let downloadMinimumDiskSpaceInMegabytes = 200
+    
     // Map of item id and the related downloader
     fileprivate var downloaders = [String: Downloader]()
     
@@ -149,7 +166,7 @@ public class ContentManager: NSObject, DTGContentManager {
             resourceValues.isExcludedFromBackup = true
             try url.setResourceValues(resourceValues)
         } catch let error as NSError {
-            print("Error excluding \(url.lastPathComponent) from backup \(error)");
+            log.error("Error excluding \(url.lastPathComponent) from backup \(error)");
         }
         
         // initialize db
@@ -231,7 +248,6 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func addItem(id: String, url: URL) throws -> DTGItem? {
-        
         if try db.item(byId: id) != nil {
             return nil
         }
@@ -267,6 +283,19 @@ public class ContentManager: NSObject, DTGContentManager {
         // for item to start downloading state must be metadataLoaded/paused or inProgress + no active downloader for the selected id.
         guard item.state == .metadataLoaded || item.state == .paused || item.state == .interrupted || (item.state == .inProgress && self.downloaders[id] == nil) else {
             throw DTGError.invalidState(itemId: id)
+        }
+        
+        // check free disk space to make sure we have enough before we start.
+        if let freeDiskSpace = ContentManager.getFreeDiskSpaceInBytes() {
+            let minimumDiskSpaceInBytes = Int64(ContentManager.downloadMinimumDiskSpaceInMegabytes) * ContentManager.megabyteInBytes
+            if let estimatedSize = item.estimatedSize {
+                if (item.state == .inProgress || item.state == .interrupted || item.state == .paused) &&
+                    freeDiskSpace <= minimumDiskSpaceInBytes / ContentManager.megabyteInBytes { // resuming a downloaded
+                    throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
+                } else if item.state == .metadataLoaded && freeDiskSpace <= (estimatedSize + minimumDiskSpaceInBytes) { // starting a new download
+                    throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
+                }
+            }
         }
         
         // make sure we have tasks to perform
@@ -378,7 +407,7 @@ extension ContentManager: DownloaderDelegate {
             }
             // when we receive progress for downloads when downloader is pasued make sure item state is pasued
             // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
-            if downloader.state == .paused {
+            if downloader.state.value == .paused {
                 item.state = .paused
             }
             item.downloadedSize += bytesWritten
@@ -442,11 +471,31 @@ extension ContentManager: DownloaderDelegate {
                 } else {
                     try self.update(itemState: .failed, byId: downloader.dtgItemId, error: error)
                 }
+            case DownloaderError.noSpaceLeftOnDevice, DTGError.insufficientDiskSpace:
+                try self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
             default: try self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
             }
         } catch {
+            // if downloader was already removed don't notify db failure again.
+            guard downloaders[downloader.dtgItemId] != nil else { return }
             self.removeDownloader(withId: downloader.dtgItemId)
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+        }
+    }
+}
+
+/************************************************************/
+// MARK: - Internal Implementation
+/************************************************************/
+
+extension ContentManager {
+    
+    static func getFreeDiskSpaceInBytes() -> Int64? {
+        do {
+            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
+            return (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value
+        } catch {
+            return 0
         }
     }
 }
