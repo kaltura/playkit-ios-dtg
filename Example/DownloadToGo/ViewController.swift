@@ -21,7 +21,7 @@ class Item {
 }
 
 class ViewController: UIViewController {
-    
+    let dummyFileName = "dummyfile"
     let videoViewControllerSegueIdentifier = "videoViewController"
     
     let cm = ContentManager.shared
@@ -126,6 +126,81 @@ class ViewController: UIViewController {
     @IBAction func remove(_ sender: UIButton) {
         let id = selectedItem.id
         try? cm.removeItem(id: id)
+    }
+    
+    @IBAction func actionBarButtonTouched(_ sender: UIBarButtonItem) {
+        let actionAlertController = UIAlertController(title: "Perform Action", message: "Please select an action to perform", preferredStyle: .actionSheet)
+        // fille device with dummy file action
+        actionAlertController.addAction(UIAlertAction(title: "Fill device disk using dummy file", style: .default, handler: { (action) in
+            let dialog = UIAlertController(title: "Fill Disk", message: "Please put the amount of MB to fill disk", preferredStyle: .alert)
+            dialog.addTextField(configurationHandler: { (textField) in
+                textField.placeholder = "Size in MB"
+                textField.keyboardType = .numberPad
+            })
+            dialog.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
+                guard let text = dialog.textFields?.first?.text, let sizeInMb = Int(text) else { return }
+                let fileManager = FileManager.default
+                if let dir = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first {
+                    let fileUrl = dir.appendingPathComponent(self.dummyFileName, isDirectory: false).appendingPathExtension("txt")
+                    if !fileManager.fileExists(atPath: fileUrl.path) {
+                        fileManager.createFile(atPath: fileUrl.path, contents: Data(), attributes: nil)
+                    }
+                    do {
+                        let fileHandle = try FileHandle(forUpdating: fileUrl)
+                        autoreleasepool {
+                            for _ in 1...sizeInMb {
+                                fileHandle.write(Data.init(count: 1000000))
+                            }
+                        }
+                        fileHandle.closeFile()
+                        self.toastMedium("Finished Filling Device with Dummy Data")
+                    } catch {
+                        print("error: \(error)")
+                    }
+                }
+            }))
+            dialog.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(dialog, animated: true, completion: nil)
+        }))
+        // update dummy file size action
+        actionAlertController.addAction(UIAlertAction(title: "Update dummy file size", style: .default, handler: { (action) in
+            let dialog = UIAlertController(title: "Update Dummy file Size", message: "Please put the amount of MB to reduce from dummy file", preferredStyle: .alert)
+            dialog.addTextField(configurationHandler: { (textField) in
+                textField.placeholder = "Size in MB"
+                textField.keyboardType = .numberPad
+            })
+            dialog.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
+                guard let text = dialog.textFields?.first?.text, let sizeInMb = Int(text) else { return }
+                let fileManager = FileManager.default
+                if let dir = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first {
+                    let fileUrl = dir.appendingPathComponent(self.dummyFileName, isDirectory: false).appendingPathExtension("txt")
+                    guard fileManager.fileExists(atPath: fileUrl.path) else { return } // make sure file exits
+                    do {
+                        let fileHandle = try FileHandle(forUpdating: fileUrl)
+                        fileHandle.truncateFile(atOffset: fileHandle.seekToEndOfFile() - UInt64(sizeInMb * 1000000))
+                        fileHandle.closeFile()
+                        self.toastMedium("Finished Updating Device Dummy Data File")
+                    } catch {
+                        print("error: \(error)")
+                    }
+                }
+            }))
+            dialog.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(dialog, animated: true, completion: nil)
+        }))
+        // remove dummy file action
+        actionAlertController.addAction(UIAlertAction(title: "Remove dummy file", style: .default, handler: { (action) in
+            let fileManager = FileManager.default
+            if let dir = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first {
+                let fileUrl = dir.appendingPathComponent(self.dummyFileName, isDirectory: false).appendingPathExtension("txt")
+                do {
+                    try fileManager.removeItem(at: fileUrl)
+                } catch {
+                    print("error: \(error)")
+                }
+            }
+        }))
+        self.present(actionAlertController, animated: true, completion: nil)
     }
     
     func getAccessoryView() -> UIView {
