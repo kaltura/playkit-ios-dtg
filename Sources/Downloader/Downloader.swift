@@ -10,6 +10,7 @@
 
 
 import Foundation
+import PlayKitUtils
 
 /// `DownloadItemTask` represents one file to download (could be video, audio or captions)
 struct DownloadItemTask {
@@ -62,7 +63,7 @@ protocol Downloader: class {
     var dtgItemId: String { get }
     
     /// The state of the downloader.
-    var state: DownloaderState { get }
+    var state: SynchronizedProperty<DownloaderState> { get }
     
     init(itemId: String, tasks: [DownloadItemTask])
     

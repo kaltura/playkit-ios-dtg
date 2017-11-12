@@ -14,7 +14,7 @@ import RealmSwift
 
 protocol RealmCascadeDeleteable {
     associatedtype RealmObject: Object
-    func cascadeDelete(_ objects: [RealmObject])
+    func cascadeDelete(_ objects: [RealmObject]) throws
 }
 
 protocol PrimaryKeyable {

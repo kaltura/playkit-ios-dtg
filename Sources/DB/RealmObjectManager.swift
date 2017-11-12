@@ -18,27 +18,27 @@ protocol RealmObjectManager {
 
 extension RealmObjectManager {
     
-    func update(_ objects: [RealmObject]) {
-        let realm = getRealm()
-        try! realm.write {
+    func update(_ objects: [RealmObject]) throws {
+        let realm = try getRealm()
+        try realm.write {
             realm.add(objects, update: true)
         }
     }
     
-    func remove(_ objects: [RealmObject]) {
-        let realm = getRealm()
-        try! realm.write {
+    func remove(_ objects: [RealmObject]) throws {
+        let realm = try getRealm()
+        try realm.write {
             realm.delete(objects)
         }
     }
     
-    func object<K>(for key: K) -> RealmObject? {
-        return getRealm().object(ofType: RealmObject.self, forPrimaryKey: key)
+    func object<K>(for key: K) throws -> RealmObject? {
+        return try getRealm().object(ofType: RealmObject.self, forPrimaryKey: key)
     }
     
     /// Queries the db, if sent with no parameters gets all the realm object of type `RealmObject`.
-    func get(_ predicateFormat: String? = nil, _ args: Any...) -> Results<RealmObject> {
-        let realm = getRealm()
+    func get(_ predicateFormat: String? = nil, _ args: Any...) throws -> Results<RealmObject> {
+        let realm = try getRealm()
         if let pf = predicateFormat {
             return realm.objects(RealmObject.self).filter(pf, args)
         } else {
@@ -49,16 +49,16 @@ extension RealmObjectManager {
 
 extension RealmObjectManager where RealmObject: RealmObjectProtocol, RealmObject == RealmObject.RealmObject {
     
-    func update(_ objects: [RealmObject.ObjectType]) {
-        self.update(objects.map { RealmObject.initialize(with: $0) })
+    func update(_ objects: [RealmObject.ObjectType]) throws {
+        try self.update(objects.map { RealmObject.initialize(with: $0) })
     }
     
-    func object<Key>(for key: Key) -> RealmObject.ObjectType? {
-        let object: RealmObject? = self.object(for: key)
+    func object<Key>(for key: Key) throws -> RealmObject.ObjectType? {
+        let object: RealmObject? = try self.object(for: key)
         return object?.asObject()
     }
     
-    func allObjects() -> [RealmObject.ObjectType] {
-        return self.get().map { $0.asObject() }
+    func allObjects() throws -> [RealmObject.ObjectType] {
+        return try self.get().map { $0.asObject() }
     }
 }

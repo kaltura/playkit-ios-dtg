@@ -20,13 +20,13 @@ class DTGItemRealmManager: RealmObjectManager, RealmCascadeDeleteable {
     // MARK: - RealmCascadeDeleteable
     /************************************************************/
     
-    func cascadeDelete(_ objects: [RealmObject]) {
+    func cascadeDelete(_ objects: [RealmObject]) throws {
         // first remove all related download item tasks
         for object in objects {
             let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
-            downloadItemTaskRealmManager.removeTasks(withItemId: object.id)
+            try downloadItemTaskRealmManager.removeTasks(withItemId: object.id)
         }
         // remove the object itself
-        self.remove(objects)
+        try self.remove(objects)
     }
 }

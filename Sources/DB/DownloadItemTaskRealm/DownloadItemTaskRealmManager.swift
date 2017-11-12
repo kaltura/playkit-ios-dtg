@@ -16,29 +16,29 @@ import RealmSwift
 class DownloadItemTaskRealmManager: RealmObjectManager {
     typealias RealmObject = DownloadItemTaskRealm
     
-    func set(tasks: [DownloadItemTaskRealm]) {
-        self.update(tasks)
+    func set(tasks: [DownloadItemTaskRealm]) throws {
+        try self.update(tasks)
     }
     
-    func tasks(forItemId id: String) -> [DownloadItemTask] {
-        return self.get("dtgItemId = '\(id)'").map { $0.asObject() }
+    func tasks(forItemId id: String) throws -> [DownloadItemTask] {
+        return try self.get("dtgItemId = '\(id)'").map { $0.asObject() }
     }
     
-    func removeTasks(withItemId id: String) {
-        let tasksToRemove = self.get("dtgItemId = '\(id)'")
-        let realm = getRealm()
+    func removeTasks(withItemId id: String) throws {
+        let tasksToRemove = try self.get("dtgItemId = '\(id)'")
+        let realm = try getRealm()
         try! realm.write {
             realm.delete(tasksToRemove)
         }
     }
     
-    func remove(_ tasks: [DownloadItemTask]) {
+    func remove(_ tasks: [DownloadItemTask]) throws {
         var tasksToRemove = [DownloadItemTaskRealm]()
         for task in tasks {
-            if let taskToRemove: DownloadItemTaskRealm = self.object(for: task.contentUrl.absoluteString) {
+            if let taskToRemove: DownloadItemTaskRealm = try self.object(for: task.contentUrl.absoluteString) {
                 tasksToRemove.append(taskToRemove)
             }
         }
-        self.remove(tasksToRemove)
+        try self.remove(tasksToRemove)
     }
 }
