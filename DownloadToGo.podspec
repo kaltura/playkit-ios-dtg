@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
   
   s.name             = 'DownloadToGo'
   s.version          = '3.2.0'
-  s.summary          = 'DownloadToGo -- download manager for HLS'
+  s.summary          = 'DownloadToGo -- video download manager for HLS'
   s.homepage         = 'https://github.com/kaltura/playkit-ios-dtg'
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
   s.author           = { 'Kaltura' => 'community@kaltura.com' }
