@@ -61,7 +61,7 @@ CHECKOUT OPTIONS:
     :git: https://github.com/surrenderios/M3U8Paser.git
 
 SPEC CHECKSUMS:
-  DownloadToGo: 58bf54fc55842d1c8cbfa1af882f19eb154bcd28
+  DownloadToGo: 20c42f23e29c295353343420aa15b842ac39ef92
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
   KalturaNetKit: d37b3c6fc08da9935677fc547c59b25abc3574a3
   Log: 5e368c9528db07517d18d2d04ff5fe2b6f5a1e21
