@@ -9,6 +9,7 @@
 import UIKit
 import DownloadToGo
 import Toast_Swift
+import PlayKit
 
 class Item {
     let id: String
@@ -21,10 +22,13 @@ class Item {
 }
 
 class ViewController: UIViewController {
+    var testEntry: PKMediaEntry?
     let dummyFileName = "dummyfile"
     let videoViewControllerSegueIdentifier = "videoViewController"
     
     let cm = ContentManager.shared
+    let lam = LocalAssetsManager.managerWithDefaultDataStore()
+    var fakeDownloader: FakeDownloader?
     
     // FIXME: change the urls for the correct default ones
     let items = [
@@ -67,6 +71,10 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        fakeDownloader = FakeDownloader(localAssetsManager: lam)
+
+        
         // initialize UI
         self.selectedItem = self.items.first!
         itemPickerView.delegate = self
@@ -77,6 +85,10 @@ class ViewController: UIViewController {
         
         // setup content manager
         cm.delegate = self
+        
+        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: 2222401, ks: nil)).set(entryId: "1_z9tkt5uz").loadMedia { (entry, error) in
+            self.testEntry = entry
+        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -85,9 +97,29 @@ class ViewController: UIViewController {
     }
 
     @IBAction func addItem(_ sender: UIButton) {
+        
+        var selectedURL = self.selectedItem.url
+        var selectedId = self.selectedItem.id
+        
+        let mediaSource = lam.getPreferredDownloadableMediaSource(for: testEntry!)
+        
+        selectedId = testEntry!.id
+
+        // Make apple download the dummy URL with DRM params from this source
+        fakeDownloader?.start(id: selectedId, media: mediaSource!)
+        
+        // Tell DTG to download the real entry
+        selectedURL = mediaSource!.contentUrl!
+        
+        
+        
+        
+        
+        
+        
         do {
-            _ = try cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
-            self.statusLabel.text = try cm.itemById(selectedItem.id)?.state.asString()
+            _ = try cm.addItem(id: selectedId, url: selectedURL)
+            self.statusLabel.text = try cm.itemById(selectedId)?.state.asString()
         } catch {
             // handle db issues here...
             print(error.localizedDescription)
@@ -97,7 +129,7 @@ class ViewController: UIViewController {
     @IBAction func loadMetadata(_ sender: UIButton) {
         DispatchQueue.global().async {
             do {
-                try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
+                try self.cm.loadItemMetadata(id: self.testEntry!.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
             } catch {
                 DispatchQueue.main.async {
@@ -109,7 +141,7 @@ class ViewController: UIViewController {
     
     @IBAction func start(_ sender: UIButton) {
         do {
-            try cm.startItem(id: self.selectedItem.id)
+            try cm.startItem(id: self.testEntry!.id)
         } catch let e {
             print("error: \(e.localizedDescription)")
         }
@@ -117,14 +149,14 @@ class ViewController: UIViewController {
     
     @IBAction func pause(_ sender: UIButton) {
         do {
-            try cm.pauseItem(id: self.selectedItem.id)
+            try cm.pauseItem(id: self.testEntry!.id)
         } catch let e {
             print("error: \(e.localizedDescription)")
         }
     }
     
     @IBAction func remove(_ sender: UIButton) {
-        let id = selectedItem.id
+        let id = testEntry!.id
         try? cm.removeItem(id: id)
     }
     
@@ -213,7 +245,7 @@ class ViewController: UIViewController {
     
     func doneButtonTapped(button: UIBarButtonItem) -> Void {
         do {
-            let item = try cm.itemById(self.selectedItem.id)
+            let item = try cm.itemById(self.testEntry!.id)
             self.statusLabel.text = item?.state.asString()
             self.itemTextField.resignFirstResponder()
         } catch {
@@ -247,7 +279,7 @@ extension ViewController {
     override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
         do {
             if identifier == self.videoViewControllerSegueIdentifier {
-                guard let item = try cm.itemById(selectedItem.id) else {
+                guard let item = try cm.itemById(testEntry!.id) else {
                     print("cannot segue to video view controller until download is finished")
                     return false
                 }
@@ -268,7 +300,7 @@ extension ViewController {
         if segue.identifier == self.videoViewControllerSegueIdentifier {
             let destinationVC = segue.destination as! VideoViewController
             do {
-                destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.selectedItem.id)
+                destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.testEntry!.id)
             } catch {
                 print("error: \(error.localizedDescription)")
             }
@@ -283,7 +315,7 @@ extension ViewController {
 extension ViewController: ContentManagerDelegate {
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
-        if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
+        if let totalBytesEstimated = totalBytesEstimated, id == self.testEntry!.id {
             if totalBytesEstimated > totalBytesDownloaded {
                 DispatchQueue.main.async {
                     self.progressView.progress = Float(totalBytesDownloaded) / Float(totalBytesEstimated)
@@ -302,9 +334,9 @@ extension ViewController: ContentManagerDelegate {
     
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
         DispatchQueue.main.async {
-            if newState == .completed && id == self.selectedItem.id {
+            if newState == .completed && id == self.testEntry!.id {
                 self.progressView.progress = 1.0
-            } else if newState == .removed && id == self.selectedItem.id {
+            } else if newState == .removed && id == self.testEntry!.id {
                 self.progressView.progress = 0.0
             } else if newState == .failed {
                 print("error: \(String(describing: error?.localizedDescription))")

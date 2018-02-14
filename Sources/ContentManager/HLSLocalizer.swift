@@ -77,6 +77,7 @@ class HLSLocalizer {
     enum Constants {
         static let EXT_X_KEY = "#EXT-X-KEY:"
         static let EXT_X_KEY_URI = "URI"
+        static let KEYFORMAT_FAIRPLAY = "KEYFORMAT=\"com.apple.streamingkeydelivery\""
     }
     
     let itemId: String
@@ -257,7 +258,7 @@ class HLSLocalizer {
             if !line.hasPrefix("#") && i < segments.countInt && line == segments[i].uri.absoluteString {
                 localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
                 i += 1
-            } else if line.hasPrefix(Constants.EXT_X_KEY) { // has AES-128 key replace uri with local path
+            } else if line.hasPrefix(Constants.EXT_X_KEY) && !line.contains(Constants.KEYFORMAT_FAIRPLAY) { // has AES-128 key replace uri with local path
                 let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY, seperatedBy: ",")
                 var updatedLine = Constants.EXT_X_KEY
                 for (index, attribute) in keyAttributes.enumerated() {

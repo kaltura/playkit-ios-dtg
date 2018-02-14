@@ -4,6 +4,8 @@ platform :ios, '9.0'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
+  pod 'DownloadToGo/FairPlay', :path => '..'
+  
   pod 'Toast-Swift'
   pod 'PlayKit', '3.3.2'
   pod 'M3U8Kit', :git => 'https://github.com/surrenderios/M3U8Paser.git', :commit => '9973646296b8d48108f9862429b013e8e170ebdb'
