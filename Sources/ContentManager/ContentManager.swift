@@ -73,16 +73,20 @@ public enum DTGError: LocalizedError {
     }
 }
 
-/************************************************************/
+/* ***********************************************************/
 // MARK: - DownloadItem
-/************************************************************/
+/* ***********************************************************/
 
 struct DownloadItem: DTGItem {
-    var id: String
-    var remoteUrl: URL
+    let id: String
+    let remoteUrl: URL
     var state: DTGItemState = .new
     var estimatedSize: Int64?
     var downloadedSize: Int64 = 0
+    var availableTextTracks: [TrackInfo] = []
+    var availableAudioTracks: [TrackInfo] = []
+    var selectedTextTracks: [TrackInfo] = []
+    var selectedAudioTracks: [TrackInfo] = []
     
     init(id: String, url: URL) {
         self.id = id
@@ -90,9 +94,14 @@ struct DownloadItem: DTGItem {
     }
 }
 
-/************************************************************/
+public struct TrackInfo {
+    let languageCode: String
+    let title: String
+}
+
+/* ***********************************************************/
 // MARK: - DTGFilePaths
-/************************************************************/
+/* ***********************************************************/
 
 class DTGFilePaths {
     
@@ -113,9 +122,9 @@ class DTGFilePaths {
     }
 }
 
-/************************************************************/
+/* ***********************************************************/
 // MARK: - ContentManager
-/************************************************************/
+/* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
     
@@ -273,6 +282,10 @@ public class ContentManager: NSObject, DTGContentManager {
         try self.db.set(tasks: localizer.tasks)
         item.state = .metadataLoaded
         item.estimatedSize = localizer.estimatedSize
+        item.availableTextTracks = localizer.availableTextTracksInfo
+        item.availableAudioTracks = localizer.availableAudioTracksInfo
+        item.selectedTextTracks = localizer.selectedTextTracksInfo
+        item.selectedAudioTracks = localizer.selectedAudioTracksInfo
         try self.update(item: item)
     }
     

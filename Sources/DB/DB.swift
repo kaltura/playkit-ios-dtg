@@ -20,12 +20,15 @@ func getRealm() throws -> Realm {
 func getRealmConfiguration() -> Realm.Configuration {
     return Realm.Configuration(
         fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
-        schemaVersion: 1,
+        schemaVersion: 2,
         migrationBlock: { migration, oldSchemaVersion in
             // We haven’t migrated anything yet, so oldSchemaVersion == 0
             if (oldSchemaVersion < 1) {
                 // The renaming operation should be done outside of calls to `enumerateObjects(ofType: _:)`.
                 migration.renameProperty(onType: DownloadItemTaskRealm.className(), from: "trackType", to: "type")
+            }
+            if (oldSchemaVersion < 2) {
+                // nothing to do just detect new properties on realm item
             }
     })
 }

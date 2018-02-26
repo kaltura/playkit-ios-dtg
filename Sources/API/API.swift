@@ -130,6 +130,18 @@ public protocol DTGItem {
     
     /// Downloaded size in bytes.
     var downloadedSize: Int64 { get }
+    
+    /// The available text tracks of the item
+    var availableTextTracks: [TrackInfo] { get }
+    
+    /// The available audio tracks of the item
+    var availableAudioTracks: [TrackInfo] { get }
+    
+    /// The selected text tracks for download (when download finishes this represents the downloaded tracks)
+    var selectedTextTracks: [TrackInfo] { get }
+    
+    /// The selected audio tracks for download (when download finishes this represents the downloaded tracks)
+    var selectedAudioTracks: [TrackInfo] { get }
 }
 
 /// Information about a Video track.
