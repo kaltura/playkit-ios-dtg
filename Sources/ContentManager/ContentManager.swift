@@ -95,8 +95,8 @@ struct DownloadItem: DTGItem {
 }
 
 public struct TrackInfo {
-    let languageCode: String
-    let title: String
+    public let languageCode: String
+    public let title: String
 }
 
 /* ***********************************************************/
