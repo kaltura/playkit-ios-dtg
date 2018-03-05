@@ -38,19 +38,20 @@ class FairPlayDummy {
             return
         }
         
-        
-        
-        
-        switch ext {
-        case "m3u8":
-            sendMaster(id)
-        case "media":
+        if split.count == 3 {
             sendMedia(id)
-        case "ts":
-            sendTS()
-        default:
-            return
+        } else {
+            switch ext {
+            case "m3u8":
+                sendMaster(id)
+            case "ts":
+                sendTS()
+            default:
+                break
+            }
         }
+        
+        
     }
     
     func sendMaster(_ id: String.SubSequence) {
@@ -58,7 +59,9 @@ class FairPlayDummy {
         let str = """
 #EXTM3U
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=44531,RESOLUTION=32x32
-\(id).media
+\(id).media.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=48531,RESOLUTION=32x32
+\(id).media.m3u8
 """
         
         respond(GCDWebServerDataResponse(data: str.data(using: .utf8), contentType: "application/x-mpegURL"))
@@ -68,7 +71,7 @@ class FairPlayDummy {
         let str = """
 #EXTM3U
 #EXT-X-TARGETDURATION:10
-#EXT-X-ALLOW-CACHE:YES
+#EXT-X-ALLOW-CACHE:NO
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://entry-\(id)",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"
 #EXT-X-VERSION:5

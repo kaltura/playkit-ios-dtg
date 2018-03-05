@@ -12,7 +12,7 @@ import AVFoundation
 
 fileprivate let DummyURL = URL(string: "https://cdnapisec.kaltura.com/p/2222401/playManifest/entryId/1_atlb2z4i/format/applehttp/protocol/https/dummy.m3u8")!
 
-public class FakeDownloader: NSObject {
+public class FairPlayLicenseFetcher: NSObject {
     
     /// The AVAssetDownloadURLSession to use for managing AVAssetDownloadTasks.
     fileprivate var assetDownloadURLSession: AVAssetDownloadURLSession!
@@ -41,15 +41,21 @@ public class FakeDownloader: NSObject {
             return false
         }
         
-        let cm = ContentManager.shared as! ContentManager
-        
-        guard let url = cm.serverUrl?.appendingPathComponent("~~FPS~~/\(media.id).m3u8") else {
-            print("ERROR: No server URL") // TODO use log
-            return false
-        }
+//        guard let url = ContentManager.shared.serverUrl?.appendingPathComponent("~~FPS~~/\(id).m3u8") else {
+//            print("ERROR: No server URL") // TODO use log
+//            return false
+//        }
 
+        
+//        guard let url = URL(string: "https://kgit.html5video.org/dummy-fps.php/\(id).m3u8?x=1") else { 
+//            print("ERROR: No server URL") // TODO use log
+//            return false
+//        }
+        
+        let url = DummyURL
+        
         let asset = AVURLAsset(url: url)
-        localAssetsManager.prepareForDownload(asset: asset, mediaSource: media, assetId: id)
+        localAssetsManager.prepareForDownload(asset: asset, mediaSource: media, assetId: "entry-\(id)")
         
         if #available(iOS 10.0, *) {
             guard let task = assetDownloadURLSession.makeAssetDownloadTask(asset: asset, assetTitle: "FPS-\(media.id)",  assetArtworkData: nil, options: nil) else {
@@ -65,7 +71,7 @@ public class FakeDownloader: NSObject {
     }
 }
 
-extension FakeDownloader: AVAssetDownloadDelegate {
+extension FairPlayLicenseFetcher: AVAssetDownloadDelegate {
     
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         

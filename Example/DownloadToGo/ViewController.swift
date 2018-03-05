@@ -13,25 +13,51 @@ import PlayKit
 
 class Item {
     let id: String
-    let url: URL
+    let partnerId: Int?
     
+    var url: URL?
+    var entry: PKMediaEntry?
+
     init(id: String, url: String) {
         self.id = id
         self.url = URL(string: url)!
+        
+        let source = PKMediaSource.init(id, contentUrl: URL(string: url))
+        self.entry = PKMediaEntry(id, sources: [source])
+        
+        self.partnerId = nil
+    }
+    
+    init(id: String, partnerId: Int) {
+        self.id = id
+        self.partnerId = partnerId
+        
+        self.url = nil
+        
+        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: Int64(partnerId), ks: nil))
+            .set(entryId: id)
+            .loadMedia { (entry, error) in
+                self.entry = entry
+                
+        }
     }
 }
 
 class ViewController: UIViewController {
-    var testEntry: PKMediaEntry?
+//    var testEntry: PKMediaEntry?
     let dummyFileName = "dummyfile"
     let videoViewControllerSegueIdentifier = "videoViewController"
     
     let cm = ContentManager.shared
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
-    var fakeDownloader: FakeDownloader?
+    var fakeDownloader: FairPlayLicenseFetcher?
     
     // FIXME: change the urls for the correct default ones
     let items = [
+        Item(id: "1_z9tkt5uz", partnerId: 2222401),
+        Item(id: "1_q81a5nbp", partnerId: 2222401),
+        Item(id: "1_f93tepsn", partnerId: 2222401),
+        Item(id: "1_2hsw7gwj", partnerId: 2222401),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
         Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
@@ -72,7 +98,7 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        fakeDownloader = FakeDownloader(localAssetsManager: lam)
+        fakeDownloader = FairPlayLicenseFetcher(localAssetsManager: lam)
 
         
         // initialize UI
@@ -85,10 +111,10 @@ class ViewController: UIViewController {
         
         // setup content manager
         cm.delegate = self
-        
-        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: 2222401, ks: nil)).set(entryId: "1_z9tkt5uz").loadMedia { (entry, error) in
-            self.testEntry = entry
-        }
+//
+//        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: 2222401, ks: nil)).set(entryId: "1_z9tkt5uz").loadMedia { (entry, error) in
+//            self.testEntry = entry
+//        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -98,28 +124,29 @@ class ViewController: UIViewController {
 
     @IBAction func addItem(_ sender: UIButton) {
         
-        var selectedURL = self.selectedItem.url
-        var selectedId = self.selectedItem.id
+        guard let entry = self.selectedItem.entry else {
+            toastMedium("No entry")
+            return
+        }
         
-        let mediaSource = lam.getPreferredDownloadableMediaSource(for: testEntry!)
+        guard let mediaSource = lam.getPreferredDownloadableMediaSource(for: entry) else {
+            toastMedium("No media source")
+            return
+        }
         
-        selectedId = testEntry!.id
-
-        // Make apple download the dummy URL with DRM params from this source
-        fakeDownloader?.start(id: selectedId, media: mediaSource!)
+        // Make iOS download the dummy URL with DRM params from this source
+        fakeDownloader?.start(id: entry.id, media: mediaSource)
         
         // Tell DTG to download the real entry
-        selectedURL = mediaSource!.contentUrl!
-        
-        
-        
-        
-        
+        guard let realContentUrl = mediaSource.contentUrl else {
+            toastMedium("No URL")
+            return
+        }
         
         
         do {
-            _ = try cm.addItem(id: selectedId, url: selectedURL)
-            self.statusLabel.text = try cm.itemById(selectedId)?.state.asString()
+            _ = try cm.addItem(id: entry.id, url: realContentUrl)
+            self.statusLabel.text = try cm.itemById(entry.id)?.state.asString()
         } catch {
             // handle db issues here...
             print(error.localizedDescription)
@@ -129,7 +156,7 @@ class ViewController: UIViewController {
     @IBAction func loadMetadata(_ sender: UIButton) {
         DispatchQueue.global().async {
             do {
-                try self.cm.loadItemMetadata(id: self.testEntry!.id, preferredVideoBitrate: 300000)
+                try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
             } catch {
                 DispatchQueue.main.async {
@@ -141,7 +168,7 @@ class ViewController: UIViewController {
     
     @IBAction func start(_ sender: UIButton) {
         do {
-            try cm.startItem(id: self.testEntry!.id)
+            try cm.startItem(id: self.selectedItem.id)
         } catch let e {
             print("error: \(e.localizedDescription)")
         }
@@ -149,14 +176,14 @@ class ViewController: UIViewController {
     
     @IBAction func pause(_ sender: UIButton) {
         do {
-            try cm.pauseItem(id: self.testEntry!.id)
+            try cm.pauseItem(id: self.selectedItem.id)
         } catch let e {
             print("error: \(e.localizedDescription)")
         }
     }
     
     @IBAction func remove(_ sender: UIButton) {
-        let id = testEntry!.id
+        let id = self.selectedItem.id
         try? cm.removeItem(id: id)
     }
     
@@ -245,7 +272,7 @@ class ViewController: UIViewController {
     
     func doneButtonTapped(button: UIBarButtonItem) -> Void {
         do {
-            let item = try cm.itemById(self.testEntry!.id)
+            let item = try cm.itemById(self.selectedItem.id)
             self.statusLabel.text = item?.state.asString()
             self.itemTextField.resignFirstResponder()
         } catch {
@@ -279,7 +306,7 @@ extension ViewController {
     override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
         do {
             if identifier == self.videoViewControllerSegueIdentifier {
-                guard let item = try cm.itemById(testEntry!.id) else {
+                guard let item = try cm.itemById(self.selectedItem.id) else {
                     print("cannot segue to video view controller until download is finished")
                     return false
                 }
@@ -300,7 +327,7 @@ extension ViewController {
         if segue.identifier == self.videoViewControllerSegueIdentifier {
             let destinationVC = segue.destination as! VideoViewController
             do {
-                destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.testEntry!.id)
+                destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.selectedItem.id)
             } catch {
                 print("error: \(error.localizedDescription)")
             }
@@ -315,7 +342,7 @@ extension ViewController {
 extension ViewController: ContentManagerDelegate {
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
-        if let totalBytesEstimated = totalBytesEstimated, id == self.testEntry!.id {
+        if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
             if totalBytesEstimated > totalBytesDownloaded {
                 DispatchQueue.main.async {
                     self.progressView.progress = Float(totalBytesDownloaded) / Float(totalBytesEstimated)
@@ -334,9 +361,9 @@ extension ViewController: ContentManagerDelegate {
     
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
         DispatchQueue.main.async {
-            if newState == .completed && id == self.testEntry!.id {
+            if newState == .completed && id == self.selectedItem.id {
                 self.progressView.progress = 1.0
-            } else if newState == .removed && id == self.testEntry!.id {
+            } else if newState == .removed && id == self.selectedItem.id {
                 self.progressView.progress = 0.0
             } else if newState == .failed {
                 print("error: \(String(describing: error?.localizedDescription))")
