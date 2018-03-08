@@ -17,6 +17,8 @@ class VideoViewController: UIViewController {
     var isControlsVisible = true
     var player: Player?
     var contentUrl: URL?
+    var textLanguageCode: String?
+    var audioLanguageCode: String?
     var tracks: PKTracks?
     var selectedAudioTrack: Track?
     var selectedTextTrack: Track?
@@ -37,6 +39,16 @@ class VideoViewController: UIViewController {
             self.player = player
             player.view = self.playerView
             let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: contentUrl!)
+            // set text language code
+            if let textLanguageCode = self.textLanguageCode {
+                player.settings.trackSelection.textSelectionMode = .selection
+                player.settings.trackSelection.textSelectionLanguage = textLanguageCode
+            }
+            // set audio language code
+            if let audioLanguageCode = self.audioLanguageCode {
+                player.settings.trackSelection.audioSelectionMode = .selection
+                player.settings.trackSelection.audioSelectionLanguage = audioLanguageCode
+            }
             player.prepare(MediaConfig(mediaEntry: mediaEntry))
             player.play()
             
@@ -65,7 +77,6 @@ class VideoViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         self.stopTimer()
-        self.player?.destroy()
     }
     
     @IBAction func playerViewTapped(_ sender: UITapGestureRecognizer) {
@@ -116,6 +127,10 @@ class VideoViewController: UIViewController {
     private func stopTimer() {
         self.timer?.invalidate()
         self.timer = nil
+    }
+    
+    deinit {
+        self.player?.destroy()
     }
 }
 

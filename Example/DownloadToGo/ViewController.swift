@@ -42,6 +42,11 @@ class ViewController: UIViewController {
         return picker
     }()
     
+    let languageCodePickerView: UIPickerView = {
+        let picker = UIPickerView()
+        return picker
+    }()
+    
     var selectedItem: Item! {
         didSet {
             do {
@@ -61,10 +66,14 @@ class ViewController: UIViewController {
         }
     }
     
+    var selectedTextLanguageCode: String?
+    var selectedAudioLanguageCode: String?
+    
     @IBOutlet weak var statusLabel: UILabel!
     @IBOutlet weak var itemTextField: UITextField!
     @IBOutlet weak var progressView: UIProgressView!
-
+    @IBOutlet weak var languageCodeTextField: UITextField!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // initialize UI
@@ -74,6 +83,11 @@ class ViewController: UIViewController {
         itemTextField.inputView = itemPickerView
         itemTextField.text = items.first?.id ?? ""
         self.itemTextField.inputAccessoryView = getAccessoryView()
+        
+        self.languageCodePickerView.delegate = self
+        self.languageCodePickerView.dataSource = self
+        self.languageCodeTextField.inputView = self.languageCodePickerView
+        self.languageCodeTextField.inputAccessoryView = getAccessoryView()
         
         // setup content manager
         cm.delegate = self
@@ -216,6 +230,7 @@ class ViewController: UIViewController {
             let item = try cm.itemById(self.selectedItem.id)
             self.statusLabel.text = item?.state.asString()
             self.itemTextField.resignFirstResponder()
+            self.languageCodeTextField.resignFirstResponder()
         } catch {
             // handle db issues here...
             print("error: \(error.localizedDescription)")
@@ -269,6 +284,8 @@ extension ViewController {
             let destinationVC = segue.destination as! VideoViewController
             do {
                 destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.selectedItem.id)
+                destinationVC.textLanguageCode = self.selectedTextLanguageCode
+                destinationVC.audioLanguageCode = self.selectedAudioLanguageCode
             } catch {
                 print("error: \(error.localizedDescription)")
             }
@@ -321,11 +338,28 @@ extension ViewController: ContentManagerDelegate {
 extension ViewController: UIPickerViewDataSource {
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 1
+        if pickerView === self.languageCodePickerView {
+            return 2
+        } else {
+            return 1
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        return self.items.count
+        if pickerView === self.languageCodePickerView {
+            do {
+                guard let item = try self.cm.itemById(self.selectedItem.id) else { return 0 }
+                if component == 0 {
+                    return item.selectedTextTracks.count
+                } else {
+                    return item.selectedAudioTracks.count
+                }
+            } catch {
+                return 0
+            }
+        } else {
+            return self.items.count
+        }
     }
 }
 
@@ -336,11 +370,40 @@ extension ViewController: UIPickerViewDataSource {
 extension ViewController: UIPickerViewDelegate {
     
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        return items[row].id
+        if pickerView === self.languageCodePickerView {
+            do {
+                guard let item = try self.cm.itemById(self.selectedItem.id) else { return "" }
+                if component == 0 {
+                    return item.selectedTextTracks[row].title
+                } else {
+                    return item.selectedAudioTracks[row].title
+                }
+            } catch {
+                return ""
+            }
+        } else {
+            return items[row].id
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        self.itemTextField.text = items[row].id
-        self.selectedItem = items[row]
+        if pickerView === self.languageCodePickerView {
+            do {
+                guard let item = try self.cm.itemById(self.selectedItem.id) else { return }
+                if component == 0 {
+                    guard item.selectedTextTracks.count > 0 else { return }
+                    self.selectedTextLanguageCode = item.selectedTextTracks[row].languageCode
+                } else {
+                    guard item.selectedAudioTracks.count > 0 else { return }
+                    self.selectedAudioLanguageCode = item.selectedAudioTracks[row].languageCode
+                }
+                self.languageCodeTextField.text = "text code: \(self.selectedTextLanguageCode ?? ""), audio code: \(self.selectedAudioLanguageCode ?? "")"
+            } catch {
+                
+            }
+        } else {
+            self.itemTextField.text = items[row].id
+            self.selectedItem = items[row]
+        }
     }
 }
