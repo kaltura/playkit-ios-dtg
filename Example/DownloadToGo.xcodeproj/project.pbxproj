@@ -36,7 +36,7 @@
 		20AD661D1F17A30C00E8E6D7 /* TracksViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TracksViewController.swift; sourceTree = "<group>"; };
 		20EEC2061F28B9C000535A42 /* HLSLocalizerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HLSLocalizerTests.swift; path = HLSLocalizer/HLSLocalizerTests.swift; sourceTree = "<group>"; };
 		20EEC25A1F28DA3600535A42 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
-		25C82E71DD5DC2FA8D73C02C /* DownloadToGo.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = DownloadToGo.podspec; path = ../DownloadToGo.podspec; sourceTree = "<group>"; };
+		25C82E71DD5DC2FA8D73C02C /* DownloadToGo.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = DownloadToGo.podspec; path = ../DownloadToGo.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		607FACD01AFB9204008FA782 /* DownloadToGo_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DownloadToGo_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACD41AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		607FACD51AFB9204008FA782 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
