@@ -1,5 +1,5 @@
 PODS:
-  - DownloadToGo (3.3.0):
+  - DownloadToGo (3.dev):
     - GCDWebServer (~> 3.3.3)
     - M3U8Kit (= 0.2.1)
     - PlayKitUtils (~> 0.1.4)
@@ -62,7 +62,7 @@ CHECKOUT OPTIONS:
     :git: https://github.com/surrenderios/M3U8Paser.git
 
 SPEC CHECKSUMS:
-  DownloadToGo: 582b21c86e2e4be1d1c3be3d31a365d04d20d79e
+  DownloadToGo: 3784fb2c5f2bf195f7379e33df2b370d23fffde6
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
   KalturaNetKit: d37b3c6fc08da9935677fc547c59b25abc3574a3
   Log: 5e368c9528db07517d18d2d04ff5fe2b6f5a1e21
