@@ -44,7 +44,6 @@ class Item {
 }
 
 class ViewController: UIViewController {
-//    var testEntry: PKMediaEntry?
     let dummyFileName = "dummyfile"
     let videoViewControllerSegueIdentifier = "videoViewController"
     
@@ -53,7 +52,6 @@ class ViewController: UIViewController {
     
     // FIXME: change the urls for the correct default ones
     let items = [
-        Item(id: "1_z9tkt5uz", partnerId: 2222401),     // FPS: Beeline promo
         Item(id: "1_2hsw7gwj", partnerId: 2222401),     // FPS: Apple BipBop
         Item(id: "1_b8ppdt98", partnerId: 2222401),     // FPS: Nyan Cat
         Item(id: "1_cwdmd8il", partnerId: 2222401),     // FPS: Maroon5 Sugar
@@ -121,10 +119,6 @@ class ViewController: UIViewController {
         
         // setup content manager
         cm.delegate = self
-//
-//        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: 2222401, ks: nil)).set(entryId: "1_z9tkt5uz").loadMedia { (entry, error) in
-//            self.testEntry = entry
-//        }
     }
 
     override func didReceiveMemoryWarning() {

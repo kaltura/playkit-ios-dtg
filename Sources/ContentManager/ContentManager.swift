@@ -148,7 +148,7 @@ public class ContentManager: NSObject, DTGContentManager {
     
     var started = false
     var server = GCDWebServer()!
-    public var serverUrl: URL? {
+    var serverUrl: URL? {
         return server.isRunning ? server.serverURL : nil
     }
     var serverPort: UInt?
