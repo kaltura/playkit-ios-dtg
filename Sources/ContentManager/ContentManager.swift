@@ -185,7 +185,6 @@ public class ContentManager: NSObject, DTGContentManager {
     private func startServer() throws {
         // start server
         server.addGETHandler(forBasePath: "/", directoryPath: DTGFilePaths.itemsDirUrl.path, indexFilename: nil, cacheAge: 3600, allowRangeRequests: true)
-        FairPlayDummy.addHandler(server: server)
         try server.start(options: [
             GCDWebServerOption_BindToLocalhost: true,
             GCDWebServerOption_Port: 0,
