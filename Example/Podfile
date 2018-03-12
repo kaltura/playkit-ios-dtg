@@ -1,13 +1,13 @@
 use_frameworks!
 
-platform :ios, '9.0'
+platform :ios, '10.3'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
   pod 'DownloadToGo/FairPlay', :path => '..'
   
   pod 'Toast-Swift'
-  pod 'PlayKit', '3.3.2'
+  pod 'PlayKit', :git => 'https://github.com/kaltura/playkit-ios.git', :branch => 'FEM-1895'
   pod 'M3U8Kit', :git => 'https://github.com/surrenderios/M3U8Paser.git', :commit => '9973646296b8d48108f9862429b013e8e170ebdb'
   target 'DownloadToGo_Tests' do
     inherit! :search_paths
