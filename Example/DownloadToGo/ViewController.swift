@@ -53,10 +53,10 @@ class ViewController: UIViewController {
     
     // FIXME: change the urls for the correct default ones
     let items = [
-        Item(id: "1_z9tkt5uz", partnerId: 2222401),
-        Item(id: "1_q81a5nbp", partnerId: 2222401),
-        Item(id: "1_f93tepsn", partnerId: 2222401),
-        Item(id: "1_2hsw7gwj", partnerId: 2222401),
+        Item(id: "1_z9tkt5uz", partnerId: 2222401),     // FPS: Beeline promo
+        Item(id: "1_2hsw7gwj", partnerId: 2222401),     // FPS: Apple BipBop
+        Item(id: "1_b8ppdt98", partnerId: 2222401),     // FPS: Nyan Cat
+        Item(id: "1_cwdmd8il", partnerId: 2222401),     // FPS: Maroon5 Sugar
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
         Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
@@ -130,19 +130,16 @@ class ViewController: UIViewController {
             return
         }
         
-        lam.fetchFairPlayLicense(for: mediaSource, id: entry.id)
-        
-        // Make iOS download the dummy URL with DRM params from this source
-        
-        // Tell DTG to download the real entry
-        guard let realContentUrl = mediaSource.contentUrl else {
-            toastMedium("No URL")
-            return
+        if mediaSource.drmData?.first is FairPlayDRMParams {
+            if #available(iOS 10.3, *) {
+                lam.fetchFairPlayLicense(for: mediaSource, id: entry.id)
+            } else {
+                // Fallback on earlier versions
+            }
         }
-        
-        
+                
         do {
-            _ = try cm.addItem(id: entry.id, url: realContentUrl)
+            _ = try cm.addItem(id: entry.id, url: mediaSource.contentUrl!)
             self.statusLabel.text = try cm.itemById(entry.id)?.state.asString()
         } catch {
             // handle db issues here...
