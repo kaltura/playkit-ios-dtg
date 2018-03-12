@@ -134,8 +134,9 @@ class ViewController: UIViewController {
             return
         }
         
+        lam.fetchFairPlayLicense(for: mediaSource, id: entry.id)
+        
         // Make iOS download the dummy URL with DRM params from this source
-        fakeDownloader?.start(id: entry.id, media: mediaSource)
         
         // Tell DTG to download the real entry
         guard let realContentUrl = mediaSource.contentUrl else {
