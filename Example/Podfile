@@ -1,10 +1,9 @@
 use_frameworks!
 
-platform :ios, '10.3'
+platform :ios, '9.0'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
-  pod 'DownloadToGo/FairPlay', :path => '..'
   
   pod 'Toast-Swift'
   pod 'PlayKit', :git => 'https://github.com/kaltura/playkit-ios.git', :branch => 'FEM-1895'

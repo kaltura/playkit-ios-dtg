@@ -50,7 +50,6 @@ class ViewController: UIViewController {
     
     let cm = ContentManager.shared
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
-    var fakeDownloader: FairPlayLicenseFetcher?
     
     // FIXME: change the urls for the correct default ones
     let items = [
@@ -98,9 +97,6 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        fakeDownloader = FairPlayLicenseFetcher(localAssetsManager: lam)
-
-        
         // initialize UI
         self.selectedItem = self.items.first!
         itemPickerView.delegate = self
