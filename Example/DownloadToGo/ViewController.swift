@@ -13,6 +13,7 @@ import PlayKit
 
 class Item {
     let id: String
+    let title: String
     let partnerId: Int?
     
     var url: URL?
@@ -20,6 +21,7 @@ class Item {
 
     init(id: String, url: String) {
         self.id = id
+        self.title = id
         self.url = URL(string: url)!
         
         let source = PKMediaSource.init(id, contentUrl: URL(string: url))
@@ -28,8 +30,9 @@ class Item {
         self.partnerId = nil
     }
     
-    init(id: String, partnerId: Int) {
+    init(_ title: String, id: String, partnerId: Int) {
         self.id = id
+        self.title = title
         self.partnerId = partnerId
         
         self.url = nil
@@ -50,15 +53,15 @@ class ViewController: UIViewController {
     let cm = ContentManager.shared
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
-    // FIXME: change the urls for the correct default ones
     let items = [
-        Item(id: "1_ytsd86sc", partnerId: 2222401),     // FPS: Kaltura 1
-        Item(id: "1_3wzacuha", partnerId: 2222401),     // FPS: Kaltura 2
-        Item(id: "1_2hsw7gwj", partnerId: 2222401),     // FPS: Apple BipBop
-        Item(id: "1_b8ppdt98", partnerId: 2222401),     // FPS: Nyan Cat
+        Item("FPS: Kaltura 1", id: "1_ytsd86sc", partnerId: 2222401),
+        Item("FPS: Kaltura 2", id: "1_3wzacuha", partnerId: 2222401),
+        Item("FPS: Apple BipBop", id: "1_2hsw7gwj", partnerId: 2222401),
+        Item("FPS: Nyan Cat", id: "1_b8ppdt98", partnerId: 2222401),
+        Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
-        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
+//        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Kaltura multi captions", url: "https://cdnapisec.kaltura.com/p/811441/sp/81144100/playManifest/entryId/1_mhyj12pj/format/applehttp/protocol/https/a.m3u8"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
         Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
@@ -110,7 +113,7 @@ class ViewController: UIViewController {
         itemPickerView.delegate = self
         itemPickerView.dataSource = self
         itemTextField.inputView = itemPickerView
-        itemTextField.text = items.first?.id ?? ""
+        itemTextField.text = items.first?.title ?? ""
         self.itemTextField.inputAccessoryView = getAccessoryView()
         
         self.languageCodePickerView.delegate = self
@@ -430,7 +433,7 @@ extension ViewController: UIPickerViewDelegate {
                 return ""
             }
         } else {
-            return items[row].id
+            return items[row].title
         }
     }
     
@@ -450,7 +453,7 @@ extension ViewController: UIPickerViewDelegate {
                 
             }
         } else {
-            self.itemTextField.text = items[row].id
+            self.itemTextField.text = items[row].title
             self.selectedItem = items[row]
         }
     }
