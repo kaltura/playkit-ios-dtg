@@ -9,14 +9,40 @@
 import UIKit
 import DownloadToGo
 import Toast_Swift
+import PlayKit
 
 class Item {
     let id: String
-    let url: URL
+    let title: String
+    let partnerId: Int?
     
+    var url: URL?
+    var entry: PKMediaEntry?
+
     init(id: String, url: String) {
         self.id = id
+        self.title = id
         self.url = URL(string: url)!
+        
+        let source = PKMediaSource.init(id, contentUrl: URL(string: url))
+        self.entry = PKMediaEntry(id, sources: [source])
+        
+        self.partnerId = nil
+    }
+    
+    init(_ title: String, id: String, partnerId: Int) {
+        self.id = id
+        self.title = title
+        self.partnerId = partnerId
+        
+        self.url = nil
+        
+        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: Int64(partnerId), ks: nil))
+            .set(entryId: id)
+            .loadMedia { (entry, error) in
+                self.entry = entry
+                
+        }
     }
 }
 
@@ -25,12 +51,17 @@ class ViewController: UIViewController {
     let videoViewControllerSegueIdentifier = "videoViewController"
     
     let cm = ContentManager.shared
+    let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
-    // FIXME: change the urls for the correct default ones
     let items = [
+        Item("FPS: Kaltura 1", id: "1_ytsd86sc", partnerId: 2222401),
+        Item("FPS: Kaltura 2", id: "1_3wzacuha", partnerId: 2222401),
+        Item("FPS: Apple BipBop", id: "1_2hsw7gwj", partnerId: 2222401),
+        Item("FPS: Nyan Cat", id: "1_b8ppdt98", partnerId: 2222401),
+        Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
-        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
+//        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Kaltura multi captions", url: "https://cdnapisec.kaltura.com/p/811441/sp/81144100/playManifest/entryId/1_mhyj12pj/format/applehttp/protocol/https/a.m3u8"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
         Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
@@ -76,12 +107,13 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+
         // initialize UI
         self.selectedItem = self.items.first!
         itemPickerView.delegate = self
         itemPickerView.dataSource = self
         itemTextField.inputView = itemPickerView
-        itemTextField.text = items.first?.id ?? ""
+        itemTextField.text = items.first?.title ?? ""
         self.itemTextField.inputAccessoryView = getAccessoryView()
         
         self.languageCodePickerView.delegate = self
@@ -99,9 +131,28 @@ class ViewController: UIViewController {
     }
 
     @IBAction func addItem(_ sender: UIButton) {
+        
+        guard let entry = self.selectedItem.entry else {
+            toastMedium("No entry")
+            return
+        }
+        
+        guard let mediaSource = lam.getPreferredDownloadableMediaSource(for: entry) else {
+            toastMedium("No media source")
+            return
+        }
+        
+        if mediaSource.drmData?.first is FairPlayDRMParams {
+            if #available(iOS 10.3, *) {
+                lam.fetchFairPlayLicense(for: mediaSource, id: entry.id)
+            } else {
+                // Fallback on earlier versions
+            }
+        }
+                
         do {
-            _ = try cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
-            self.statusLabel.text = try cm.itemById(selectedItem.id)?.state.asString()
+            _ = try cm.addItem(id: entry.id, url: mediaSource.contentUrl!)
+            self.statusLabel.text = try cm.itemById(entry.id)?.state.asString()
         } catch {
             // handle db issues here...
             print(error.localizedDescription)
@@ -138,7 +189,7 @@ class ViewController: UIViewController {
     }
     
     @IBAction func remove(_ sender: UIButton) {
-        let id = selectedItem.id
+        let id = self.selectedItem.id
         try? cm.removeItem(id: id)
     }
     
@@ -262,7 +313,7 @@ extension ViewController {
     override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
         do {
             if identifier == self.videoViewControllerSegueIdentifier {
-                guard let item = try cm.itemById(selectedItem.id) else {
+                guard let item = try cm.itemById(self.selectedItem.id) else {
                     print("cannot segue to video view controller until download is finished")
                     return false
                 }
@@ -382,7 +433,7 @@ extension ViewController: UIPickerViewDelegate {
                 return ""
             }
         } else {
-            return items[row].id
+            return items[row].title
         }
     }
     
@@ -402,7 +453,7 @@ extension ViewController: UIPickerViewDelegate {
                 
             }
         } else {
-            self.itemTextField.text = items[row].id
+            self.itemTextField.text = items[row].title
             self.selectedItem = items[row]
         }
     }

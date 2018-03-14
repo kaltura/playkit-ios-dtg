@@ -77,6 +77,7 @@ class HLSLocalizer {
     enum Constants {
         static let EXT_X_KEY = "#EXT-X-KEY:"
         static let EXT_X_KEY_URI = "URI"
+        static let KEYFORMAT_FAIRPLAY = "KEYFORMAT=\"com.apple.streamingkeydelivery\""
     }
     
     let itemId: String
@@ -241,6 +242,10 @@ class HLSLocalizer {
         try save(text: localText as String, as: target)
     }
     
+    private func isHLSAESKey(line: String) -> Bool {
+        return line.hasPrefix(Constants.EXT_X_KEY) && !line.contains(Constants.KEYFORMAT_FAIRPLAY)
+    }
+    
     private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
@@ -257,7 +262,8 @@ class HLSLocalizer {
             if !line.hasPrefix("#") && i < segments.countInt && line == segments[i].uri.absoluteString {
                 localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
                 i += 1
-            } else if line.hasPrefix(Constants.EXT_X_KEY) { // has AES-128 key replace uri with local path
+            } else if isHLSAESKey(line: line) { 
+                // has AES-128 key replace uri with local path
                 let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY, seperatedBy: ",")
                 var updatedLine = Constants.EXT_X_KEY
                 for (index, attribute) in keyAttributes.enumerated() {
@@ -351,7 +357,7 @@ class HLSLocalizer {
         var downloadItemTasks = [DownloadItemTask]()
         
         for line in lines {
-            if line.hasPrefix(Constants.EXT_X_KEY) {
+            if isHLSAESKey(line: line) {
                 // the attributes of the key are seperated by commas, need to seperate and get the URI to create the download task.
                 let keyAttributes = self.getSegmentAttributes(fromSegment: line, segmentPrefix: keySegmentTagPrefix, seperatedBy: ",")
                 for attribute in keyAttributes {

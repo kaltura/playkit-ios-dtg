@@ -1,5 +1,5 @@
 PODS:
-  - DownloadToGo (3.dev):
+  - DownloadToGo (3.3.0-dev):
     - GCDWebServer (~> 3.3.3)
     - M3U8Kit (= 0.2.1)
     - PlayKitUtils (~> 0.1.4)
@@ -18,9 +18,9 @@ PODS:
   - ObjcExceptionBridging (1.0.1):
     - ObjcExceptionBridging/ObjcExceptionBridging (= 1.0.1)
   - ObjcExceptionBridging/ObjcExceptionBridging (1.0.1)
-  - PlayKit (3.4.0):
-    - PlayKit/Core (= 3.4.0)
-  - PlayKit/Core (3.4.0):
+  - PlayKit (3.4.x-dev):
+    - PlayKit/Core (= 3.4.x-dev)
+  - PlayKit/Core (3.4.x-dev):
     - KalturaNetKit (~> 0.0)
     - Log (= 1.0)
     - PlayKitUtils (= 0.1.4)
@@ -45,7 +45,7 @@ DEPENDENCIES:
   - DownloadToGo (from `..`)
   - M3U8Kit (from `https://github.com/surrenderios/M3U8Paser.git`, commit `9973646296b8d48108f9862429b013e8e170ebdb`)
   - Nimble (= 7.0.2)
-  - PlayKit (= 3.4.0)
+  - PlayKit (from `../../playkit-ios`)
   - Quick (= 1.2.0)
   - Toast-Swift
 
@@ -55,6 +55,8 @@ EXTERNAL SOURCES:
   M3U8Kit:
     :commit: 9973646296b8d48108f9862429b013e8e170ebdb
     :git: https://github.com/surrenderios/M3U8Paser.git
+  PlayKit:
+    :path: ../../playkit-ios
 
 CHECKOUT OPTIONS:
   M3U8Kit:
@@ -62,14 +64,14 @@ CHECKOUT OPTIONS:
     :git: https://github.com/surrenderios/M3U8Paser.git
 
 SPEC CHECKSUMS:
-  DownloadToGo: 3784fb2c5f2bf195f7379e33df2b370d23fffde6
+  DownloadToGo: 51888a3014be382509a274fc90c38eb77f6d18ff
   GCDWebServer: 1c39a1f0763e4eb492bee021e4270fce097d3555
   KalturaNetKit: d37b3c6fc08da9935677fc547c59b25abc3574a3
   Log: 5e368c9528db07517d18d2d04ff5fe2b6f5a1e21
   M3U8Kit: 3e0f7feef04a775252b41c0fa91de7e1fe8f188c
   Nimble: bfe1f814edabba69ff145cb1283e04ed636a67f2
   ObjcExceptionBridging: c30e00eb3700467e695faeea30e26e18bd445001
-  PlayKit: 89d6010a58df781281119a319e08e91614fa6cd0
+  PlayKit: 099466211a5f9df804308d170cbf6a1cec8c3bda
   PlayKitUtils: 8f03f72690805e20718be6f913547e0966c835f9
   Quick: 58d203b1c5e27fff7229c4c1ae445ad7069a7a08
   Realm: 3601ef091c8c499a31101d8563b991e75546cdce
@@ -79,6 +81,6 @@ SPEC CHECKSUMS:
   Toast-Swift: ba0b01b095aada709d915f9beb1d38184a2721c3
   XCGLogger: c9601cae9a8912de34a58666ba931ed3d624dd31
 
-PODFILE CHECKSUM: 8a15fadf388a41eae1ac5c955312cb382872e98b
+PODFILE CHECKSUM: b7d0e8d4187bb6ea0eae81458424db40e57b6ad1
 
 COCOAPODS: 1.4.0
