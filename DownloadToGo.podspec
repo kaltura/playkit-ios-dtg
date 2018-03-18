@@ -11,8 +11,8 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '8.0'
 
   s.source_files = 'Sources/**/*'
-  
-  s.dependency 'M3U8Kit', '0.2.1'
+
+  s.dependency 'M3U8Kit', '0.2.2'
   s.dependency 'GCDWebServer', '~> 3.3.3'
   s.dependency 'RealmSwift', '~> 2.8.3'
   s.dependency 'XCGLogger', '~> 6.0.1'
