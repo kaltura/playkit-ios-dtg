@@ -26,6 +26,13 @@ class TracksViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // Select current tracks
+        if tracks != nil {
+            selectedAudioTrack = tracks.audioTracks?.first(where: {$0.id == player?.currentAudioTrack})
+            selectedTextTrack = tracks.textTracks?.first(where: {$0.id == player?.currentTextTrack})
+        }
+        
         self.navigationItem.setRightBarButton(UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissTracksVC)), animated: false)
     }
     
