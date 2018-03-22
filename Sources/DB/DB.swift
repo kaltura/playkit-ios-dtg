@@ -13,19 +13,22 @@ import Foundation
 import RealmSwift
 
 /// returns a configured realm object.
-func getRealm() -> Realm {
-    return try! Realm(configuration: getRealmConfiguration())
+func getRealm() throws -> Realm {
+    return try Realm(configuration: getRealmConfiguration())
 }
 
 func getRealmConfiguration() -> Realm.Configuration {
     return Realm.Configuration(
         fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
-        schemaVersion: 1,
+        schemaVersion: 2,
         migrationBlock: { migration, oldSchemaVersion in
             // We haven’t migrated anything yet, so oldSchemaVersion == 0
             if (oldSchemaVersion < 1) {
                 // The renaming operation should be done outside of calls to `enumerateObjects(ofType: _:)`.
                 migration.renameProperty(onType: DownloadItemTaskRealm.className(), from: "trackType", to: "type")
+            }
+            if (oldSchemaVersion < 2) {
+                // nothing to do just detect new properties on realm item
             }
     })
 }
@@ -34,31 +37,27 @@ protocol DB: class {
     
     /* Items API */
     
-    func update(item: DownloadItem, completionHandler: (() -> Void)?)
-    func item(byId id: String) -> DownloadItem?
-    func removeItem(byId id: String)
-    func allItems() -> [DownloadItem]
+    func update(item: DownloadItem) throws
+    func item(byId id: String) throws -> DownloadItem?
+    func removeItem(byId id: String) throws
+    func allItems() throws -> [DownloadItem]
     
-    func items(byState state: DTGItemState) -> [DownloadItem]
-    func update(itemState: DTGItemState, byId id: String)
+    func items(byState state: DTGItemState) throws -> [DownloadItem]
+    func update(itemState: DTGItemState, byId id: String) throws
     
     /* Tasks API */
     
-    func set(tasks: [DownloadItemTask])
-    func tasks(forItemId id: String) -> [DownloadItemTask]
-    func removeTasks(withItemId id: String)
-    func remove(_ tasks: [DownloadItemTask])
-    func update(_ tasks: [DownloadItemTask])
+    func set(tasks: [DownloadItemTask]) throws
+    func tasks(forItemId id: String) throws -> [DownloadItemTask]
+    func removeTasks(withItemId id: String) throws
+    func remove(_ tasks: [DownloadItemTask]) throws
+    func update(_ tasks: [DownloadItemTask]) throws
 }
 
 class RealmDB: DB {
     
     fileprivate let dtgItemRealmManager = DTGItemRealmManager()
     fileprivate let downloadItemTaskRealmManager = DownloadItemTaskRealmManager()
-    
-    /// Dispatch queue to handle all actions on a background queue to make sure not to block main thread.
-    /// use only for db actions and to synchornized changes
-    let dispatch = DispatchQueue(label: "com.kaltura.dtg.db")
 }
 
 /************************************************************/
@@ -67,44 +66,31 @@ class RealmDB: DB {
 
 extension RealmDB {
     
-    func update(item: DownloadItem, completionHandler: (() -> Void)?) {
-        self.dispatch.sync {
-            self.dtgItemRealmManager.update([item])
-            completionHandler?()
-        }
+    func update(item: DownloadItem) throws {
+        try self.dtgItemRealmManager.update([item])
     }
     
-    func item(byId id: String) -> DownloadItem? {
-        return self.dispatch.sync {
-            return self.dtgItemRealmManager.object(for: id)
-        }
+    func item(byId id: String) throws -> DownloadItem? {
+        return try self.dtgItemRealmManager.object(for: id)
     }
     
-    func removeItem(byId id: String) {
-        self.dispatch.sync {
-            guard let objectToRemove: DTGItemRealm = self.dtgItemRealmManager.object(for: id) else { return }
-            self.dtgItemRealmManager.cascadeDelete([objectToRemove])
-        }
+    func removeItem(byId id: String) throws {
+        guard let objectToRemove: DTGItemRealm = try self.dtgItemRealmManager.object(for: id) else { return }
+        try self.dtgItemRealmManager.cascadeDelete([objectToRemove])
     }
     
-    func allItems() -> [DownloadItem] {
-        return self.dispatch.sync {
-            return self.dtgItemRealmManager.allObjects()
-        }
+    func allItems() throws -> [DownloadItem] {
+        return try self.dtgItemRealmManager.allObjects()
     }
     
-    func items(byState state: DTGItemState) -> [DownloadItem] {
-        return self.dispatch.sync {
-            return self.dtgItemRealmManager.allObjects().filter { $0.state == state }
-        }
+    func items(byState state: DTGItemState) throws -> [DownloadItem] {
+        return try self.dtgItemRealmManager.allObjects().filter { $0.state == state }
     }
     
-    func update(itemState: DTGItemState, byId id: String) {
-        self.dispatch.sync {
-            guard var item = self.dtgItemRealmManager.object(for: id) else { return }
-            item.state = itemState
-            self.dtgItemRealmManager.update([item])
-        }
+    func update(itemState: DTGItemState, byId id: String) throws {
+        guard var item = try self.dtgItemRealmManager.object(for: id) else { return }
+        item.state = itemState
+        try self.dtgItemRealmManager.update([item])
     }
 }
 
@@ -114,34 +100,24 @@ extension RealmDB {
 
 extension RealmDB {
     
-    func set(tasks: [DownloadItemTask]) {
-        self.dispatch.sync {
-            let realmTasks = tasks.map { DownloadItemTaskRealm(object: $0) }
-            self.downloadItemTaskRealmManager.set(tasks: realmTasks)
-        }
+    func set(tasks: [DownloadItemTask]) throws {
+        let realmTasks = tasks.map { DownloadItemTaskRealm(object: $0) }
+        try self.downloadItemTaskRealmManager.set(tasks: realmTasks)
     }
     
-    func tasks(forItemId id: String) -> [DownloadItemTask] {
-        return self.dispatch.sync {
-            return self.downloadItemTaskRealmManager.tasks(forItemId: id)
-        }
+    func tasks(forItemId id: String) throws -> [DownloadItemTask] {
+        return try self.downloadItemTaskRealmManager.tasks(forItemId: id)
     }
     
-    func removeTasks(withItemId id: String) {
-        self.dispatch.sync {
-            self.downloadItemTaskRealmManager.removeTasks(withItemId: id)
-        }
+    func removeTasks(withItemId id: String) throws {
+        try self.downloadItemTaskRealmManager.removeTasks(withItemId: id)
     }
     
-    func remove(_ tasks: [DownloadItemTask]) {
-        self.dispatch.sync {
-            self.downloadItemTaskRealmManager.remove(tasks)
-        }
+    func remove(_ tasks: [DownloadItemTask]) throws {
+        try self.downloadItemTaskRealmManager.remove(tasks)
     }
     
-    func update(_ tasks: [DownloadItemTask]) {
-        self.dispatch.sync {
-            self.downloadItemTaskRealmManager.update(tasks)
-        }
+    func update(_ tasks: [DownloadItemTask]) throws {
+        try self.downloadItemTaskRealmManager.update(tasks)
     }
 }

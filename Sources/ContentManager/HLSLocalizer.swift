@@ -430,6 +430,47 @@ class HLSLocalizer {
     }
 }
 
+extension HLSLocalizer {
+    
+    var availableTextTracksInfo: [TrackInfo] {
+        guard let masterPlaylist = self.masterPlaylist else { return [] }
+        return self.getTracksInfo(from: masterPlaylist.textStreams())
+    }
+    
+    var availableAudioTracksInfo: [TrackInfo] {
+        guard let masterPlaylist = self.masterPlaylist, let audioStreams = masterPlaylist.audioStreams() else { return [] }
+        return self.getTracksInfo(from: audioStreams)
+    }
+    
+    var selectedTextTracksInfo: [TrackInfo] {
+        guard self.selectedTextStreams.count > 0 else { return [] }
+        let streamsInfo = self.selectedTextStreams.map { $0.streamInfo }
+        return self.getTracksInfo(from: streamsInfo)
+    }
+    
+    var selectedAudioTracksInfo: [TrackInfo] {
+        guard self.selectedAudioStreams.count > 0 else { return [] }
+        let streamsInfo = self.selectedAudioStreams.map { $0.streamInfo }
+        return self.getTracksInfo(from: streamsInfo)
+    }
+    
+    private func getTracksInfo(from streamList: M3U8ExtXMediaList) -> [TrackInfo] {
+        var tracksInfo: [TrackInfo] = []
+        for i in 0..<streamList.countInt {
+            let stream = streamList[i]
+            tracksInfo.append(TrackInfo(languageCode: stream.language(), title: stream.name()))
+        }
+        return tracksInfo
+    }
+    
+    private func getTracksInfo(from streams: [M3U8ExtXMedia]) -> [TrackInfo] {
+        var tracksInfo: [TrackInfo] = []
+        for stream in streams {
+            tracksInfo.append(TrackInfo(languageCode: stream.language(), title: stream.name()))
+        }
+        return tracksInfo
+    }
+}
 
 /************************************************************/
 // MARK: - M3U8Kit convenience extensions

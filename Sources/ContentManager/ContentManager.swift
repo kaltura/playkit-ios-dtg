@@ -54,22 +54,39 @@ enum DownloadItemTaskType {
 // MARK: - DTGError
 /************************************************************/
 
-public enum DTGError: Error {
+public enum DTGError: LocalizedError {
     case itemNotFound(itemId: String)
     /// sent when item cannot be started (casued when item state is other than metadata loaded)
     case invalidState(itemId: String)
+    /// insufficient disk space to start or continue the download
+    case insufficientDiskSpace(freeSpaceInMegabytes: Int)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .itemNotFound(let itemId):
+            return "The item (id: \(itemId)) of the action was not found"
+        case .invalidState(let itemId):
+            return "try to make an action with an invalid state (item id: \(itemId))"
+        case .insufficientDiskSpace(let freeSpaceInMegabytes):
+            return "insufficient disk space to start or continue the download, only have \(freeSpaceInMegabytes)MB free..."
+        }
+    }
 }
 
-/************************************************************/
+/* ***********************************************************/
 // MARK: - DownloadItem
-/************************************************************/
+/* ***********************************************************/
 
 struct DownloadItem: DTGItem {
-    var id: String
-    var remoteUrl: URL
+    let id: String
+    let remoteUrl: URL
     var state: DTGItemState = .new
     var estimatedSize: Int64?
     var downloadedSize: Int64 = 0
+    var availableTextTracks: [TrackInfo] = []
+    var availableAudioTracks: [TrackInfo] = []
+    var selectedTextTracks: [TrackInfo] = []
+    var selectedAudioTracks: [TrackInfo] = []
     
     init(id: String, url: URL) {
         self.id = id
@@ -77,9 +94,14 @@ struct DownloadItem: DTGItem {
     }
 }
 
-/************************************************************/
+public struct TrackInfo {
+    public let languageCode: String
+    public let title: String
+}
+
+/* ***********************************************************/
 // MARK: - DTGFilePaths
-/************************************************************/
+/* ***********************************************************/
 
 class DTGFilePaths {
     
@@ -100,9 +122,9 @@ class DTGFilePaths {
     }
 }
 
-/************************************************************/
+/* ***********************************************************/
 // MARK: - ContentManager
-/************************************************************/
+/* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
     
@@ -135,6 +157,10 @@ public class ContentManager: NSObject, DTGContentManager {
     // db interface instance
     let db: DB
     
+    static let megabyteInBytes: Int64 = 1000000
+    /// the minimum free space we need to have in addition to the estimated size, to prevent no disk space issues.
+    static let downloadMinimumDiskSpaceInMegabytes = 200
+    
     // Map of item id and the related downloader
     fileprivate var downloaders = [String: Downloader]()
     
@@ -149,7 +175,7 @@ public class ContentManager: NSObject, DTGContentManager {
             resourceValues.isExcludedFromBackup = true
             try url.setResourceValues(resourceValues)
         } catch let error as NSError {
-            print("Error excluding \(url.lastPathComponent) from backup \(error)");
+            log.error("Error excluding \(url.lastPathComponent) from backup \(error)");
         }
         
         // initialize db
@@ -204,46 +230,44 @@ public class ContentManager: NSObject, DTGContentManager {
 
     public func startItems(inStates states: DTGItemStartableState...) throws {
         if states.contains(.inProgress) {
-            for item in itemsByState(.inProgress) {
+            for item in try itemsByState(.inProgress) {
                 try startItem(id: item.id)
             }
         }
         if states.contains(.paused) {
-            for item in itemsByState(.paused) {
+            for item in try itemsByState(.paused) {
                 try startItem(id: item.id)
             }
         }
         if states.contains(.interrupted) {
-            for item in itemsByState(.interrupted) {
+            for item in try itemsByState(.interrupted) {
                 try startItem(id: item.id)
             }
         }
     }
 
-    public func itemsByState(_ state: DTGItemState) -> [DTGItem] {
+    public func itemsByState(_ state: DTGItemState) throws -> [DTGItem] {
 
-        return db.items(byState: state)
+        return try db.items(byState: state)
     }
     
-    public func itemById(_ id: String) -> DTGItem? {
+    public func itemById(_ id: String) throws -> DTGItem? {
         
-        return db.item(byId: id)
+        return try db.item(byId: id)
     }
     
-    public func addItem(id: String, url: URL) -> DTGItem? {
-        
-        if db.item(byId: id) != nil {
+    public func addItem(id: String, url: URL) throws -> DTGItem? {
+        if try db.item(byId: id) != nil {
             return nil
         }
         
         let item = DownloadItem(id: id, url: url)
-        self.update(item: item)
+        try self.update(item: item)
 
         return item
     }
 
-    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?, completionHandler: (() -> Void)?) throws {
-        
+    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
         var item = try findItemOrThrow(id)
         // can only load metadata on item in `.new` state.
         guard item.state == .new else { throw DTGError.invalidState(itemId: id) }
@@ -252,21 +276,17 @@ public class ContentManager: NSObject, DTGContentManager {
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
         let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
         
-        DispatchQueue.global().async {
-            do {
-                try localizer.loadMetadata()
-                try localizer.saveLocalFiles()
-                // when localizer finished add the tasks and update the item
-                self.db.set(tasks: localizer.tasks)
-                item.state = .metadataLoaded
-                item.estimatedSize = localizer.estimatedSize
-                self.update(item: item) {
-                    completionHandler?()
-                }
-            } catch {
-                self.update(itemState: .failed, byId: id, error: error)
-            }
-        }
+        try localizer.loadMetadata()
+        try localizer.saveLocalFiles()
+        // when localizer finished add the tasks and update the item
+        try self.db.set(tasks: localizer.tasks)
+        item.state = .metadataLoaded
+        item.estimatedSize = localizer.estimatedSize
+        item.availableTextTracks = localizer.availableTextTracksInfo
+        item.availableAudioTracks = localizer.availableAudioTracksInfo
+        item.selectedTextTracks = localizer.selectedTextTracksInfo
+        item.selectedAudioTracks = localizer.selectedAudioTracksInfo
+        try self.update(item: item)
     }
     
     public func startItem(id: String) throws {
@@ -278,14 +298,37 @@ public class ContentManager: NSObject, DTGContentManager {
             throw DTGError.invalidState(itemId: id)
         }
         
+        // check free disk space to make sure we have enough before we start.
+        if let freeDiskSpace = ContentManager.getFreeDiskSpaceInBytes() {
+            let minimumDiskSpaceInBytes = Int64(ContentManager.downloadMinimumDiskSpaceInMegabytes) * ContentManager.megabyteInBytes
+            if let estimatedSize = item.estimatedSize {
+                // resuming a downloaded, make sure we have enough space and a we have more that the minimum we allow
+                if (item.state == .inProgress || item.state == .interrupted || item.state == .paused) {
+                    // for a rare case where we might have that download interrupted serveral times and we downloaded more than the estimate,
+                    // use 0 as the new estimate instead of negative number.
+                    let resumeEstimatedSize = estimatedSize - item.downloadedSize < 0 ? 0 : estimatedSize - item.downloadedSize
+                    if freeDiskSpace <= minimumDiskSpaceInBytes ||
+                        freeDiskSpace <= resumeEstimatedSize + minimumDiskSpaceInBytes {
+                        throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
+                    }
+                }
+                // starting a new download
+                else if item.state == .metadataLoaded && freeDiskSpace <= (estimatedSize + minimumDiskSpaceInBytes) {
+                    throw DTGError.insufficientDiskSpace(freeSpaceInMegabytes: Int(freeDiskSpace/ContentManager.megabyteInBytes))
+                }
+            }
+        }
+        
         // make sure we have tasks to perform
-        let tasks = db.tasks(forItemId: id)
+        let tasks = try db.tasks(forItemId: id)
         guard tasks.count > 0 else {
             log.warning("no tasks for this id")
+            // if an item was started and his state allows to start and has no tasks set the state to completed.
+            try self.update(itemState: .completed, byId: id)
             return
         }
         
-        self.update(itemState: .inProgress, byId: id)
+        try self.update(itemState: .inProgress, byId: id)
         
         let downloader = DefaultDownloader(itemId: id, tasks: tasks)
         downloader.delegate = self
@@ -303,7 +346,7 @@ public class ContentManager: NSObject, DTGContentManager {
         }
         // update state, changed before downloader delegate called
         // to make sure every call to db to get item will be with the updated state.
-        self.update(itemState: .paused, byId: downloader.dtgItemId)
+        try self.update(itemState: .paused, byId: downloader.dtgItemId)
         // pause the downloads and remove the downloader
         downloader.pause()
     }
@@ -318,7 +361,7 @@ public class ContentManager: NSObject, DTGContentManager {
         }
         
         // remove from db
-        db.removeItem(byId: id)
+        try db.removeItem(byId: id)
         
         // remove all files
         let itemPath = DTGFilePaths.itemDirUrl(forItemId: id)
@@ -352,9 +395,9 @@ public class ContentManager: NSObject, DTGContentManager {
         }
     }
     
-    public func setup() {
+    public func setup() throws {
         // gets the realm instance, when migration is needed sets up the new scheme and migration block.
-        _ = getRealm()
+        _ = try getRealm()
     }
 }
 
@@ -378,58 +421,110 @@ extension ContentManager: GCDWebServerDelegate {
 extension ContentManager: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64) {
-        guard var item = self.db.item(byId: downloader.dtgItemId) else {
-            log.warning("no item for request id")
-            return
-        }
-        // when we receive progress for downloads when downloader is pasued make sure item state is pasued
-        // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
-        if downloader.state == .paused {
-            item.state = .paused
-        }
-        item.downloadedSize += bytesWritten
-        self.update(item: item) {
+        do {
+            guard var item = try self.db.item(byId: downloader.dtgItemId) else {
+                log.warning("no item for request id")
+                return
+            }
+            // when we receive progress for downloads when downloader is pasued make sure item state is pasued
+            // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
+            if downloader.state.value == .paused {
+                item.state = .paused
+            }
+            item.downloadedSize += bytesWritten
+            try self.update(item: item)
             self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
+        } catch {
+            // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+            self.removeDownloader(withId: downloader.dtgItemId)
+            self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
         }
     }
     
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask]) {
         log.info("downloading paused")
-        // save pasued tasks to db
-        self.db.update(tasks)
         self.removeDownloader(withId: downloader.dtgItemId)
+        do {
+            // save pasued tasks to db
+            try self.db.update(tasks)
+        } catch {
+            self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+        }
     }
     
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
-        // removes all tasks from the db
-        self.db.removeTasks(withItemId: downloader.dtgItemId)
         // clear the downloader instance
         self.removeDownloader(withId: downloader.dtgItemId)
+        do {
+            // removes all tasks from the db
+            try self.db.removeTasks(withItemId: downloader.dtgItemId)
+        } catch {
+            self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+        }
     }
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
-        // remove the task from the db tasks objects
-        self.db.remove([downloadItemTask])
+        do {
+            // remove the task from the db tasks objects
+            try self.db.remove([downloadItemTask])
+        } catch {
+            // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+            self.removeDownloader(withId: downloader.dtgItemId)
+            self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+        }
     }
     
     func downloader(_ downloader: Downloader, didChangeToState newState: DownloaderState) {
         log.debug("downloader state: \(newState.rawValue)")
         if newState == .idle {
-            self.update(itemState: .completed, byId: downloader.dtgItemId)
+            try? self.update(itemState: .completed, byId: downloader.dtgItemId)
             // remove the downloader, no longer needed
             self.removeDownloader(withId: downloader.dtgItemId)
+        } else if newState == .paused {
+            do {
+                try self.update(itemState: .paused, byId: downloader.dtgItemId)
+            } catch {
+                // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+                self.removeDownloader(withId: downloader.dtgItemId)
+                self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+            }
         }
     }
     
     func downloader(_ downloader: Downloader, didFailWithError error: Error) {
-        switch error {
-        case DownloaderError.http(let statusCode, let rootError):
-            if statusCode >= 500 {
-                self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: rootError)
-            } else {
-                self.update(itemState: .failed, byId: downloader.dtgItemId, error: error)
+        do {
+            switch error {
+            case DownloaderError.http(let statusCode, let rootError):
+                if statusCode >= 500 {
+                    try self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: rootError)
+                } else {
+                    try self.update(itemState: .failed, byId: downloader.dtgItemId, error: error)
+                }
+            case DownloaderError.noSpaceLeftOnDevice, DTGError.insufficientDiskSpace:
+                try self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
+            default: try self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
             }
-        default: self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
+        } catch {
+            // if downloader was already removed don't notify db failure again.
+            guard downloaders[downloader.dtgItemId] != nil else { return }
+            self.removeDownloader(withId: downloader.dtgItemId)
+            self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
+        }
+    }
+}
+
+/************************************************************/
+// MARK: - Internal Implementation
+/************************************************************/
+
+extension ContentManager {
+    
+    static func getFreeDiskSpaceInBytes() -> Int64? {
+        do {
+            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
+            return (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value
+        } catch {
+            return 0
         }
     }
 }
@@ -440,35 +535,31 @@ extension ContentManager: DownloaderDelegate {
 
 private extension ContentManager {
     
-    func update(item: DownloadItem, completionHandler: (() -> Void)? = nil) {
+    func update(item: DownloadItem) throws {
         if item.state == .failed {
-            try? self.removeItem(id: item.id)
+            try self.removeItem(id: item.id)
             self.notifyItemState(item.id, newState: item.state, error: nil)
         } else {
-            let oldItem = self.db.item(byId: item.id)
-            db.update(item: item) {
-                if oldItem?.state != item.state {
-                    self.notifyItemState(item.id, newState: item.state, error: nil)
-                }
-                DispatchQueue.main.async {
-                    completionHandler?()
-                }
+            let oldItem = try self.db.item(byId: item.id)
+            try db.update(item: item)
+            if oldItem?.state != item.state {
+                self.notifyItemState(item.id, newState: item.state, error: nil)
             }
         }
     }
     
-    func update(itemState: DTGItemState, byId id: String, error: Error? = nil) {
+    func update(itemState: DTGItemState, byId id: String, error: Error? = nil) throws {
         if itemState == .failed {
-            try? self.removeItem(id: id)
+            try self.removeItem(id: id)
         } else {
-            self.db.update(itemState: itemState, byId: id)
+            try self.db.update(itemState: itemState, byId: id)
         }
         self.notifyItemState(id, newState: itemState, error: error)
     }
     
     @discardableResult
     func findItemOrThrow(_ id: String) throws -> DownloadItem {
-        if let item = db.item(byId: id) {
+        if let item = try db.item(byId: id) {
             return item
         } else {
             throw DTGError.itemNotFound(itemId: id)

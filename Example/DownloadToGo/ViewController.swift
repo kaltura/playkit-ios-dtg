@@ -21,7 +21,7 @@ class Item {
 }
 
 class ViewController: UIViewController {
-    
+    let dummyFileName = "dummyfile"
     let videoViewControllerSegueIdentifier = "videoViewController"
     
     let cm = ContentManager.shared
@@ -42,24 +42,38 @@ class ViewController: UIViewController {
         return picker
     }()
     
+    let languageCodePickerView: UIPickerView = {
+        let picker = UIPickerView()
+        return picker
+    }()
+    
     var selectedItem: Item! {
         didSet {
-            let item = cm.itemById(selectedItem.id)
-            DispatchQueue.main.async {
-                self.statusLabel.text = item?.state.asString() ?? ""
-                if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
-                    self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
-                } else {
-                    self.progressView.progress = 0.0
+            do {
+                let item = try cm.itemById(selectedItem.id)
+                DispatchQueue.main.async {
+                    self.statusLabel.text = item?.state.asString() ?? ""
+                    if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
+                        self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
+                    } else {
+                        self.progressView.progress = 0.0
+                    }
                 }
+            } catch {
+                // handle error here
+                print("error: \(error.localizedDescription)")
             }
         }
     }
     
+    var selectedTextLanguageCode: String?
+    var selectedAudioLanguageCode: String?
+    
     @IBOutlet weak var statusLabel: UILabel!
     @IBOutlet weak var itemTextField: UITextField!
     @IBOutlet weak var progressView: UIProgressView!
-
+    @IBOutlet weak var languageCodeTextField: UITextField!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // initialize UI
@@ -69,6 +83,11 @@ class ViewController: UIViewController {
         itemTextField.inputView = itemPickerView
         itemTextField.text = items.first?.id ?? ""
         self.itemTextField.inputAccessoryView = getAccessoryView()
+        
+        self.languageCodePickerView.delegate = self
+        self.languageCodePickerView.dataSource = self
+        self.languageCodeTextField.inputView = self.languageCodePickerView
+        self.languageCodeTextField.inputAccessoryView = getAccessoryView()
         
         // setup content manager
         cm.delegate = self
@@ -80,17 +99,25 @@ class ViewController: UIViewController {
     }
 
     @IBAction func addItem(_ sender: UIButton) {
-        _ = cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
-        self.statusLabel.text = cm.itemById(selectedItem.id)?.state.asString()
+        do {
+            _ = try cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
+            self.statusLabel.text = try cm.itemById(selectedItem.id)?.state.asString()
+        } catch {
+            // handle db issues here...
+            print(error.localizedDescription)
+        }
     }
     
     @IBAction func loadMetadata(_ sender: UIButton) {
-        do {
-            try cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000) {
+        DispatchQueue.global().async {
+            do {
+                try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
+            } catch {
+                DispatchQueue.main.async {
+                    self.toastMedium("loadItemMetadata failed \(error)")
+                }
             }
-        } catch {
-            toastMedium("loadItemMetadata failed \(error)")
         }
     }
     
@@ -103,12 +130,91 @@ class ViewController: UIViewController {
     }
     
     @IBAction func pause(_ sender: UIButton) {
-        try? cm.pauseItem(id: self.selectedItem.id)
+        do {
+            try cm.pauseItem(id: self.selectedItem.id)
+        } catch let e {
+            print("error: \(e.localizedDescription)")
+        }
     }
     
     @IBAction func remove(_ sender: UIButton) {
         let id = selectedItem.id
         try? cm.removeItem(id: id)
+    }
+    
+    @IBAction func actionBarButtonTouched(_ sender: UIBarButtonItem) {
+        let actionAlertController = UIAlertController(title: "Perform Action", message: "Please select an action to perform", preferredStyle: .actionSheet)
+        // fille device with dummy file action
+        actionAlertController.addAction(UIAlertAction(title: "Fill device disk using dummy file", style: .default, handler: { (action) in
+            let dialog = UIAlertController(title: "Fill Disk", message: "Please put the amount of MB to fill disk", preferredStyle: .alert)
+            dialog.addTextField(configurationHandler: { (textField) in
+                textField.placeholder = "Size in MB"
+                textField.keyboardType = .numberPad
+            })
+            dialog.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
+                guard let text = dialog.textFields?.first?.text, let sizeInMb = Int(text) else { return }
+                let fileManager = FileManager.default
+                if let dir = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first {
+                    let fileUrl = dir.appendingPathComponent(self.dummyFileName, isDirectory: false).appendingPathExtension("txt")
+                    if !fileManager.fileExists(atPath: fileUrl.path) {
+                        fileManager.createFile(atPath: fileUrl.path, contents: Data(), attributes: nil)
+                    }
+                    do {
+                        let fileHandle = try FileHandle(forUpdating: fileUrl)
+                        autoreleasepool {
+                            for _ in 1...sizeInMb {
+                                fileHandle.write(Data.init(count: 1000000))
+                            }
+                        }
+                        fileHandle.closeFile()
+                        self.toastMedium("Finished Filling Device with Dummy Data")
+                    } catch {
+                        print("error: \(error)")
+                    }
+                }
+            }))
+            dialog.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(dialog, animated: true, completion: nil)
+        }))
+        // update dummy file size action
+        actionAlertController.addAction(UIAlertAction(title: "Update dummy file size", style: .default, handler: { (action) in
+            let dialog = UIAlertController(title: "Update Dummy file Size", message: "Please put the amount of MB to reduce from dummy file", preferredStyle: .alert)
+            dialog.addTextField(configurationHandler: { (textField) in
+                textField.placeholder = "Size in MB"
+                textField.keyboardType = .numberPad
+            })
+            dialog.addAction(UIAlertAction(title: "OK", style: .default, handler: { (action) in
+                guard let text = dialog.textFields?.first?.text, let sizeInMb = Int(text) else { return }
+                let fileManager = FileManager.default
+                if let dir = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first {
+                    let fileUrl = dir.appendingPathComponent(self.dummyFileName, isDirectory: false).appendingPathExtension("txt")
+                    guard fileManager.fileExists(atPath: fileUrl.path) else { return } // make sure file exits
+                    do {
+                        let fileHandle = try FileHandle(forUpdating: fileUrl)
+                        fileHandle.truncateFile(atOffset: fileHandle.seekToEndOfFile() - UInt64(sizeInMb * 1000000))
+                        fileHandle.closeFile()
+                        self.toastMedium("Finished Updating Device Dummy Data File")
+                    } catch {
+                        print("error: \(error)")
+                    }
+                }
+            }))
+            dialog.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(dialog, animated: true, completion: nil)
+        }))
+        // remove dummy file action
+        actionAlertController.addAction(UIAlertAction(title: "Remove dummy file", style: .default, handler: { (action) in
+            let fileManager = FileManager.default
+            if let dir = fileManager.urls(for: .libraryDirectory, in: .userDomainMask).first {
+                let fileUrl = dir.appendingPathComponent(self.dummyFileName, isDirectory: false).appendingPathExtension("txt")
+                do {
+                    try fileManager.removeItem(at: fileUrl)
+                } catch {
+                    print("error: \(error)")
+                }
+            }
+        }))
+        self.present(actionAlertController, animated: true, completion: nil)
     }
     
     func getAccessoryView() -> UIView {
@@ -120,9 +226,15 @@ class ViewController: UIViewController {
     }
     
     func doneButtonTapped(button: UIBarButtonItem) -> Void {
-        let item = cm.itemById(self.selectedItem.id)
-        self.statusLabel.text = item?.state.asString()
-        self.itemTextField.resignFirstResponder()
+        do {
+            let item = try cm.itemById(self.selectedItem.id)
+            self.statusLabel.text = item?.state.asString()
+            self.itemTextField.resignFirstResponder()
+            self.languageCodeTextField.resignFirstResponder()
+        } catch {
+            // handle db issues here...
+            print("error: \(error.localizedDescription)")
+        }
     }
     
     func toastShort(_ message: String) {
@@ -148,16 +260,21 @@ class ViewController: UIViewController {
 extension ViewController {
     
     override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
-        if identifier == self.videoViewControllerSegueIdentifier {
-            guard let item = cm.itemById(selectedItem.id) else {
+        do {
+            if identifier == self.videoViewControllerSegueIdentifier {
+                guard let item = try cm.itemById(selectedItem.id) else {
+                    print("cannot segue to video view controller until download is finished")
+                    return false
+                }
+                if item.state == .completed {
+                    return true
+                }
                 print("cannot segue to video view controller until download is finished")
                 return false
             }
-            if item.state == .completed {
-                return true
-            }
-            print("cannot segue to video view controller until download is finished")
-            return false
+        } catch {
+            // handle db issues here...
+            print("error: \(error.localizedDescription)")
         }
         return true
     }
@@ -167,6 +284,8 @@ extension ViewController {
             let destinationVC = segue.destination as! VideoViewController
             do {
                 destinationVC.contentUrl = try self.cm.itemPlaybackUrl(id: self.selectedItem.id)
+                destinationVC.textLanguageCode = self.selectedTextLanguageCode
+                destinationVC.audioLanguageCode = self.selectedAudioLanguageCode
             } catch {
                 print("error: \(error.localizedDescription)")
             }
@@ -219,11 +338,28 @@ extension ViewController: ContentManagerDelegate {
 extension ViewController: UIPickerViewDataSource {
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 1
+        if pickerView === self.languageCodePickerView {
+            return 2
+        } else {
+            return 1
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        return self.items.count
+        if pickerView === self.languageCodePickerView {
+            do {
+                guard let item = try self.cm.itemById(self.selectedItem.id) else { return 0 }
+                if component == 0 {
+                    return item.selectedTextTracks.count
+                } else {
+                    return item.selectedAudioTracks.count
+                }
+            } catch {
+                return 0
+            }
+        } else {
+            return self.items.count
+        }
     }
 }
 
@@ -234,11 +370,40 @@ extension ViewController: UIPickerViewDataSource {
 extension ViewController: UIPickerViewDelegate {
     
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        return items[row].id
+        if pickerView === self.languageCodePickerView {
+            do {
+                guard let item = try self.cm.itemById(self.selectedItem.id) else { return "" }
+                if component == 0 {
+                    return item.selectedTextTracks[row].title
+                } else {
+                    return item.selectedAudioTracks[row].title
+                }
+            } catch {
+                return ""
+            }
+        } else {
+            return items[row].id
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        self.itemTextField.text = items[row].id
-        self.selectedItem = items[row]
+        if pickerView === self.languageCodePickerView {
+            do {
+                guard let item = try self.cm.itemById(self.selectedItem.id) else { return }
+                if component == 0 {
+                    guard item.selectedTextTracks.count > 0 else { return }
+                    self.selectedTextLanguageCode = item.selectedTextTracks[row].languageCode
+                } else {
+                    guard item.selectedAudioTracks.count > 0 else { return }
+                    self.selectedAudioLanguageCode = item.selectedAudioTracks[row].languageCode
+                }
+                self.languageCodeTextField.text = "text code: \(self.selectedTextLanguageCode ?? ""), audio code: \(self.selectedAudioLanguageCode ?? "")"
+            } catch {
+                
+            }
+        } else {
+            self.itemTextField.text = items[row].id
+            self.selectedItem = items[row]
+        }
     }
 }

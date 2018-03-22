@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="EGP-jg-gGe">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="13771" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="EGP-jg-gGe">
     <device id="retina4_7" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13772"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -13,7 +15,7 @@
             <objects>
                 <navigationController id="EGP-jg-gGe" sceneMemberID="viewController">
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="kHp-uS-mX9">
-                        <rect key="frame" x="0.0" y="0.0" width="375" height="44"/>
+                        <rect key="frame" x="0.0" y="20" width="375" height="44"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </navigationBar>
                     <connections>
@@ -136,12 +138,19 @@
                                     </button>
                                 </subviews>
                             </stackView>
+                            <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Select language code" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="2wz-gC-Jlr">
+                                <rect key="frame" x="16" y="523" width="343" height="30"/>
+                                <nil key="textColor"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits"/>
+                            </textField>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="eQy-pv-dEJ" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="16" id="2d4-7g-fH1"/>
                             <constraint firstItem="eQy-pv-dEJ" firstAttribute="top" secondItem="9eG-bV-JOc" secondAttribute="bottom" constant="20" id="3XK-BZ-Y4z"/>
                             <constraint firstItem="O3t-SZ-StZ" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" constant="20" id="5gR-bi-rE3"/>
+                            <constraint firstItem="2wz-gC-Jlr" firstAttribute="top" secondItem="eQy-pv-dEJ" secondAttribute="bottom" constant="8" id="7jy-0W-ncs"/>
                             <constraint firstItem="Z1o-J3-VeI" firstAttribute="centerY" secondItem="9eG-bV-JOc" secondAttribute="centerY" id="93B-NL-VkE"/>
                             <constraint firstItem="XsP-Nu-3Ga" firstAttribute="leading" secondItem="O3t-SZ-StZ" secondAttribute="trailing" constant="8" id="9c5-E7-9HM"/>
                             <constraint firstItem="O3t-SZ-StZ" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="16" id="Fjm-Iu-V44"/>
@@ -150,12 +159,21 @@
                             <constraint firstItem="Z1o-J3-VeI" firstAttribute="leading" secondItem="9eG-bV-JOc" secondAttribute="trailing" constant="8" id="b5R-44-RKI"/>
                             <constraint firstItem="XsP-Nu-3Ga" firstAttribute="centerY" secondItem="O3t-SZ-StZ" secondAttribute="centerY" id="e6x-D4-CTE"/>
                             <constraint firstItem="9eG-bV-JOc" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="16" id="fdu-Tc-RWV"/>
+                            <constraint firstItem="2wz-gC-Jlr" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" id="gdw-GI-Z0x"/>
+                            <constraint firstItem="2wz-gC-Jlr" firstAttribute="trailing" secondItem="kh9-bI-dsS" secondAttribute="trailingMargin" id="lfN-Jz-wz8"/>
                             <constraint firstItem="9eG-bV-JOc" firstAttribute="top" secondItem="O3t-SZ-StZ" secondAttribute="bottom" constant="20" id="mYC-GM-O2i"/>
                         </constraints>
                     </view>
-                    <navigationItem key="navigationItem" title="Download to Go" id="Kza-Yt-8qV"/>
+                    <navigationItem key="navigationItem" title="Download to Go" id="Kza-Yt-8qV">
+                        <barButtonItem key="rightBarButtonItem" systemItem="action" id="VQM-jJ-n07">
+                            <connections>
+                                <action selector="actionBarButtonTouched:" destination="vXZ-lx-hvc" id="Qqk-u5-wha"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
                     <connections>
                         <outlet property="itemTextField" destination="XsP-Nu-3Ga" id="Mym-HJ-UYl"/>
+                        <outlet property="languageCodeTextField" destination="2wz-gC-Jlr" id="uqY-5F-Ux2"/>
                         <outlet property="progressView" destination="nGf-FJ-2Q6" id="t2b-Ry-Jg7"/>
                         <outlet property="statusLabel" destination="Z1o-J3-VeI" id="Q26-It-LcH"/>
                     </connections>
@@ -292,14 +310,14 @@
                         <color key="backgroundColor" cocoaTouchSystemColor="groupTableViewBackgroundColor"/>
                         <prototypes>
                             <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" selectionStyle="none" indentationWidth="10" reuseIdentifier="trackCell" textLabel="ces-rD-Lnu" style="IBUITableViewCellStyleDefault" id="abc-Ql-ua8">
-                                <rect key="frame" x="0.0" y="56" width="375" height="44"/>
+                                <rect key="frame" x="0.0" y="55.5" width="375" height="44"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="abc-Ql-ua8" id="70V-G3-Hvx">
                                     <rect key="frame" x="0.0" y="0.0" width="375" height="43.5"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <subviews>
                                         <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Title" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="ces-rD-Lnu">
-                                            <rect key="frame" x="15" y="0.0" width="345" height="43.5"/>
+                                            <rect key="frame" x="16" y="0.0" width="343" height="43.5"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                             <nil key="textColor"/>
@@ -326,7 +344,7 @@
                 <navigationController automaticallyAdjustsScrollViewInsets="NO" id="Ebf-kI-rPP" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="95i-QT-zOf">
-                        <rect key="frame" x="0.0" y="0.0" width="375" height="44"/>
+                        <rect key="frame" x="0.0" y="20" width="375" height="44"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </navigationBar>
                     <nil name="viewControllers"/>
