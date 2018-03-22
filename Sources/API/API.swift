@@ -175,7 +175,7 @@ public enum DTGItemState: Int {
     /// Item download has failed (fatal error cannot use this item again).
     case failed
     
-    /// Item download was interrupted (can be casued by error that we can recover from)
+    /// Item download was interrupted (can be caused by error that we can recover from)
     /// 
     /// For example: when we can call start item again after this state.
     case interrupted
