@@ -8,6 +8,7 @@ target 'DownloadToGo_Example' do
   pod 'M3U8Kit', :git => 'https://github.com/kaltura/M3U8Paser', :tag => 'k0.2.2'
   
   pod 'Toast-Swift'
+
   target 'DownloadToGo_Tests' do
     inherit! :search_paths
 
