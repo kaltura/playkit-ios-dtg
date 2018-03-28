@@ -22,6 +22,8 @@ class TrackInfoRealm: Object {
         self.languageCode = trackInfo.languageCode
     }
     
+    public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
+
     func asTrackInfo() -> TrackInfo {
         return TrackInfo(languageCode: self.languageCode, title: self.title)
     }
@@ -47,6 +49,8 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     override static func primaryKey() -> String? {
         return "id"
     }
+    
+    public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
     
     var pk: String {
         return self.id

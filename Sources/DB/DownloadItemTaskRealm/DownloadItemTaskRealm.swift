@@ -29,6 +29,8 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         return "contentUrl"
     }
     
+    public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
+    
     var pk: String {
         return self.contentUrl
     }
