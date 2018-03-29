@@ -142,24 +142,24 @@ class ViewController: UIViewController {
             return
         }
         
-        if mediaSource.drmData?.first is FairPlayDRMParams {
-            if #available(iOS 10.3, *) {
-                lam.fetchFairPlayLicense(for: mediaSource, id: entry.id)
-            } else {
-                // Fallback on earlier versions
-            }
-        }
-                
+        var item: DTGItem?
         do {
-            _ = try cm.addItem(id: entry.id, url: mediaSource.contentUrl!)
-            self.statusLabel.text = try cm.itemById(entry.id)?.state.asString()
+            item = try cm.itemById(entry.id)
+            if item == nil {
+                item = try cm.addItem(id: entry.id, url: mediaSource.contentUrl!)
+            }
         } catch {
-            // handle db issues here...
-            print(error.localizedDescription)
+            toastMedium("Can't add item: " + error.localizedDescription)
+            return
         }
-    }
-    
-    @IBAction func loadMetadata(_ sender: UIButton) {
+
+        guard let dtgItem = item else {
+            toastMedium("Can't add item")
+            return
+        }
+        
+        self.statusLabel.text = dtgItem.state.asString()
+        
         DispatchQueue.global().async {
             do {
                 try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)

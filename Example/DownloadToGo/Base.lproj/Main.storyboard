@@ -64,7 +64,7 @@
                                 <nil key="highlightedColor"/>
                             </label>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="eQy-pv-dEJ">
-                                <rect key="frame" x="16" y="165" width="343" height="350"/>
+                                <rect key="frame" x="16" y="165" width="343" height="300"/>
                                 <subviews>
                                     <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="wjP-bg-NpF">
                                         <rect key="frame" x="0.0" y="0.0" width="343" height="50"/>
@@ -96,32 +96,24 @@
                                             <action selector="addItem:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="ZPG-1e-OgP"/>
                                         </connections>
                                     </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1Fh-Yf-I9L">
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="PWe-Oo-vCa">
                                         <rect key="frame" x="0.0" y="100" width="343" height="50"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                        <state key="normal" title="Load Metadata"/>
-                                        <connections>
-                                            <action selector="loadMetadata:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="Y8T-zs-d3z"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="PWe-Oo-vCa">
-                                        <rect key="frame" x="0.0" y="150" width="343" height="50"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                        <state key="normal" title="Start"/>
+                                        <state key="normal" title="Start Download"/>
                                         <connections>
                                             <action selector="start:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="KfY-gr-vfq"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="iJm-i3-ZEg">
-                                        <rect key="frame" x="0.0" y="200" width="343" height="50"/>
+                                        <rect key="frame" x="0.0" y="150" width="343" height="50"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                        <state key="normal" title="Pause"/>
+                                        <state key="normal" title="Pause Download"/>
                                         <connections>
                                             <action selector="pause:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="8JT-sT-1d1"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nzH-iz-QzR">
-                                        <rect key="frame" x="0.0" y="250" width="343" height="50"/>
+                                        <rect key="frame" x="0.0" y="200" width="343" height="50"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                         <state key="normal" title="Play Downloaded Item"/>
                                         <connections>
@@ -129,7 +121,7 @@
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="txI-gE-pT9">
-                                        <rect key="frame" x="0.0" y="300" width="343" height="50"/>
+                                        <rect key="frame" x="0.0" y="250" width="343" height="50"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                         <state key="normal" title="Remove"/>
                                         <connections>
@@ -139,7 +131,7 @@
                                 </subviews>
                             </stackView>
                             <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Select language code" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="2wz-gC-Jlr">
-                                <rect key="frame" x="16" y="523" width="343" height="30"/>
+                                <rect key="frame" x="16" y="473" width="343" height="30"/>
                                 <nil key="textColor"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
