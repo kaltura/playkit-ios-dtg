@@ -37,7 +37,7 @@ class Item {
         
         self.url = nil
         
-        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: Int64(partnerId), ks: nil))
+        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "http://cdnapi.kaltura.com", partnerId: Int64(partnerId), ks: nil))
             .set(entryId: id)
             .loadMedia { (entry, error) in
                 self.entry = entry
@@ -54,18 +54,14 @@ class ViewController: UIViewController {
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
     let items = [
-        Item("FPS: Kaltura 1", id: "1_ytsd86sc", partnerId: 2222401),
-        Item("FPS: Kaltura 2", id: "1_3wzacuha", partnerId: 2222401),
-        Item("FPS: Apple BipBop", id: "1_2hsw7gwj", partnerId: 2222401),
-        Item("FPS: Nyan Cat", id: "1_b8ppdt98", partnerId: 2222401),
+        Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
+        Item("FPS: Ella 2", id: "1_gdds2mc8", partnerId: 1788671),
+        Item("FPS: Ella 3", id: "1_z8qqwqkg", partnerId: 1788671),
         Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
-//        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
-        Item(id: "Kaltura multi captions", url: "https://cdnapisec.kaltura.com/p/811441/sp/81144100/playManifest/entryId/1_mhyj12pj/format/applehttp/protocol/https/a.m3u8"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
         Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
-        Item(id: "Empty", url: "https://cdnapisec.kaltura.com/p/2215841/playManifest/entryId/1_58e88ugs/format/applehttp/protocol/https/a.m3u8"),
     ]
     
     let itemPickerView: UIPickerView = {
@@ -164,6 +160,14 @@ class ViewController: UIViewController {
             do {
                 try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
+                guard let url = try self.cm.itemPlaybackUrl(id: self.selectedItem.id) else {
+                    self.toastMedium("Can't get local url")
+                    return
+                }
+                
+                self.lam.registerDownloadedAsset(location: url, mediaSource: mediaSource, callback: { (error) in
+                    self.toastMedium("Registered")
+                })
             } catch {
                 DispatchQueue.main.async {
                     self.toastMedium("loadItemMetadata failed \(error)")
