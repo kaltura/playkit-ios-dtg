@@ -55,8 +55,6 @@ class ViewController: UIViewController {
     
     let items = [
         Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
-        Item("FPS: Ella 2", id: "1_gdds2mc8", partnerId: 1788671),
-        Item("FPS: Ella 3", id: "1_z8qqwqkg", partnerId: 1788671),
         Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
@@ -194,7 +192,21 @@ class ViewController: UIViewController {
     
     @IBAction func remove(_ sender: UIButton) {
         let id = self.selectedItem.id
-        try? cm.removeItem(id: id)
+        do {
+            guard let url = try self.cm.itemPlaybackUrl(id: id) else {
+                self.toastMedium("Can't get local url")
+                return
+            }
+            
+            lam.unregisterDownloadedAsset(location: url, callback: { (error) in
+                self.toastMedium("Unregister complete")
+            })
+            
+            try? cm.removeItem(id: id)
+            
+        } catch {
+            
+        }
     }
     
     @IBAction func actionBarButtonTouched(_ sender: UIBarButtonItem) {
