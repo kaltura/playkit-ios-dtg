@@ -30,7 +30,9 @@ func getRealmConfiguration() -> Realm.Configuration {
             if (oldSchemaVersion < 2) {
                 // nothing to do just detect new properties on realm item
             }
-    })
+        },
+        objectTypes: [DTGItemRealm.self, TrackInfoRealm.self, DownloadItemTaskRealm.self]
+    )
 }
 
 protocol DB: class {
