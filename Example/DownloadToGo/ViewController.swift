@@ -30,14 +30,14 @@ class Item {
         self.partnerId = nil
     }
     
-    init(_ title: String, id: String, partnerId: Int) {
+    init(_ title: String, id: String, partnerId: Int, env: String = "http://cdnapi.kaltura.com") {
         self.id = id
         self.title = title
         self.partnerId = partnerId
         
         self.url = nil
         
-        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: "http://cdnapi.kaltura.com", partnerId: Int64(partnerId), ks: nil))
+        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: env, partnerId: Int64(partnerId), ks: nil))
             .set(entryId: id)
             .loadMedia { (entry, error) in
                 self.entry = entry
@@ -135,6 +135,8 @@ class ViewController: UIViewController {
             toastMedium("No media source")
             return
         }
+        
+        print("Selected to download:", mediaSource.contentUrl)
         
         var item: DTGItem?
         do {
