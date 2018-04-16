@@ -55,6 +55,7 @@ class ViewController: UIViewController {
     
     let items = [
         Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
+        Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
         Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
