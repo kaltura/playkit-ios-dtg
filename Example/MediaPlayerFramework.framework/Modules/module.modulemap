@@ -1,0 +1,11 @@
+framework module MediaPlayerFramework {
+  umbrella header "MediaPlayerFramework.h"
+
+  export *
+  module * { export * }
+}
+
+module MediaPlayerFramework.Swift {
+    header "MediaPlayerFramework-Swift.h"
+    requires objc
+}
