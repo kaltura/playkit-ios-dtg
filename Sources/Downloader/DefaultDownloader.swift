@@ -125,9 +125,10 @@ extension DefaultDownloader {
     }
     
     func cancel() {
+        // Invalidate the session before canceling, so that no new tast will start
+        self.invalidateSession()
         self.cancelDownloadTasks()
         self.state.value = .cancelled
-        self.invalidateSession()
     }
     
     func invalidateSession() {
@@ -200,11 +201,12 @@ private extension DefaultDownloader {
     
     func cancelDownloadTasks() {
         guard self.activeDownloads.count > 0 else { return }
+        // Remove all items in the queue before canceling the active ones
+        self.downloadItemTasksQueue.purge()
         for (sessionTask, _) in self.activeDownloads {
             sessionTask.cancel()
         }
         self.activeDownloads.removeAll()
-        self.downloadItemTasksQueue.purge()
     }
     
     func setBackgroundURLSession() {
