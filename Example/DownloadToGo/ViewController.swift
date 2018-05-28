@@ -11,6 +11,9 @@ import DownloadToGo
 import Toast_Swift
 import PlayKit
 
+let setSmallerOfflineDRMExpirationMinutes: Int? = 5
+//let setSmallerOfflineDRMExpirationMinutes: Int? = nil
+
 class Item {
     let id: String
     let title: String
@@ -40,7 +43,19 @@ class Item {
         OVPMediaProvider(SimpleOVPSessionProvider(serverURL: env, partnerId: Int64(partnerId), ks: nil))
             .set(entryId: id)
             .loadMedia { (entry, error) in
+                
+                if let minutes = setSmallerOfflineDRMExpirationMinutes {
+                    entry?.sources?.forEach({ (source) in
+                        if let drmData = source.drmData, let fpsData = drmData.first as? FairPlayDRMParams {
+                            var lic = fpsData.licenseUri!.absoluteString
+                            lic.append(contentsOf: "&rental_duration=\(minutes*60)")
+                            fpsData.licenseUri = URL(string: lic)
+                        }
+                    })
+                }
+                
                 self.entry = entry
+                
                 
         }
     }
@@ -56,6 +71,7 @@ class ViewController: UIViewController {
     let items = [
         Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
         Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
+        Item("FPS: QA 2", id: "0_7o8zceol", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
         Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
@@ -166,9 +182,6 @@ class ViewController: UIViewController {
                     return
                 }
                 
-                self.lam.registerDownloadedAsset(location: url, mediaSource: mediaSource, callback: { (error) in
-                    self.toastMedium("Registered")
-                })
             } catch {
                 DispatchQueue.main.async {
                     self.toastMedium("loadItemMetadata failed \(error)")
@@ -206,6 +219,56 @@ class ViewController: UIViewController {
             })
             
             try? cm.removeItem(id: id)
+            
+        } catch {
+            
+        }
+    }
+    
+    @IBAction func renew(_ sender: UIButton) {
+        let id = self.selectedItem.id
+        do {
+            guard let url = try self.cm.itemPlaybackUrl(id: id) else {
+                self.toastMedium("Can't get local url")
+                return
+            }
+            
+            guard let entry = self.selectedItem.entry, 
+                let source = lam.getPreferredDownloadableMediaSource(for: entry) else {
+                    
+                    self.toastMedium("No valid source")
+                    return
+            }
+                        
+            lam.renewDownloadedAsset(location: url, mediaSource: source) { (error) in
+                self.toastMedium("Renew complete")
+            }
+            
+        } catch {
+            
+        }
+    }
+
+    @IBAction func checkStatus(_ sender: UIButton) {
+        let id = self.selectedItem.id
+        do {
+            guard let url = try self.cm.itemPlaybackUrl(id: id) else {
+                self.toastMedium("Can't get local url")
+                return
+            }
+            
+            guard let expiryDate = lam.checkDownloadedAsset(location: url) else {
+                toastMedium("Unknown")
+                return
+            }
+            
+            let expString = DateFormatter.localizedString(from: expiryDate, dateStyle: .long, timeStyle: .long)
+            
+            if expiryDate < Date() {
+                toastLong("EXPIRED at \(expString)")
+            } else {
+                toastLong("VALID until \(expString)")
+            }
             
         } catch {
             
@@ -319,7 +382,7 @@ class ViewController: UIViewController {
     
     func toastLong(_ message: String) {
         print(message)
-        self.view.makeToast(message, duration: 1.5, position: .center)
+        self.view.makeToast(message, duration: 4, position: .center)
     }
 }
 

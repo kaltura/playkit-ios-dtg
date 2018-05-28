@@ -6,7 +6,6 @@ target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
   # pod 'PlayKit'
   pod 'PlayKit', :path => '../../playkit-ios'
-  pod 'M3U8Kit', :git => 'https://github.com/alexsun/M3U8Paser', :tag => '0.2.3'
   
   pod 'Toast-Swift'
 
