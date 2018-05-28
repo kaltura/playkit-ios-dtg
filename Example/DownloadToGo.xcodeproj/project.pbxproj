@@ -19,6 +19,7 @@
 		607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDC1AFB9204008FA782 /* Images.xcassets */; };
 		607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDE1AFB9204008FA782 /* LaunchScreen.xib */; };
 		607FACEC1AFB9204008FA782 /* Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACEB1AFB9204008FA782 /* Tests.swift */; };
+		CAB012E1206CCBC400EB3F69 /* Samples.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB012E0206CCBC400EB3F69 /* Samples.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +53,7 @@
 		8031456F9885A9779A8DB1CA /* Pods-DownloadToGo_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Example.release.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example.release.xcconfig"; sourceTree = "<group>"; };
 		B402B6E39A3C14EF02EE7E7A /* Pods_DownloadToGo_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA4F3EDA67A5435C5B8522DC /* Pods_DownloadToGo_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		CAB012E0206CCBC400EB3F69 /* Samples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Samples.swift; sourceTree = "<group>"; };
 		DC9E0E3C7F4B72EB61E261A5 /* Pods-DownloadToGo_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Example.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		E2377F8A42CA921D4A467108 /* Pods-DownloadToGo_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Tests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		EBD962729B0E7C93B9B967A2 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
@@ -126,6 +128,7 @@
 				607FACDC1AFB9204008FA782 /* Images.xcassets */,
 				607FACDE1AFB9204008FA782 /* LaunchScreen.xib */,
 				607FACD31AFB9204008FA782 /* Supporting Files */,
+				CAB012E0206CCBC400EB3F69 /* Samples.swift */,
 			);
 			name = "Example for DownloadToGo";
 			path = DownloadToGo;
@@ -395,6 +398,7 @@
 				20AD661E1F17A30C00E8E6D7 /* TracksViewController.swift in Sources */,
 				607FACD81AFB9204008FA782 /* ViewController.swift in Sources */,
 				607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */,
+				CAB012E1206CCBC400EB3F69 /* Samples.swift in Sources */,
 				20AD661C1F174B0900E8E6D7 /* VideoViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

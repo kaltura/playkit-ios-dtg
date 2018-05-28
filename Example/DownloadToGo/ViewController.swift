@@ -9,14 +9,55 @@
 import UIKit
 import DownloadToGo
 import Toast_Swift
+import PlayKit
+
+let setSmallerOfflineDRMExpirationMinutes: Int? = 5
+//let setSmallerOfflineDRMExpirationMinutes: Int? = nil
 
 class Item {
     let id: String
-    let url: URL
+    let title: String
+    let partnerId: Int?
     
+    var url: URL?
+    var entry: PKMediaEntry?
+
     init(id: String, url: String) {
         self.id = id
+        self.title = id
         self.url = URL(string: url)!
+        
+        let source = PKMediaSource.init(id, contentUrl: URL(string: url))
+        self.entry = PKMediaEntry(id, sources: [source])
+        
+        self.partnerId = nil
+    }
+    
+    init(_ title: String, id: String, partnerId: Int, env: String = "http://cdnapi.kaltura.com") {
+        self.id = id
+        self.title = title
+        self.partnerId = partnerId
+        
+        self.url = nil
+        
+        OVPMediaProvider(SimpleOVPSessionProvider(serverURL: env, partnerId: Int64(partnerId), ks: nil))
+            .set(entryId: id)
+            .loadMedia { (entry, error) in
+                
+                if let minutes = setSmallerOfflineDRMExpirationMinutes {
+                    entry?.sources?.forEach({ (source) in
+                        if let drmData = source.drmData, let fpsData = drmData.first as? FairPlayDRMParams {
+                            var lic = fpsData.licenseUri!.absoluteString
+                            lic.append(contentsOf: "&rental_duration=\(minutes*60)")
+                            fpsData.licenseUri = URL(string: lic)
+                        }
+                    })
+                }
+                
+                self.entry = entry
+                
+                
+        }
     }
 }
 
@@ -25,16 +66,17 @@ class ViewController: UIViewController {
     let videoViewControllerSegueIdentifier = "videoViewController"
     
     let cm = ContentManager.shared
+    let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
-    // FIXME: change the urls for the correct default ones
     let items = [
+        Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
+        Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
+        Item("FPS: QA 2", id: "0_7o8zceol", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
+        Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
         Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
-        Item(id: "Kaltura 1", url: "http://cdnapi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/flavorIds/1_d2uwy7vv,1_jl7y56al/format/applehttp/protocol/http/a.m3u8"),
-        Item(id: "Kaltura multi captions", url: "https://cdnapisec.kaltura.com/p/811441/sp/81144100/playManifest/entryId/1_mhyj12pj/format/applehttp/protocol/https/a.m3u8"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
         Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
-        Item(id: "Empty", url: "https://cdnapisec.kaltura.com/p/2215841/playManifest/entryId/1_58e88ugs/format/applehttp/protocol/https/a.m3u8"),
     ]
     
     let itemPickerView: UIPickerView = {
@@ -76,12 +118,13 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+
         // initialize UI
         self.selectedItem = self.items.first!
         itemPickerView.delegate = self
         itemPickerView.dataSource = self
         itemTextField.inputView = itemPickerView
-        itemTextField.text = items.first?.id ?? ""
+        itemTextField.text = items.first?.title ?? ""
         self.itemTextField.inputAccessoryView = getAccessoryView()
         
         self.languageCodePickerView.delegate = self
@@ -99,20 +142,46 @@ class ViewController: UIViewController {
     }
 
     @IBAction func addItem(_ sender: UIButton) {
-        do {
-            _ = try cm.addItem(id: self.selectedItem.id, url: self.selectedItem.url)
-            self.statusLabel.text = try cm.itemById(selectedItem.id)?.state.asString()
-        } catch {
-            // handle db issues here...
-            print(error.localizedDescription)
+        
+        guard let entry = self.selectedItem.entry else {
+            toastMedium("No entry")
+            return
         }
-    }
-    
-    @IBAction func loadMetadata(_ sender: UIButton) {
+        
+        guard let mediaSource = lam.getPreferredDownloadableMediaSource(for: entry) else {
+            toastMedium("No media source")
+            return
+        }
+        
+        print("Selected to download:", mediaSource.contentUrl)
+        
+        var item: DTGItem?
+        do {
+            item = try cm.itemById(entry.id)
+            if item == nil {
+                item = try cm.addItem(id: entry.id, url: mediaSource.contentUrl!)
+            }
+        } catch {
+            toastMedium("Can't add item: " + error.localizedDescription)
+            return
+        }
+
+        guard let dtgItem = item else {
+            toastMedium("Can't add item")
+            return
+        }
+        
+        self.statusLabel.text = dtgItem.state.asString()
+        
         DispatchQueue.global().async {
             do {
                 try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
+                guard let url = try self.cm.itemPlaybackUrl(id: self.selectedItem.id) else {
+                    self.toastMedium("Can't get local url")
+                    return
+                }
+                
             } catch {
                 DispatchQueue.main.async {
                     self.toastMedium("loadItemMetadata failed \(error)")
@@ -138,8 +207,72 @@ class ViewController: UIViewController {
     }
     
     @IBAction func remove(_ sender: UIButton) {
-        let id = selectedItem.id
-        try? cm.removeItem(id: id)
+        let id = self.selectedItem.id
+        do {
+            guard let url = try self.cm.itemPlaybackUrl(id: id) else {
+                self.toastMedium("Can't get local url")
+                return
+            }
+            
+            lam.unregisterDownloadedAsset(location: url, callback: { (error) in
+                self.toastMedium("Unregister complete")
+            })
+            
+            try? cm.removeItem(id: id)
+            
+        } catch {
+            
+        }
+    }
+    
+    @IBAction func renew(_ sender: UIButton) {
+        let id = self.selectedItem.id
+        do {
+            guard let url = try self.cm.itemPlaybackUrl(id: id) else {
+                self.toastMedium("Can't get local url")
+                return
+            }
+            
+            guard let entry = self.selectedItem.entry, 
+                let source = lam.getPreferredDownloadableMediaSource(for: entry) else {
+                    
+                    self.toastMedium("No valid source")
+                    return
+            }
+                        
+            lam.renewDownloadedAsset(location: url, mediaSource: source) { (error) in
+                self.toastMedium("Renew complete")
+            }
+            
+        } catch {
+            
+        }
+    }
+
+    @IBAction func checkStatus(_ sender: UIButton) {
+        let id = self.selectedItem.id
+        do {
+            guard let url = try self.cm.itemPlaybackUrl(id: id) else {
+                self.toastMedium("Can't get local url")
+                return
+            }
+            
+            guard let expiryDate = lam.checkDownloadedAsset(location: url) else {
+                toastMedium("Unknown")
+                return
+            }
+            
+            let expString = DateFormatter.localizedString(from: expiryDate, dateStyle: .long, timeStyle: .long)
+            
+            if expiryDate < Date() {
+                toastLong("EXPIRED at \(expString)")
+            } else {
+                toastLong("VALID until \(expString)")
+            }
+            
+        } catch {
+            
+        }
     }
     
     @IBAction func actionBarButtonTouched(_ sender: UIBarButtonItem) {
@@ -249,7 +382,7 @@ class ViewController: UIViewController {
     
     func toastLong(_ message: String) {
         print(message)
-        self.view.makeToast(message, duration: 1.5, position: .center)
+        self.view.makeToast(message, duration: 4, position: .center)
     }
 }
 
@@ -262,7 +395,7 @@ extension ViewController {
     override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
         do {
             if identifier == self.videoViewControllerSegueIdentifier {
-                guard let item = try cm.itemById(selectedItem.id) else {
+                guard let item = try cm.itemById(self.selectedItem.id) else {
                     print("cannot segue to video view controller until download is finished")
                     return false
                 }
@@ -382,7 +515,7 @@ extension ViewController: UIPickerViewDelegate {
                 return ""
             }
         } else {
-            return items[row].id
+            return items[row].title
         }
     }
     
@@ -402,7 +535,7 @@ extension ViewController: UIPickerViewDelegate {
                 
             }
         } else {
-            self.itemTextField.text = items[row].id
+            self.itemTextField.text = items[row].title
             self.selectedItem = items[row]
         }
     }

@@ -61,3 +61,6 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
+
+# Intentionally ignore Podfile.lock in samples.
+Podfile.lock
