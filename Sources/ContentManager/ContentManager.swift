@@ -356,8 +356,8 @@ public class ContentManager: NSObject, DTGContentManager {
 
         // if in progress, cancel
         if let downloader = self.downloaders[id] {
-            downloader.cancel()
             self.downloaders[id] = nil
+            downloader.cancel()
         }
         
         // remove from db
@@ -426,16 +426,20 @@ extension ContentManager: DownloaderDelegate {
                 log.warning("no item for request id")
                 return
             }
-            // when we receive progress for downloads when downloader is pasued make sure item state is pasued
+            // When we receive progress for downloads when downloader is pasued make sure item state is pasued
             // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
             if downloader.state.value == .paused {
                 item.state = .paused
+            }
+            if downloader.state.value == .cancelled {
+                // In case we get a progress update after the download has been canceled we don't want to update it.
+                return
             }
             item.downloadedSize += bytesWritten
             try self.update(item: item)
             self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
         } catch {
-            // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+            // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
             self.removeDownloader(withId: downloader.dtgItemId)
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
         }
@@ -445,7 +449,7 @@ extension ContentManager: DownloaderDelegate {
         log.info("downloading paused")
         self.removeDownloader(withId: downloader.dtgItemId)
         do {
-            // save pasued tasks to db
+            // Save pasued tasks to db
             try self.db.update(tasks)
         } catch {
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
@@ -453,10 +457,10 @@ extension ContentManager: DownloaderDelegate {
     }
     
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader) {
-        // clear the downloader instance
+        // Clear the downloader instance
         self.removeDownloader(withId: downloader.dtgItemId)
         do {
-            // removes all tasks from the db
+            // Removes all tasks from the db
             try self.db.removeTasks(withItemId: downloader.dtgItemId)
         } catch {
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
@@ -465,10 +469,10 @@ extension ContentManager: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
         do {
-            // remove the task from the db tasks objects
+            // Remove the task from the db tasks objects
             try self.db.remove([downloadItemTask])
         } catch {
-            // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+            // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
             self.removeDownloader(withId: downloader.dtgItemId)
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
         }
@@ -478,13 +482,13 @@ extension ContentManager: DownloaderDelegate {
         log.debug("downloader state: \(newState.rawValue)")
         if newState == .idle {
             try? self.update(itemState: .completed, byId: downloader.dtgItemId)
-            // remove the downloader, no longer needed
+            // Remove the downloader, no longer needed
             self.removeDownloader(withId: downloader.dtgItemId)
         } else if newState == .paused {
             do {
                 try self.update(itemState: .paused, byId: downloader.dtgItemId)
             } catch {
-                // remove the downloader, data storage has an issue or is full no need to keep downloading for now.
+                // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
                 self.removeDownloader(withId: downloader.dtgItemId)
                 self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
             }
@@ -505,7 +509,7 @@ extension ContentManager: DownloaderDelegate {
             default: try self.update(itemState: .interrupted, byId: downloader.dtgItemId, error: error)
             }
         } catch {
-            // if downloader was already removed don't notify db failure again.
+            // If downloader was already removed don't notify db failure again.
             guard downloaders[downloader.dtgItemId] != nil else { return }
             self.removeDownloader(withId: downloader.dtgItemId)
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
