@@ -177,10 +177,6 @@ class ViewController: UIViewController {
             do {
                 try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
-                guard let url = try self.cm.itemPlaybackUrl(id: self.selectedItem.id) else {
-                    self.toastMedium("Can't get local url")
-                    return
-                }
                 
             } catch {
                 DispatchQueue.main.async {
@@ -257,14 +253,14 @@ class ViewController: UIViewController {
                 return
             }
             
-            guard let expiryDate = lam.checkDownloadedAsset(location: url) else {
+            guard let exp = lam.getLicenseExpirationInfo(location: url) else {
                 toastMedium("Unknown")
                 return
             }
             
-            let expString = DateFormatter.localizedString(from: expiryDate, dateStyle: .long, timeStyle: .long)
+            let expString = DateFormatter.localizedString(from: exp.expirationDate, dateStyle: .long, timeStyle: .long)
             
-            if expiryDate < Date() {
+            if exp.expirationDate < Date() {
                 toastLong("EXPIRED at \(expString)")
             } else {
                 toastLong("VALID until \(expString)")
