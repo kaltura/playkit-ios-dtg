@@ -95,7 +95,9 @@ class ViewController: UIViewController {
                 let item = try cm.itemById(selectedItem.id)
                 DispatchQueue.main.async {
                     self.statusLabel.text = item?.state.asString() ?? ""
-                    if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
+                    if item?.state == .completed {
+                        self.progressView.progress = 1.0
+                    } else if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
                         self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
                     } else {
                         self.progressView.progress = 0.0
@@ -433,6 +435,7 @@ extension ViewController: ContentManagerDelegate {
             if totalBytesEstimated > totalBytesDownloaded {
                 DispatchQueue.main.async {
                     self.progressView.progress = Float(totalBytesDownloaded) / Float(totalBytesEstimated)
+                    self.view.layoutIfNeeded()
                 }
             } else if totalBytesDownloaded >= totalBytesEstimated && totalBytesEstimated > 0 {
                 DispatchQueue.main.async {
