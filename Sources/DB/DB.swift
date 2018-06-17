@@ -14,10 +14,10 @@ import RealmSwift
 
 /// returns a configured realm object.
 func getRealm() throws -> Realm {
-    return try Realm(configuration: getRealmConfiguration())
+    return try Realm(configuration: config)
 }
 
-func getRealmConfiguration() -> Realm.Configuration {
+fileprivate let config: Realm.Configuration = {
     return Realm.Configuration(
         fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
         schemaVersion: 2,
@@ -33,7 +33,7 @@ func getRealmConfiguration() -> Realm.Configuration {
         },
         objectTypes: [DTGItemRealm.self, TrackInfoRealm.self, DownloadItemTaskRealm.self]
     )
-}
+}()
 
 protocol DB: class {
     
