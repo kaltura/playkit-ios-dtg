@@ -19,16 +19,20 @@ protocol RealmObjectManager {
 extension RealmObjectManager {
     
     func update(_ objects: [RealmObject]) throws {
-        let realm = try getRealm()
-        try realm.write {
-            realm.add(objects, update: true)
+        try autoreleasepool { 
+            let realm = try getRealm()
+            try realm.write {
+                realm.add(objects, update: true)
+            }
         }
     }
     
     func remove(_ objects: [RealmObject]) throws {
-        let realm = try getRealm()
-        try realm.write {
-            realm.delete(objects)
+        try autoreleasepool { 
+            let realm = try getRealm()
+            try realm.write {
+                realm.delete(objects)
+            }
         }
     }
     
