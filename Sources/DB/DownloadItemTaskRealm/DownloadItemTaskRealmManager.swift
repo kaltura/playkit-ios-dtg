@@ -28,7 +28,7 @@ class DownloadItemTaskRealmManager: RealmObjectManager {
         let tasksToRemove = try self.get("dtgItemId = '\(id)'")
         try autoreleasepool { 
             let realm = try getRealm()
-            try! realm.write {
+            try realm.write {
                 realm.delete(tasksToRemove)
             }
         }
