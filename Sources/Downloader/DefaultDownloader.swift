@@ -1,7 +1,7 @@
 // ===================================================================================================
 // Copyright (C) 2017 Kaltura Inc.
 //
-// Licensed under the AGPLv3 license, unless a different license for a 
+// Licensed under the AGPLv3 license, unless a different license for a
 // particular library is specified in the applicable library path.
 //
 // You may obtain a copy of the License at
@@ -23,6 +23,14 @@ public enum DownloaderError: Error {
     case noSpaceLeftOnDevice
 }
 
+/// Available download progress update throttle settings
+public enum DownloaderProgressThrottle: Double {
+    case slow = 2.0
+    case medium = 1.0
+    case fast = 0.2
+    case none = 0
+}
+
 /// `Downloader` object is responsible for downloading files locally and reporting progres.
 class DefaultDownloader: NSObject, Downloader {
     
@@ -39,6 +47,13 @@ class DefaultDownloader: NSObject, Downloader {
     fileprivate var downloadItemTasksQueue = Queue<DownloadItemTask>()
     
     fileprivate let synchronizedQueue = DispatchQueue(label: "com.kaltura.dtg.session.synchronizedQueue")
+    
+    /// Progress updates are throttled as to ensure Realm isn't overloaded with write calls.
+    fileprivate var lastProgressRefreshTime: Date = Date()
+    /// The duration to wait before allowing forwarding a progress update.
+    fileprivate let progressUpdateThrottle: DownloaderProgressThrottle = .fast
+    /// Any throttled progress is stored locally until the throttle permits a subsequent update.
+    fileprivate var throttledBytesWritten: Int64 = 0
     
     fileprivate var currentTasksCount: Int {
         return synchronizedQueue.sync {
@@ -327,7 +342,14 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     }
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        self.delegate?.downloader(self, didProgress: bytesWritten)
+        // Only report progress updates if the throttle permits
+        guard isProgressUpdatePermitted() else {
+            throttledBytesWritten += bytesWritten
+            return
+        }
+        self.delegate?.downloader(self, didProgress: bytesWritten + throttledBytesWritten)
+        lastProgressRefreshTime = Date()
+        throttledBytesWritten = 0
     }
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
@@ -366,4 +388,9 @@ private extension DefaultDownloader {
         self.invokeBackgroundSessionCompletionHandler()
         self.delegate?.downloader(self, didFailWithError: error)
     }
+    
+    func isProgressUpdatePermitted() -> Bool {
+        return Date() > lastProgressRefreshTime + progressUpdateThrottle.rawValue
+    }
 }
+
