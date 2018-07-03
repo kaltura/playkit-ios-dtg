@@ -46,6 +46,8 @@ class DefaultDownloader: NSObject, Downloader {
         }
     }
     
+    fileprivate var invalidatedSession: URLSession? = nil
+    
     /************************************************************/
     // MARK: - Downloader Properties
     /************************************************************/
@@ -125,7 +127,7 @@ extension DefaultDownloader {
     }
     
     func cancel() {
-        // Invalidate the session before canceling, so that no new tast will start
+        // Invalidate the session before canceling, so that no new tasks will start
         self.invalidateSession()
         self.cancelDownloadTasks()
         self.state.value = .cancelled
@@ -158,16 +160,22 @@ private extension DefaultDownloader {
     }
     
     func start(downloadTask: DownloadItemTask) {
-        let urlSessionDownloadTask: URLSessionDownloadTask
-        if let downloadTaskResumeData = downloadTask.resumeData {
-            // if we have resume data create a task with the resume data and remove it from the downloadTask
-            urlSessionDownloadTask = self.downloadURLSession.downloadTask(withResumeData: downloadTaskResumeData)
-        } else {
-            urlSessionDownloadTask = self.downloadURLSession.downloadTask(with: downloadTask.contentUrl)
+        // Validate that the downloadURLSession wasn't invalidated
+        if self.downloadURLSession != self.invalidatedSession {
+            let urlSessionDownloadTask: URLSessionDownloadTask
+            if let downloadTaskResumeData = downloadTask.resumeData {
+                // if we have resume data create a task with the resume data and remove it from the downloadTask
+                urlSessionDownloadTask = self.downloadURLSession.downloadTask(withResumeData: downloadTaskResumeData)
+            } else {
+                urlSessionDownloadTask = self.downloadURLSession.downloadTask(with: downloadTask.contentUrl)
+            }
+            self.activeDownloads[urlSessionDownloadTask] = downloadTask
+            urlSessionDownloadTask.resume()
+            log.debug("Started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
         }
-        self.activeDownloads[urlSessionDownloadTask] = downloadTask
-        urlSessionDownloadTask.resume()
-        log.debug("started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
+        else {
+            log.debug("Can't start downloading, the session has been invalidated")
+        }
     }
     
     func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {
@@ -292,6 +300,8 @@ extension DefaultDownloader: URLSessionDelegate {
         if let e = error {
             self.failed(with: e)
         }
+        
+        self.invalidatedSession = session
     }
 }
 
