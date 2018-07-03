@@ -23,14 +23,6 @@ public enum DownloaderError: Error {
     case noSpaceLeftOnDevice
 }
 
-/// Available download progress update throttle settings
-public enum DownloaderProgressThrottle: Double {
-    case slow = 2.0
-    case medium = 1.0
-    case fast = 0.2
-    case none = 0
-}
-
 /// `Downloader` object is responsible for downloading files locally and reporting progres.
 class DefaultDownloader: NSObject, Downloader {
     
@@ -51,7 +43,7 @@ class DefaultDownloader: NSObject, Downloader {
     /// Progress updates are throttled as to ensure Realm isn't overloaded with write calls.
     fileprivate var lastProgressRefreshTime: Date = Date()
     /// The duration to wait before allowing forwarding a progress update.
-    fileprivate let progressUpdateThrottle: DownloaderProgressThrottle = .fast
+    fileprivate let progressUpdateThrottle: Double = 0.2
     /// Any throttled progress is stored locally until the throttle permits a subsequent update.
     fileprivate var throttledBytesWritten: Int64 = 0
     
@@ -325,6 +317,10 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
             return
         }
         
+        // Forward any previously-throttled download progress
+        self.delegate?.downloader(self, didProgress: throttledBytesWritten)
+        throttledBytesWritten = 0
+        
         do {
             // if the file exists for some reason, rewrite it.
             if fileManager.fileExists(atPath: downloadItemTask.destinationUrl.path) {
@@ -390,7 +386,7 @@ private extension DefaultDownloader {
     }
     
     func isProgressUpdatePermitted() -> Bool {
-        return Date() > lastProgressRefreshTime + progressUpdateThrottle.rawValue
+        return Date() > lastProgressRefreshTime + progressUpdateThrottle
     }
 }
 
