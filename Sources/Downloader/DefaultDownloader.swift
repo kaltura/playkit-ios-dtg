@@ -258,27 +258,28 @@ extension DefaultDownloader: URLSessionDelegate {
         if let e = error as NSError?, let downloadTask = task as? URLSessionDownloadTask {
             // if cancelled no need to handle error
             guard e.code != NSURLErrorCancelled else { return }
+            
             if e.domain == NSPOSIXErrorDomain && e.code == 28 {
                 cancel(with: DownloaderError.noSpaceLeftOnDevice)
-            }
-            
-            // if http response type and error code is 503 retry
-            if let httpResponse = task.response as? HTTPURLResponse {
-                let httpError = DownloaderError.http(statusCode: httpResponse.statusCode, rootError: e)
-                if httpResponse.statusCode >= 500 {
-                    retry(downloadTask: downloadTask, receivedError: httpError)
-                } else {
-                    cancel(with: e)
-                }
             } else {
-                if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
-                    log.debug("has resumse data from error, retrying")
-                    retry(downloadTask: downloadTask, resumeData: resumeData, receivedError: e)
+                // if http response type and error code is 503 retry
+                if let httpResponse = task.response as? HTTPURLResponse {
+                    let httpError = DownloaderError.http(statusCode: httpResponse.statusCode, rootError: e)
+                    if httpResponse.statusCode >= 500 {
+                        retry(downloadTask: downloadTask, receivedError: httpError)
+                    } else {
+                        cancel(with: e)
+                    }
                 } else {
-                    cancel(with: e)
+                    if let resumeData = e.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+                        log.debug("has resumse data from error, retrying")
+                        retry(downloadTask: downloadTask, resumeData: resumeData, receivedError: e)
+                    } else {
+                        cancel(with: e)
+                    }
                 }
-                return
             }
+            return
         }
         
         if activeDownloads.count == 0 && self.downloadItemTasksQueue.count == 0 {
