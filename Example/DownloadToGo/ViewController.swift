@@ -155,7 +155,7 @@ class ViewController: UIViewController {
             return
         }
         
-        print("Selected to download:", mediaSource.contentUrl)
+        print("Selected to download: \(String(describing: mediaSource.contentUrl))")
         
         var item: DTGItem?
         do {
