@@ -318,8 +318,10 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
         }
         
         // Forward any previously-throttled download progress
-        self.delegate?.downloader(self, didProgress: throttledBytesWritten)
-        throttledBytesWritten = 0
+        if throttledBytesWritten > 0 {
+            self.delegate?.downloader(self, didProgress: throttledBytesWritten)
+            throttledBytesWritten = 0
+        }
         
         do {
             // if the file exists for some reason, rewrite it.
