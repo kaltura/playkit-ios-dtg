@@ -19,7 +19,7 @@ public protocol DTGContentManager: class {
     var storagePath: URL { get }
     
     /// Delegate that will receive download events.
-    weak var delegate: ContentManagerDelegate? { get set }
+    var delegate: ContentManagerDelegate? { get set }
     
     /// set log level for viewing logs.
     func setLogLevel(_ logLevel: LogLevel)
