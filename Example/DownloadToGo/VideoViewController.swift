@@ -119,7 +119,7 @@ class VideoViewController: UIViewController {
         self.stopTimer()
     }
  
-    func timerTick() {
+    @objc func timerTick() {
         guard let player = self.player else { return }
         self.playheadSlider.value = Float(player.currentTime) / Float(player.duration)
     }

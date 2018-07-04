@@ -41,7 +41,7 @@ class TracksViewController: UITableViewController {
         self.delegate?.trackViewControllerDidSelectAudioTrack(self.selectedAudioTrack, andTextTrack: self.selectedTextTrack)
     }
     
-    func dismissTracksVC() {
+    @objc func dismissTracksVC() {
         self.dismiss(animated: true, completion: nil)
     }
     
