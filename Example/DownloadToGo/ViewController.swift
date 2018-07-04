@@ -298,7 +298,9 @@ class ViewController: UIViewController {
                             }
                         }
                         fileHandle.closeFile()
-                        self.toastMedium("Finished Filling Device with Dummy Data")
+                        DispatchQueue.main.async {
+                            self.toastMedium("Finished Filling Device with Dummy Data")
+                        }
                     } catch {
                         print("error: \(error)")
                     }
@@ -324,7 +326,9 @@ class ViewController: UIViewController {
                         let fileHandle = try FileHandle(forUpdating: fileUrl)
                         fileHandle.truncateFile(atOffset: fileHandle.seekToEndOfFile() - UInt64(sizeInMb * 1000000))
                         fileHandle.closeFile()
-                        self.toastMedium("Finished Updating Device Dummy Data File")
+                        DispatchQueue.main.async {
+                            self.toastMedium("Finished Updating Device Dummy Data File")
+                        }
                     } catch {
                         print("error: \(error)")
                     }
