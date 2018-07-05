@@ -50,7 +50,7 @@ protocol Downloader: class {
     var sessionIdentifier: String { get }
     
     /// The downloader delegate object.
-    weak var delegate: DownloaderDelegate? { get set }
+    var delegate: DownloaderDelegate? { get set }
     
     /// Background completion handler, can be received from application delegate when woken to background.
     /// Should be invoked when `urlSessionDidFinishEvents` is called.
