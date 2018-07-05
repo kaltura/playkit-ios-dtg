@@ -1,6 +1,7 @@
 use_frameworks!
 
 platform :ios, '9.0'
+swift_version = '4.0'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'

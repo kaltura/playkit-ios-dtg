@@ -155,7 +155,7 @@ class ViewController: UIViewController {
             return
         }
         
-        print("Selected to download:", mediaSource.contentUrl)
+        print("Selected to download: \(String(describing: mediaSource.contentUrl))")
         
         var item: DTGItem?
         do {
@@ -213,7 +213,9 @@ class ViewController: UIViewController {
             }
             
             lam.unregisterDownloadedAsset(location: url, callback: { (error) in
-                self.toastMedium("Unregister complete")
+                DispatchQueue.main.async {
+                    self.toastMedium("Unregister complete")
+                }
             })
             
             try? cm.removeItem(id: id)
@@ -239,7 +241,9 @@ class ViewController: UIViewController {
             }
                         
             lam.renewDownloadedAsset(location: url, mediaSource: source) { (error) in
-                self.toastMedium("Renew complete")
+                DispatchQueue.main.async {
+                    self.toastMedium("Renew complete")
+                }
             }
             
         } catch {
@@ -298,7 +302,9 @@ class ViewController: UIViewController {
                             }
                         }
                         fileHandle.closeFile()
-                        self.toastMedium("Finished Filling Device with Dummy Data")
+                        DispatchQueue.main.async {
+                            self.toastMedium("Finished Filling Device with Dummy Data")
+                        }
                     } catch {
                         print("error: \(error)")
                     }
@@ -324,7 +330,9 @@ class ViewController: UIViewController {
                         let fileHandle = try FileHandle(forUpdating: fileUrl)
                         fileHandle.truncateFile(atOffset: fileHandle.seekToEndOfFile() - UInt64(sizeInMb * 1000000))
                         fileHandle.closeFile()
-                        self.toastMedium("Finished Updating Device Dummy Data File")
+                        DispatchQueue.main.async {
+                            self.toastMedium("Finished Updating Device Dummy Data File")
+                        }
                     } catch {
                         print("error: \(error)")
                     }
@@ -356,7 +364,7 @@ class ViewController: UIViewController {
         return toolBar
     }
     
-    func doneButtonTapped(button: UIBarButtonItem) -> Void {
+    @objc func doneButtonTapped(button: UIBarButtonItem) -> Void {
         do {
             let item = try cm.itemById(self.selectedItem.id)
             self.statusLabel.text = item?.state.asString()
