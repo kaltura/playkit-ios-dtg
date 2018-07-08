@@ -55,8 +55,6 @@ class Item {
                 }
                 
                 self.entry = entry
-                
-                
         }
     }
 }
@@ -122,17 +120,19 @@ class ViewController: UIViewController {
         super.viewDidLoad()
 
         // initialize UI
-        self.selectedItem = self.items.first!
+        selectedItem = items.first!
         itemPickerView.delegate = self
         itemPickerView.dataSource = self
         itemTextField.inputView = itemPickerView
+        itemTextField.inputView?.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         itemTextField.text = items.first?.title ?? ""
-        self.itemTextField.inputAccessoryView = getAccessoryView()
+        itemTextField.inputAccessoryView = getAccessoryView()
         
-        self.languageCodePickerView.delegate = self
-        self.languageCodePickerView.dataSource = self
-        self.languageCodeTextField.inputView = self.languageCodePickerView
-        self.languageCodeTextField.inputAccessoryView = getAccessoryView()
+        languageCodePickerView.delegate = self
+        languageCodePickerView.dataSource = self
+        languageCodeTextField.inputView = languageCodePickerView
+        languageCodeTextField.inputView?.autoresizingMask = [.flexibleHeight, .flexibleWidth]
+        languageCodeTextField.inputAccessoryView = getAccessoryView()
         
         // setup content manager
         cm.delegate = self
