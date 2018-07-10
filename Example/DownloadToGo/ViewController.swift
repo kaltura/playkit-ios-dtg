@@ -191,16 +191,16 @@ class ViewController: UIViewController {
     @IBAction func start(_ sender: UIButton) {
         do {
             try cm.startItem(id: self.selectedItem.id)
-        } catch let e {
-            print("error: \(e.localizedDescription)")
+        } catch {
+            toastLong(error.localizedDescription)
         }
     }
     
     @IBAction func pause(_ sender: UIButton) {
         do {
             try cm.pauseItem(id: self.selectedItem.id)
-        } catch let e {
-            print("error: \(e.localizedDescription)")
+        } catch {
+            toastLong(error.localizedDescription)
         }
     }
     
@@ -208,7 +208,7 @@ class ViewController: UIViewController {
         let id = self.selectedItem.id
         do {
             guard let url = try self.cm.itemPlaybackUrl(id: id) else {
-                self.toastMedium("Can't get local url")
+                toastMedium("Can't get local url")
                 return
             }
             
@@ -221,7 +221,7 @@ class ViewController: UIViewController {
             try? cm.removeItem(id: id)
             
         } catch {
-            
+            toastLong(error.localizedDescription)
         }
     }
     
@@ -229,14 +229,14 @@ class ViewController: UIViewController {
         let id = self.selectedItem.id
         do {
             guard let url = try self.cm.itemPlaybackUrl(id: id) else {
-                self.toastMedium("Can't get local url")
+                toastMedium("Can't get local url")
                 return
             }
             
             guard let entry = self.selectedItem.entry, 
                 let source = lam.getPreferredDownloadableMediaSource(for: entry) else {
                     
-                    self.toastMedium("No valid source")
+                    toastMedium("No valid source")
                     return
             }
                         
@@ -247,7 +247,7 @@ class ViewController: UIViewController {
             }
             
         } catch {
-            
+            toastLong(error.localizedDescription)
         }
     }
 
@@ -255,7 +255,7 @@ class ViewController: UIViewController {
         let id = self.selectedItem.id
         do {
             guard let url = try self.cm.itemPlaybackUrl(id: id) else {
-                self.toastMedium("Can't get local url")
+                toastMedium("Can't get local url")
                 return
             }
             
@@ -273,7 +273,7 @@ class ViewController: UIViewController {
             }
             
         } catch {
-            
+            toastLong(error.localizedDescription)
         }
     }
     
@@ -402,13 +402,13 @@ extension ViewController {
         do {
             if identifier == self.videoViewControllerSegueIdentifier {
                 guard let item = try cm.itemById(self.selectedItem.id) else {
-                    print("cannot segue to video view controller until download is finished")
+                    toastMedium("cannot segue to video view controller until download is finished")
                     return false
                 }
                 if item.state == .completed {
                     return true
                 }
-                print("cannot segue to video view controller until download is finished")
+                toastMedium("cannot segue to video view controller until download is finished")
                 return false
             }
         } catch {
