@@ -389,7 +389,10 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func itemTracks(id: String) throws -> (audio: [TrackInfo], text: [TrackInfo]) {
-        let master = try M3U8MasterPlaylist(contentOf: itemPlaybackUrl(id: id))
+        
+        let masterURL = DTGFilePaths.itemDirUrl(forItemId: id).appendingPathComponent("master.m3u8", isDirectory: false)
+        let master = try M3U8MasterPlaylist(contentOf: masterURL)
+        
         guard let mediaList = master.xMediaList else { return ([], []) }
         
         var audio = [TrackInfo]()
