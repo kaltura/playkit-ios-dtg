@@ -19,7 +19,7 @@ func getRealm() throws -> Realm {
 
 fileprivate let config = Realm.Configuration(
     fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
-    schemaVersion: 2,
+    schemaVersion: 3,
     migrationBlock: { migration, oldSchemaVersion in
         // We haven’t migrated anything yet, so oldSchemaVersion == 0
         if (oldSchemaVersion < 1) {
@@ -30,7 +30,7 @@ fileprivate let config = Realm.Configuration(
             // nothing to do just detect new properties on realm item
         }
     },
-    objectTypes: [DTGItemRealm.self, TrackInfoRealm.self, DownloadItemTaskRealm.self]
+    objectTypes: [DTGItemRealm.self, DownloadItemTaskRealm.self]
 )
 
 

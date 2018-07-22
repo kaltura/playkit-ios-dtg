@@ -91,6 +91,7 @@ class ViewController: UIViewController {
         didSet {
             do {
                 let item = try cm.itemById(selectedItem.id)
+                selectedDTGItem = item
                 DispatchQueue.main.async {
                     self.statusLabel.text = item?.state.asString() ?? ""
                     if item?.state == .completed {
@@ -107,6 +108,8 @@ class ViewController: UIViewController {
             }
         }
     }
+    
+    var selectedDTGItem: DTGItem?
     
     var selectedTextLanguageCode: String?
     var selectedAudioLanguageCode: String?
@@ -458,6 +461,20 @@ extension ViewController: ContentManagerDelegate {
     }
     
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
+        
+        if newState == .metadataLoaded {
+            let tracks = try! ContentManager.shared.itemTracks(id: id)
+            
+            print("AUDIO tracks")
+            for t in tracks.audio {
+                print(t.languageCode, t.title)
+            }
+            print("TEXT tracks")
+            for t in tracks.text {
+                print(t.languageCode, t.title)
+            }
+        }
+        
         DispatchQueue.main.async {
             if newState == .completed && id == self.selectedItem.id {
                 self.progressView.progress = 1.0
@@ -488,7 +505,7 @@ extension ViewController: UIPickerViewDataSource {
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if pickerView === self.languageCodePickerView {
             do {
-                guard let item = try self.cm.itemById(self.selectedItem.id) else { return 0 }
+                guard let item = selectedDTGItem else { return 0 }
                 if component == 0 {
                     return item.selectedTextTracks.count
                 } else {
@@ -512,7 +529,7 @@ extension ViewController: UIPickerViewDelegate {
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if pickerView === self.languageCodePickerView {
             do {
-                guard let item = try self.cm.itemById(self.selectedItem.id) else { return "" }
+                guard let item = selectedDTGItem else { return "" }
                 if component == 0 {
                     return item.selectedTextTracks[row].title
                 } else {
@@ -529,7 +546,7 @@ extension ViewController: UIPickerViewDelegate {
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         if pickerView === self.languageCodePickerView {
             do {
-                guard let item = try self.cm.itemById(self.selectedItem.id) else { return }
+                guard let item = selectedDTGItem else { return }
                 if component == 0 {
                     guard item.selectedTextTracks.count > 0 else { return }
                     self.selectedTextLanguageCode = item.selectedTextTracks[row].languageCode
