@@ -12,23 +12,6 @@
 import Foundation
 import RealmSwift
 
-class TrackInfoRealm: Object {
-    @objc dynamic var title: String = ""
-    @objc dynamic var languageCode: String = ""
-    
-    convenience init(trackInfo: TrackInfo) {
-        self.init()
-        self.title = trackInfo.title
-        self.languageCode = trackInfo.languageCode
-    }
-    
-    public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
-
-    func asTrackInfo() -> TrackInfo {
-        return TrackInfo(code: self.languageCode, title: self.title)
-    }
-}
-
 class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     @objc dynamic var id: String = ""
@@ -40,11 +23,6 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     var estimatedSize = RealmOptional<Int64>()
     /// Downloaded size in bytes.
     @objc dynamic var downloadedSize: Int64 = 0
-    
-    let availableTextTracks = List<TrackInfoRealm>()
-    let availableAudioTracks = List<TrackInfoRealm>()
-    let selectedTextTracks = List<TrackInfoRealm>()
-    let selectedAudioTracks = List<TrackInfoRealm>()
     
     override static func primaryKey() -> String? {
         return "id"
@@ -63,10 +41,6 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         self.state = object.state.asString()
         self.estimatedSize = RealmOptional<Int64>(object.estimatedSize)
         self.downloadedSize = object.downloadedSize
-        self.availableTextTracks.replaceSubrange(0..<self.availableTextTracks.count, with: object.availableTextTracks.map { TrackInfoRealm(trackInfo: $0) })
-        self.availableAudioTracks.replaceSubrange(0..<self.availableAudioTracks.count, with: object.availableAudioTracks.map { TrackInfoRealm(trackInfo: $0) })
-        self.selectedTextTracks.replaceSubrange(0..<self.selectedTextTracks.count, with: object.selectedTextTracks.map { TrackInfoRealm(trackInfo: $0) })
-        self.selectedAudioTracks.replaceSubrange(0..<self.selectedAudioTracks.count, with: object.selectedAudioTracks.map { TrackInfoRealm(trackInfo: $0) })
     }
     
     static func initialize(with object: DownloadItem) -> DTGItemRealm {
@@ -80,10 +54,11 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         item.state = DTGItemState(value: self.state)!
         item.estimatedSize = self.estimatedSize.value
         item.downloadedSize = self.downloadedSize
-        item.availableTextTracks = self.availableTextTracks.map { $0.asTrackInfo() }
-        item.availableAudioTracks = self.availableAudioTracks.map { $0.asTrackInfo() }
-        item.selectedTextTracks = self.selectedTextTracks.map { $0.asTrackInfo() }
-        item.selectedAudioTracks = self.selectedAudioTracks.map { $0.asTrackInfo() }
+        
+        if let tracks = try? ContentManager.shared.itemTracks(id: self.id) {
+            item.selectedAudioTracks = tracks.audio
+            item.selectedTextTracks = tracks.text
+        }
         
         return item
     }

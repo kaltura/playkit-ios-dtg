@@ -84,8 +84,6 @@ struct DownloadItem: DTGItem {
     var state: DTGItemState = .new
     var estimatedSize: Int64?
     var downloadedSize: Int64 = 0
-    var availableTextTracks: [TrackInfo] = []
-    var availableAudioTracks: [TrackInfo] = []
     var selectedTextTracks: [TrackInfo] = []
     var selectedAudioTracks: [TrackInfo] = []
     
@@ -288,8 +286,6 @@ public class ContentManager: NSObject, DTGContentManager {
         try self.db.set(tasks: localizer.tasks)
         item.state = .metadataLoaded
         item.estimatedSize = localizer.estimatedSize
-        item.availableTextTracks = localizer.availableTextTracksInfo
-        item.availableAudioTracks = localizer.availableAudioTracksInfo
         item.selectedTextTracks = localizer.selectedTextTracksInfo
         item.selectedAudioTracks = localizer.selectedAudioTracksInfo
         try self.update(item: item)
