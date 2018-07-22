@@ -464,7 +464,7 @@ extension HLSLocalizer {
         var tracksInfo: [TrackInfo] = []
         for i in 0..<streamList.countInt {
             let stream = streamList[i]
-            tracksInfo.append(TrackInfo(languageCode: stream.language(), title: stream.name()))
+            tracksInfo.append(TrackInfo(code: stream.language(), title: stream.name()))
         }
         return tracksInfo
     }
@@ -472,7 +472,7 @@ extension HLSLocalizer {
     private func getTracksInfo(from streams: [M3U8ExtXMedia]) -> [TrackInfo] {
         var tracksInfo: [TrackInfo] = []
         for stream in streams {
-            tracksInfo.append(TrackInfo(languageCode: stream.language(), title: stream.name()))
+            tracksInfo.append(TrackInfo(code: stream.language(), title: stream.name()))
         }
         return tracksInfo
     }

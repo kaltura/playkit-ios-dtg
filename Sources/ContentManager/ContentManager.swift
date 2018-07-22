@@ -13,6 +13,7 @@ import Foundation
 import GCDWebServer
 import XCGLogger
 import PlayKitUtils
+import M3U8Kit
 
 let log = XCGLogger.default
 
@@ -97,6 +98,11 @@ struct DownloadItem: DTGItem {
 public struct TrackInfo {
     public let languageCode: String
     public let title: String
+    
+    public init(code: String, title: String) {
+        self.languageCode = code
+        self.title = title
+    }
 }
 
 /* ***********************************************************/
@@ -386,6 +392,36 @@ public class ContentManager: NSObject, DTGContentManager {
         return serverUrl?.appendingPathComponent("\(id.safeItemPathName())/master.m3u8")
     }
     
+    public func itemTracks(id: String) throws -> (audio: [TrackInfo], text: [TrackInfo]) {
+        let master = try M3U8MasterPlaylist(contentOf: itemPlaybackUrl(id: id))
+        guard let mediaList = master.xMediaList else { return ([], []) }
+        
+        var audio = [TrackInfo]()
+        var text = [TrackInfo]()
+        
+        if let list = mediaList.audio() {
+            audio = extractAvailableLanguages(list: list)
+        }
+        
+        if let list = mediaList.subtitle() {
+            text = extractAvailableLanguages(list: list)
+        }
+        
+        return (audio, text)
+    }
+
+    private func extractAvailableLanguages(list: M3U8ExtXMediaList) -> ([TrackInfo]) {
+        
+        var tracks = [TrackInfo]()
+        
+        for i in 0 ..< list.count {
+            guard let media = list.xMedia(at: i) else {continue}
+            tracks.append(TrackInfo(code: media.language(), title: media.name()))
+        }
+        
+        return tracks
+    }
+
     public func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
         for (_, downloader) in self.downloaders {
             if downloader.sessionIdentifier == identifier {

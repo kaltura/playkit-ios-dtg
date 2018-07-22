@@ -25,7 +25,7 @@ class TrackInfoRealm: Object {
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
 
     func asTrackInfo() -> TrackInfo {
-        return TrackInfo(languageCode: self.languageCode, title: self.title)
+        return TrackInfo(code: self.languageCode, title: self.title)
     }
 }
 

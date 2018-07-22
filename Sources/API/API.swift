@@ -84,6 +84,7 @@ public protocol DTGContentManager: class {
     /// - Throws: DTGError.itemNotFound
     func itemPlaybackUrl(id: String) throws -> URL?
     
+    func itemTracks(id: String) throws -> (audio: [TrackInfo], text: [TrackInfo])
     
     /// Handles events of a background session waiting to be processed.
     ///

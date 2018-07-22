@@ -458,6 +458,20 @@ extension ViewController: ContentManagerDelegate {
     }
     
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
+        
+        if newState == .metadataLoaded {
+            let tracks = try! ContentManager.shared.itemTracks(id: id)
+            
+            print("AUDIO tracks")
+            for t in tracks.audio {
+                print(t.languageCode, t.title)
+            }
+            print("TEXT tracks")
+            for t in tracks.text {
+                print(t.languageCode, t.title)
+            }
+        }
+        
         DispatchQueue.main.async {
             if newState == .completed && id == self.selectedItem.id {
                 self.progressView.progress = 1.0
