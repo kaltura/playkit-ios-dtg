@@ -12,7 +12,7 @@
 import Foundation
 import RealmSwift
 
-class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
+class DownloadItemTaskRealm: Object {
     
     @objc dynamic var dtgItemId: String = ""
     
@@ -31,10 +31,6 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
     
-    var pk: String {
-        return self.contentUrl
-    }
-    
     convenience init(object: DownloadItemTask) {
         self.init()
         self.dtgItemId = object.dtgItemId
@@ -42,10 +38,6 @@ class DownloadItemTaskRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         self.type = object.type.asString()
         self.destinationUrl = String(object.destinationUrl.absoluteString[DTGFilePaths.storagePath.absoluteString.endIndex...])
         self.resumeData = object.resumeData
-    }
-    
-    static func initialize(with object: DownloadItemTask) -> DownloadItemTaskRealm {
-        return DownloadItemTaskRealm(object: object)
     }
     
     func asObject() -> DownloadItemTask {

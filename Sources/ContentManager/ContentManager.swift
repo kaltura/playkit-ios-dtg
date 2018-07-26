@@ -13,6 +13,7 @@ import Foundation
 import GCDWebServer
 import XCGLogger
 import PlayKitUtils
+import RealmSwift
 
 let log = XCGLogger.default
 
@@ -78,15 +79,16 @@ public enum DTGError: LocalizedError {
 /* ***********************************************************/
 
 struct DownloadItem: DTGItem {
-    let id: String
+    
+    let id: String 
     let remoteUrl: URL
-    var state: DTGItemState = .new
-    var estimatedSize: Int64?
-    var downloadedSize: Int64 = 0
-    var availableTextTracks: [TrackInfo] = []
-    var availableAudioTracks: [TrackInfo] = []
-    var selectedTextTracks: [TrackInfo] = []
-    var selectedAudioTracks: [TrackInfo] = []
+    var state: DTGItemState = .new 
+    var estimatedSize: Int64? 
+    var downloadedSize: Int64 = 0 
+    var availableTextTracks: [TrackInfo] = [] 
+    var availableAudioTracks: [TrackInfo] = [] 
+    var selectedTextTracks: [TrackInfo] = [] 
+    var selectedAudioTracks: [TrackInfo] = [] 
     
     init(id: String, url: URL) {
         self.id = id
@@ -94,9 +96,12 @@ struct DownloadItem: DTGItem {
     }
 }
 
-public struct TrackInfo {
+public struct TrackInfo: Hashable {
     public let languageCode: String
     public let title: String
+    var id: String {
+        return "\(self.languageCode):\(self.title)"
+    }
 }
 
 /* ***********************************************************/
@@ -248,21 +253,21 @@ public class ContentManager: NSObject, DTGContentManager {
 
     public func itemsByState(_ state: DTGItemState) throws -> [DTGItem] {
 
-        return try db.items(byState: state)
+        return try db.getItems(byState: state)
     }
     
     public func itemById(_ id: String) throws -> DTGItem? {
         
-        return try db.item(byId: id)
+        return try db.getItem(byId: id)
     }
     
     public func addItem(id: String, url: URL) throws -> DTGItem? {
-        if try db.item(byId: id) != nil {
+        if try db.getItem(byId: id) != nil {
             return nil
         }
         
         let item = DownloadItem(id: id, url: url)
-        try self.update(item: item)
+        try self.add(item: item)
 
         return item
     }
@@ -286,7 +291,8 @@ public class ContentManager: NSObject, DTGContentManager {
         item.availableAudioTracks = localizer.availableAudioTracksInfo
         item.selectedTextTracks = localizer.selectedTextTracksInfo
         item.selectedAudioTracks = localizer.selectedAudioTracksInfo
-        try self.update(item: item)
+        try self.db.updateAfterMetadataLoaded(item: item)
+        notifyItemState(item.id, newState: .metadataLoaded, error: nil)
     }
     
     public func startItem(id: String) throws {
@@ -320,7 +326,7 @@ public class ContentManager: NSObject, DTGContentManager {
         }
         
         // make sure we have tasks to perform
-        let tasks = try db.tasks(forItemId: id)
+        let tasks = try db.getTasks(forItemId: id)
         guard tasks.count > 0 else {
             log.warning("no tasks for this id")
             // if an item was started and his state allows to start and has no tasks set the state to completed.
@@ -422,22 +428,20 @@ extension ContentManager: DownloaderDelegate {
     
     func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64) {
         do {
-            guard var item = try self.db.item(byId: downloader.dtgItemId) else {
-                log.warning("no item for request id")
-                return
-            }
-            // When we receive progress for downloads when downloader is pasued make sure item state is pasued
-            // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
-            if downloader.state.value == .paused {
-                item.state = .paused
-            }
+            
             if downloader.state.value == .cancelled {
                 // In case we get a progress update after the download has been canceled we don't want to update it.
                 return
             }
-            item.downloadedSize += bytesWritten
-            try self.update(item: item)
-            self.delegate?.item(id: downloader.dtgItemId, didDownloadData: item.downloadedSize, totalBytesEstimated: item.estimatedSize)
+            
+            // When we receive progress for downloads when downloader is pasued make sure item state is pasued
+            // otherwise because the delegate and db are async we can receive an item with state `inProgress` before the change was made.
+            let newState = (downloader.state.value == .paused) ? DTGItemState.paused : nil
+
+            let (newSize, estSize) = try self.updateItem(id: downloader.dtgItemId, incrementDownloadSize: bytesWritten, state: newState)
+            
+            self.delegate?.item(id: downloader.dtgItemId, didDownloadData: newSize, totalBytesEstimated: estSize)
+            
         } catch {
             // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
             self.removeDownloader(withId: downloader.dtgItemId)
@@ -450,7 +454,7 @@ extension ContentManager: DownloaderDelegate {
         self.removeDownloader(withId: downloader.dtgItemId)
         do {
             // Save pasued tasks to db
-            try self.db.update(tasks)
+            try self.db.pauseTasks(tasks)
         } catch {
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
         }
@@ -470,7 +474,7 @@ extension ContentManager: DownloaderDelegate {
     func downloader(_ downloader: Downloader, didFinishDownloading downloadItemTask: DownloadItemTask) {
         do {
             // Remove the task from the db tasks objects
-            try self.db.remove([downloadItemTask])
+            try self.db.removeTask(downloadItemTask)
         } catch {
             // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
             self.removeDownloader(withId: downloader.dtgItemId)
@@ -539,31 +543,32 @@ extension ContentManager {
 
 private extension ContentManager {
     
-    func update(item: DownloadItem) throws {
-        if item.state == .failed {
-            try self.removeItem(id: item.id)
-            self.notifyItemState(item.id, newState: item.state, error: nil)
-        } else {
-            let oldItem = try self.db.item(byId: item.id)
-            try db.update(item: item)
-            if oldItem?.state != item.state {
-                self.notifyItemState(item.id, newState: item.state, error: nil)
-            }
+    
+    func updateItem(id: String, incrementDownloadSize: Int64, state: DTGItemState?) throws -> (newSize: Int64, estSize: Int64) {
+        let res = try db.updateItemSize(id: id, incrementDownloadSize: incrementDownloadSize, state: state)
+        if let state = state {
+            self.notifyItemState(id, newState: state, error: nil)
         }
+        return res
+    }
+    
+    func add(item: DownloadItem) throws {
+        try db.add(item: item)
+        self.notifyItemState(item.id, newState: item.state, error: nil)
     }
     
     func update(itemState: DTGItemState, byId id: String, error: Error? = nil) throws {
         if itemState == .failed {
             try self.removeItem(id: id)
         } else {
-            try self.db.update(itemState: itemState, byId: id)
+            try self.db.updateItemState(id: id, newState: itemState)
         }
         self.notifyItemState(id, newState: itemState, error: error)
     }
     
     @discardableResult
     func findItemOrThrow(_ id: String) throws -> DownloadItem {
-        if let item = try db.item(byId: id) {
+        if let item = try db.getItem(byId: id) {
             return item
         } else {
             throw DTGError.itemNotFound(itemId: id)
