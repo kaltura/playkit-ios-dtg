@@ -102,6 +102,11 @@ public struct TrackInfo: Hashable {
     var id: String {
         return "\(self.languageCode):\(self.title)"
     }
+    
+    enum TrackType: String {
+        case audio
+        case text
+    }
 }
 
 /* ***********************************************************/

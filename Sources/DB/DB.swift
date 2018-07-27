@@ -24,17 +24,19 @@ fileprivate func migrateTrackInfoObjects(_ migration: Migration) {
     migration.enumerateObjects(ofType: DTGItemRealm.className()) { (oldObj, newObj) in
         guard let newObj = newObj, let oldObj = oldObj else {return}
 
-        for i in 0..<2 {
-            let oldName = ["selectedTextTracks", "selectedAudioTracks"][i]
-            let newName = ["textTracks", "audioTracks"][i]
-            let typeName = ["text", "audio"][i]
+        let names = [
+            (TrackInfo.TrackType.text, "selectedTextTracks", "textTracks"), 
+            (TrackInfo.TrackType.audio, "selectedAudioTracks", "audioTracks")
+        ]
+        
+        for (type, oldName, newName) in names {
 
             let oldTracks = oldObj[oldName] as! List<DynamicObject>
             let newTracks = List<TrackInfoRealm>()
             
             for t in oldTracks {
                 let ti = TrackInfo(languageCode: t["languageCode"] as! String, title: t["title"] as! String)
-                let tir = TrackInfoRealm(itemId: oldObj["id"] as! String, type: typeName, selected: true, trackInfo: ti)
+                let tir = TrackInfoRealm(itemId: oldObj["id"] as! String, type: type, selected: true, trackInfo: ti)
                 newTracks.append(tir)
             }
             
@@ -114,7 +116,7 @@ class RealmDB: DB {
 
 extension RealmDB {
     
-    func convertTracks(itemId: String, type: String, available: [TrackInfo], selected: [TrackInfo], list: List<TrackInfoRealm>) {
+    func convertTracks(itemId: String, type: TrackInfo.TrackType, available: [TrackInfo], selected: [TrackInfo], list: List<TrackInfoRealm>) {
         var tracks = [TrackInfo: Bool]()
         
         for t in available {
@@ -138,8 +140,8 @@ extension RealmDB {
         try write(getRealm()) {
             realmItem.state = DTGItemState.metadataLoaded.asString()
             realmItem.estimatedSize.value = item.estimatedSize ?? -1
-            convertTracks(itemId: item.id, type: "text", available: item.availableTextTracks, selected: item.selectedTextTracks, list: realmItem.textTracks)
-            convertTracks(itemId: item.id, type: "audio", available: item.availableAudioTracks, selected: item.selectedAudioTracks, list: realmItem.audioTracks)
+            convertTracks(itemId: item.id, type: .text, available: item.availableTextTracks, selected: item.selectedTextTracks, list: realmItem.textTracks)
+            convertTracks(itemId: item.id, type: .audio, available: item.availableAudioTracks, selected: item.selectedAudioTracks, list: realmItem.audioTracks)
         }
     }
     

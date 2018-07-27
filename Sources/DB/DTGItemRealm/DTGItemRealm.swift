@@ -19,12 +19,12 @@ class TrackInfoRealm: Object {
     @objc dynamic var type: String = ""
     @objc dynamic var selected = false
     
-    convenience init(itemId: String, type: String, selected: Bool, trackInfo: TrackInfo) {
+    convenience init(itemId: String, type: TrackInfo.TrackType, selected: Bool, trackInfo: TrackInfo) {
         self.init()
         self.title = trackInfo.title
         self.languageCode = trackInfo.languageCode
         self.id = "\(type):\(trackInfo.id):\(itemId)"
-        self.type = type
+        self.type = type.rawValue
         self.selected = selected
         
         log.debug("New TrackInfoRealm <\(id)>")
