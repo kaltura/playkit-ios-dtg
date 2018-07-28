@@ -2,8 +2,9 @@ language: objective-c
 osx_image: xcode9.4
 before_install:
   - gem install cocoapods # Since Travis is not always on latest version
+  - pod repo update
 script:
-  - pod lib lint
+  - pod lib lint --allow-warnings
 notifications:
   email:
     recipients:
