@@ -25,6 +25,8 @@ class DownloadItemTaskRealm: Object {
     
     @objc dynamic var resumeData: Data? = nil
     
+    let order = RealmOptional<Int>()
+    
     override static func primaryKey() -> String? {
         return "contentUrl"
     }
@@ -38,13 +40,15 @@ class DownloadItemTaskRealm: Object {
         self.type = object.type.asString()
         self.destinationUrl = String(object.destinationUrl.absoluteString[DTGFilePaths.storagePath.absoluteString.endIndex...])
         self.resumeData = object.resumeData
+        self.order.value = object.order
     }
     
     func asObject() -> DownloadItemTask {
         let contentUrl = URL(string: self.contentUrl)!
         let type = DownloadItemTaskType(type: self.type)!
         let destinationUrl = URL(string: self.destinationUrl, relativeTo: DTGFilePaths.storagePath)!
-        var downloadItemTask = DownloadItemTask(dtgItemId: self.dtgItemId, contentUrl: contentUrl, type: type, destinationUrl: destinationUrl)
+        var downloadItemTask = DownloadItemTask(dtgItemId: self.dtgItemId, contentUrl: contentUrl, type: type, 
+                                                destinationUrl: destinationUrl, order: order.value)
         if let resumeData = self.resumeData {
             downloadItemTask.resumeData = resumeData
         }

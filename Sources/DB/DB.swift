@@ -154,7 +154,6 @@ extension RealmDB {
     
     func realmItem(_ id: String) throws -> DTGItemRealm? {
         guard let item = try getRealm().object(ofType: DTGItemRealm.self, forPrimaryKey: id) else {
-            log.error("No such item \(id)")
             return nil
         }
         return item
@@ -172,7 +171,10 @@ extension RealmDB {
     
     func updateItemSize(id: String, incrementDownloadSize: Int64, state: DTGItemState?) throws -> (newSize: Int64, estSize: Int64) {
 
-        guard let realmItem = try realmItem(id) else {return (-1, -1)}
+        guard let realmItem = try realmItem(id) else {
+            log.error("No such item \(id)")
+            return (-1, -1)
+        }
         
         try write(getRealm()) {
             realmItem.downloadedSize += incrementDownloadSize
@@ -215,7 +217,10 @@ extension RealmDB {
     }
     
     func updateItemState(id: String, newState: DTGItemState) throws -> Bool {
-        guard let item = try self.realmItem(id) else {return false}
+        guard let item = try self.realmItem(id) else {
+            log.error("No such item \(id)")
+            return false
+        }
         
         let oldStateStr = item.state
         let oldState = DTGItemState(value: oldStateStr)
@@ -246,7 +251,7 @@ extension RealmDB {
     }
     
     func getTasks(forItemId id: String) throws -> [DownloadItemTask] {
-        let realmTasks = try RealmDB.getTasks(itemId: id, rlm: getRealm())
+        let realmTasks = try RealmDB.getTasks(itemId: id, rlm: getRealm()).sorted(byKeyPath: "order")
         return realmTasks.map({$0.asObject()})
     }
     
