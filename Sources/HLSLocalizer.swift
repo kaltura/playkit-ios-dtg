@@ -12,7 +12,6 @@
 import Foundation
 import M3U8Kit
 
-fileprivate let defaultAudioBitrate = 160*1024
 
 struct MockVideoTrack: DTGVideoTrack {
     var width: Int?
@@ -95,12 +94,15 @@ class HLSLocalizer {
     var selectedVideoStream: VideoStream?
     var selectedAudioStreams = [MediaStream]()
     var selectedTextStreams = [MediaStream]()
+    
+    let audioBitrateEstimation: Int
 
-    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?) {
+    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?, audioBitrateEstimation: Int) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
         self.downloadPath = downloadPath
+        self.audioBitrateEstimation = audioBitrateEstimation
     }
     
     private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
@@ -421,7 +423,7 @@ class HLSLocalizer {
                 switch type {
                 case M3U8MediaPlaylistTypeAudio:
                     let bitrate = streams[i].bandwidth()
-                    aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : defaultAudioBitrate)
+                    aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : audioBitrateEstimation)
                     selectedAudioStreams.append(stream)
                 case M3U8MediaPlaylistTypeSubtitle:
                     selectedTextStreams.append(stream)

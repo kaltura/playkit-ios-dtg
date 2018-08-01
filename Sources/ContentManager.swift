@@ -84,11 +84,12 @@ struct DownloadItem: DTGItem {
     let remoteUrl: URL
     var state: DTGItemState = .new 
     var estimatedSize: Int64? 
-    var downloadedSize: Int64 = 0 
+    var downloadedSize: Int64 = 0
+    var duration: TimeInterval?
     var availableTextTracks: [TrackInfo] = [] 
     var availableAudioTracks: [TrackInfo] = [] 
     var selectedTextTracks: [TrackInfo] = [] 
-    var selectedAudioTracks: [TrackInfo] = [] 
+    var selectedAudioTracks: [TrackInfo] = []
     
     init(id: String, url: URL) {
         self.id = id
@@ -139,7 +140,6 @@ class DTGFilePaths {
 /* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
-    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
     
@@ -157,6 +157,8 @@ public class ContentManager: NSObject, DTGContentManager {
     public var storagePath: URL {
         return DTGFilePaths.storagePath
     }
+    
+    var defaultAudioBitrateEstimation: Int = 64000
     
     var started = false
     var server = GCDWebServer()
@@ -201,6 +203,10 @@ public class ContentManager: NSObject, DTGContentManager {
         #endif
         log.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
         log.debug("*** ContentManager ***")
+    }
+    
+    public func setDefaultAudioBitrateEstimation(bitrate: Int) {
+        self.defaultAudioBitrateEstimation = bitrate
     }
     
     private func startServer() throws {
@@ -286,13 +292,17 @@ public class ContentManager: NSObject, DTGContentManager {
         
         let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
-        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
+        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), 
+                                     downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), 
+                                     preferredVideoBitrate: preferredVideoBitrate, 
+                                     audioBitrateEstimation: defaultAudioBitrateEstimation)
         
         try localizer.loadMetadata()
         try localizer.saveLocalFiles()
         // when localizer finished add the tasks and update the item
         try self.db.set(tasks: localizer.tasks)
         item.state = .metadataLoaded
+        item.duration = localizer.duration
         item.estimatedSize = localizer.estimatedSize
         item.availableTextTracks = localizer.availableTextTracksInfo
         item.availableAudioTracks = localizer.availableAudioTracksInfo

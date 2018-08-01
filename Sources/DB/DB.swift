@@ -139,6 +139,7 @@ extension RealmDB {
         
         try write(getRealm()) {
             realmItem.state = DTGItemState.metadataLoaded.asString()
+            realmItem.duration.value = item.duration
             realmItem.estimatedSize.value = item.estimatedSize ?? -1
             convertTracks(itemId: item.id, type: .text, available: item.availableTextTracks, selected: item.selectedTextTracks, list: realmItem.textTracks)
             convertTracks(itemId: item.id, type: .audio, available: item.availableAudioTracks, selected: item.selectedAudioTracks, list: realmItem.audioTracks)
