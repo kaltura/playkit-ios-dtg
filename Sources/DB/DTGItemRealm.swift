@@ -13,31 +13,25 @@ import Foundation
 import RealmSwift
 
 class TrackInfoRealm: Object {
-    @objc dynamic var id: String = ""
     @objc dynamic var title: String = ""
     @objc dynamic var languageCode: String = ""
     @objc dynamic var type: String = ""
     @objc dynamic var selected = false
     
-    convenience init(itemId: String, type: TrackInfo.TrackType, selected: Bool, trackInfo: TrackInfo) {
+    convenience init(itemId: String, selected: Bool, trackInfo: TrackInfo) {
         self.init()
         self.title = trackInfo.title
         self.languageCode = trackInfo.languageCode
-        self.id = "\(type):\(trackInfo.id):\(itemId)"
-        self.type = type.rawValue
+        self.type = trackInfo.type.rawValue
         self.selected = selected
         
-        log.debug("New TrackInfoRealm <\(id)>")
     }
     
-    override static func primaryKey() -> String? {
-        return "id"
-    }
     
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
 
     func asTrackInfo() -> TrackInfo {
-        return TrackInfo(languageCode: self.languageCode, title: self.title)
+        return TrackInfo(languageCode: self.languageCode, title: self.title, type: TrackInfo.TrackType(rawValue: type)!)
     }
 }
 

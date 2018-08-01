@@ -99,11 +99,13 @@ struct DownloadItem: DTGItem {
 public struct TrackInfo: Hashable {
     public let languageCode: String
     public let title: String
+    public let type: TrackType
+    
     var id: String {
         return "\(self.languageCode):\(self.title)"
     }
     
-    enum TrackType: String {
+    public enum TrackType: String {
         case audio
         case text
     }

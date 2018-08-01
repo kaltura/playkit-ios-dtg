@@ -35,8 +35,8 @@ fileprivate func migrateTrackInfoObjects(_ migration: Migration) {
             let newTracks = List<TrackInfoRealm>()
             
             for t in oldTracks {
-                let ti = TrackInfo(languageCode: t["languageCode"] as! String, title: t["title"] as! String)
-                let tir = TrackInfoRealm(itemId: oldObj["id"] as! String, type: type, selected: true, trackInfo: ti)
+                let ti = TrackInfo(languageCode: t["languageCode"] as! String, title: t["title"] as! String, type: type)
+                let tir = TrackInfoRealm(itemId: oldObj["id"] as! String, selected: true, trackInfo: ti)
                 newTracks.append(tir)
             }
             
@@ -127,7 +127,7 @@ extension RealmDB {
         }
 
         for (key, value) in tracks {
-            list.append(TrackInfoRealm(itemId: itemId, type: type, selected: value, trackInfo: key))
+            list.append(TrackInfoRealm(itemId: itemId, selected: value, trackInfo: key))
         }
     }
     
