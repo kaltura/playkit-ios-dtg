@@ -21,6 +21,25 @@ func getRealm() throws -> Realm {
 
 fileprivate func migrateTrackInfoObjects(_ migration: Migration) {
     
+    // In schema v2, DTGItemRealm had 4 lists of TrackInfoRealm objects:
+    // selectedTextTracks, availableTextTracks, selectedAudioTracks, availableAudioTracks
+    // As a model, it was wrong: all of the `selected` tracks are also `available`.
+    
+    // In addition, each write to the DTGItemRealm created a leak of TrackInfoRealm objects: the list of objects
+    // that existed before the write was removed from the DTGItemRealm object, but NOT DELETED FROM DB. And new
+    // lists were created.
+    
+    // In schema v2 DTGItemRealm only has 2 such lists: textTracks and audioTracks.
+    // Instead of the redundant `selected` lists, each TrackInfoRealm object now has a boolean property, `selected`.
+    // In addition, TrackInfoRealm also has a type propery (audio/text).
+    
+    // The following code makes the upgrade: it goes over the lists of the TrackInfoRealm objects that are currently
+    // associated with the DTGItemRealm objects. It creates new TrackInfoRealm objects with the correct properties
+    // and assumes that all `available` tracks are also `selected`: this is true because DTG does not currently let
+    // the app choose tracks, it selects all of them. The new TrackInfoRealm objects are added to the object's 
+    // textTracks and audioTracks lists.
+    
+    
     migration.enumerateObjects(ofType: DTGItemRealm.className()) { (oldObj, newObj) in
         guard let newObj = newObj, let oldObj = oldObj else {return}
 
@@ -35,8 +54,10 @@ fileprivate func migrateTrackInfoObjects(_ migration: Migration) {
             let newTracks = List<TrackInfoRealm>()
             
             for t in oldTracks {
-                let ti = TrackInfo(languageCode: t["languageCode"] as! String, title: t["title"] as! String, type: type)
-                let tir = TrackInfoRealm(itemId: oldObj["id"] as! String, selected: true, trackInfo: ti)
+                let ti = TrackInfo(type: type, 
+                                   languageCode: t["languageCode"] as? String ?? "?", 
+                                   title: t["title"] as? String ?? "?")
+                let tir = TrackInfoRealm(trackInfo: ti, selected: true)
                 newTracks.append(tir)
             }
             
@@ -127,7 +148,7 @@ extension RealmDB {
         }
 
         for (key, value) in tracks {
-            list.append(TrackInfoRealm(itemId: itemId, selected: value, trackInfo: key))
+            list.append(TrackInfoRealm(trackInfo: key, selected: value))
         }
     }
     

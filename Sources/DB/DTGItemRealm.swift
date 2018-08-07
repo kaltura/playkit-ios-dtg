@@ -18,20 +18,25 @@ class TrackInfoRealm: Object {
     @objc dynamic var type: String = ""
     @objc dynamic var selected = false
     
-    convenience init(itemId: String, selected: Bool, trackInfo: TrackInfo) {
+    convenience init(trackInfo: TrackInfo, selected: Bool) {
         self.init()
         self.title = trackInfo.title
         self.languageCode = trackInfo.languageCode
         self.type = trackInfo.type.rawValue
         self.selected = selected
-        
     }
     
     
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
 
-    func asTrackInfo() -> TrackInfo {
-        return TrackInfo(languageCode: self.languageCode, title: self.title, type: TrackInfo.TrackType(rawValue: type)!)
+    func asTrackInfo() -> TrackInfo? {
+        guard let trackType = TrackInfo.TrackType(rawValue: type) else {
+            log.error("No such type \(type)")
+            return nil
+        }
+        return TrackInfo(type: trackType, 
+                         languageCode: self.languageCode, 
+                         title: self.title)
     }
 }
 
@@ -70,10 +75,10 @@ class DTGItemRealm: Object {
         item.state = DTGItemState(value: self.state)!
         item.estimatedSize = self.estimatedSize.value
         item.downloadedSize = self.downloadedSize
-        item.availableTextTracks = self.textTracks.filter("type = 'text'").map({ $0.asTrackInfo() })
-        item.selectedTextTracks = self.textTracks.filter("type = 'text' AND selected = true").map({ $0.asTrackInfo() })
-        item.availableAudioTracks = self.audioTracks.filter("type = 'audio'").map({ $0.asTrackInfo() })
-        item.selectedAudioTracks = self.audioTracks.filter("type = 'audio' AND selected = true").map({ $0.asTrackInfo() })
+        item.availableTextTracks = self.textTracks.filter("type = 'text'").compactMap({ $0.asTrackInfo() })
+        item.selectedTextTracks = self.textTracks.filter("type = 'text' AND selected = true").compactMap({ $0.asTrackInfo() })
+        item.availableAudioTracks = self.audioTracks.filter("type = 'audio'").compactMap({ $0.asTrackInfo() })
+        item.selectedAudioTracks = self.audioTracks.filter("type = 'audio' AND selected = true").compactMap({ $0.asTrackInfo() })
         
         return item
     }

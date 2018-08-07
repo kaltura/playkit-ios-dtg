@@ -97,9 +97,9 @@ struct DownloadItem: DTGItem {
 }
 
 public struct TrackInfo: Hashable {
+    public let type: TrackType
     public let languageCode: String
     public let title: String
-    public let type: TrackType
     
     var id: String {
         return "\(self.languageCode):\(self.title)"
@@ -420,7 +420,7 @@ public class ContentManager: NSObject, DTGContentManager {
 
 extension ContentManager: GCDWebServerDelegate {
     
-    public func webServerDidStart(_ server: GCDWebServer!) {
+    public func webServerDidStart(_ server: GCDWebServer) {
         self.startCompletionHandler?()
         self.startCompletionHandler = nil
     }
