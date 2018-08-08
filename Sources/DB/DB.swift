@@ -97,30 +97,7 @@ fileprivate let config = Realm.Configuration(
     objectTypes: [DTGItemRealm.self, DownloadItemTaskRealm.self, TrackInfoRealm.self]
 )
 
-
-protocol DB: class {
-    
-    /* Items API */
-    
-    func add(item: DownloadItem) throws
-    func getItem(byId id: String) throws -> DownloadItem?
-    func removeItem(byId id: String) throws
-    
-    func getItems(byState state: DTGItemState) throws -> [DownloadItem]
-    func updateItemSize(id: String, incrementDownloadSize: Int64, state: DTGItemState?) throws -> (newSize: Int64, estSize: Int64)
-    func updateItemState(id: String, newState: DTGItemState) throws -> Bool
-    func updateAfterMetadataLoaded(item: DownloadItem) throws
-    
-    /* Tasks API */
-    
-    func set(tasks: [DownloadItemTask]) throws
-    func getTasks(forItemId id: String) throws -> [DownloadItemTask]
-    func removeTasks(withItemId id: String) throws
-    func removeTask(_ task: DownloadItemTask) throws
-    func pauseTasks(_ tasks: [DownloadItemTask]) throws
-}
-
-class RealmDB: DB {
+class RealmDB {
     func write(_ rlm: Realm, _ block: (() -> Void)) throws {
         try autoreleasepool {
             try rlm.write {
@@ -175,7 +152,6 @@ extension RealmDB {
     
     func realmItem(_ id: String) throws -> DTGItemRealm? {
         guard let item = try getRealm().object(ofType: DTGItemRealm.self, forPrimaryKey: id) else {
-            log.error("No such item \(id)")
             return nil
         }
         return item
@@ -193,7 +169,10 @@ extension RealmDB {
     
     func updateItemSize(id: String, incrementDownloadSize: Int64, state: DTGItemState?) throws -> (newSize: Int64, estSize: Int64) {
 
-        guard let realmItem = try realmItem(id) else {return (-1, -1)}
+        guard let realmItem = try realmItem(id) else {
+            log.error("No such item \(id)")
+            return (-1, -1)            
+        }
         
         try write(getRealm()) {
             realmItem.downloadedSize += incrementDownloadSize
@@ -235,8 +214,12 @@ extension RealmDB {
         return items.map({ $0.asObject() })
     }
     
+    @discardableResult
     func updateItemState(id: String, newState: DTGItemState) throws -> Bool {
-        guard let item = try self.realmItem(id) else {return false}
+        guard let item = try self.realmItem(id) else {
+            log.error("No such item \(id)")
+            return false            
+        }
         
         let oldStateStr = item.state
         let oldState = DTGItemState(value: oldStateStr)

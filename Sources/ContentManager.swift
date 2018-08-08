@@ -167,7 +167,7 @@ public class ContentManager: NSObject, DTGContentManager {
     var startCompletionHandler: (() -> Void)?
     
     // db interface instance
-    let db: DB
+    let db: RealmDB
     
     static let megabyteInBytes: Int64 = 1000000
     /// the minimum free space we need to have in addition to the estimated size, to prevent no disk space issues.
@@ -264,12 +264,12 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func itemById(_ id: String) throws -> DTGItem? {
-        
         return try db.getItem(byId: id)
     }
     
     public func addItem(id: String, url: URL) throws -> DTGItem? {
         if try db.getItem(byId: id) != nil {
+            log.error("Item already exists: \(id)")
             return nil
         }
         
