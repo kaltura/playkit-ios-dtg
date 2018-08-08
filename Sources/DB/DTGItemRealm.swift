@@ -15,21 +15,32 @@ import RealmSwift
 class TrackInfoRealm: Object {
     @objc dynamic var title: String = ""
     @objc dynamic var languageCode: String = ""
+    @objc dynamic var type: String = ""
+    @objc dynamic var selected = false
     
-    convenience init(trackInfo: TrackInfo) {
+    convenience init(trackInfo: TrackInfo, selected: Bool) {
         self.init()
         self.title = trackInfo.title
         self.languageCode = trackInfo.languageCode
+        self.type = trackInfo.type.rawValue
+        self.selected = selected
     }
+    
     
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
 
-    func asTrackInfo() -> TrackInfo {
-        return TrackInfo(languageCode: self.languageCode, title: self.title)
+    func asTrackInfo() -> TrackInfo? {
+        guard let trackType = TrackInfo.TrackType(rawValue: type) else {
+            log.error("No such type \(type)")
+            return nil
+        }
+        return TrackInfo(type: trackType, 
+                         languageCode: self.languageCode, 
+                         title: self.title)
     }
 }
 
-class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
+class DTGItemRealm: Object {
     
     @objc dynamic var id: String = ""
     /// The items's remote URL.
@@ -41,10 +52,8 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     /// Downloaded size in bytes.
     @objc dynamic var downloadedSize: Int64 = 0
     
-    let availableTextTracks = List<TrackInfoRealm>()
-    let availableAudioTracks = List<TrackInfoRealm>()
-    let selectedTextTracks = List<TrackInfoRealm>()
-    let selectedAudioTracks = List<TrackInfoRealm>()
+    let textTracks = List<TrackInfoRealm>()
+    let audioTracks = List<TrackInfoRealm>()
     
     override static func primaryKey() -> String? {
         return "id"
@@ -52,25 +61,11 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
     
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
     
-    var pk: String {
-        return self.id
-    }
-    
     convenience required init(object: DownloadItem) {
         self.init()
         self.id = object.id
         self.remoteUrl = object.remoteUrl.absoluteString
         self.state = object.state.asString()
-        self.estimatedSize = RealmOptional<Int64>(object.estimatedSize)
-        self.downloadedSize = object.downloadedSize
-        self.availableTextTracks.replaceSubrange(0..<self.availableTextTracks.count, with: object.availableTextTracks.map { TrackInfoRealm(trackInfo: $0) })
-        self.availableAudioTracks.replaceSubrange(0..<self.availableAudioTracks.count, with: object.availableAudioTracks.map { TrackInfoRealm(trackInfo: $0) })
-        self.selectedTextTracks.replaceSubrange(0..<self.selectedTextTracks.count, with: object.selectedTextTracks.map { TrackInfoRealm(trackInfo: $0) })
-        self.selectedAudioTracks.replaceSubrange(0..<self.selectedAudioTracks.count, with: object.selectedAudioTracks.map { TrackInfoRealm(trackInfo: $0) })
-    }
-    
-    static func initialize(with object: DownloadItem) -> DTGItemRealm {
-        return DTGItemRealm(object: object)
     }
     
     func asObject() -> DownloadItem {
@@ -80,10 +75,10 @@ class DTGItemRealm: Object, RealmObjectProtocol, PrimaryKeyable {
         item.state = DTGItemState(value: self.state)!
         item.estimatedSize = self.estimatedSize.value
         item.downloadedSize = self.downloadedSize
-        item.availableTextTracks = self.availableTextTracks.map { $0.asTrackInfo() }
-        item.availableAudioTracks = self.availableAudioTracks.map { $0.asTrackInfo() }
-        item.selectedTextTracks = self.selectedTextTracks.map { $0.asTrackInfo() }
-        item.selectedAudioTracks = self.selectedAudioTracks.map { $0.asTrackInfo() }
+        item.availableTextTracks = self.textTracks.filter("type = 'text'").compactMap({ $0.asTrackInfo() })
+        item.selectedTextTracks = self.textTracks.filter("type = 'text' AND selected = true").compactMap({ $0.asTrackInfo() })
+        item.availableAudioTracks = self.audioTracks.filter("type = 'audio'").compactMap({ $0.asTrackInfo() })
+        item.selectedAudioTracks = self.audioTracks.filter("type = 'audio' AND selected = true").compactMap({ $0.asTrackInfo() })
         
         return item
     }

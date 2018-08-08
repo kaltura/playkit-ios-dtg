@@ -16,6 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         do {
+            
+            ContentManager.shared.setLogLevel(.debug)
+            
             // setup the content manager.
             try ContentManager.shared.setup()
             print("Home dir:", NSHomeDirectory())
