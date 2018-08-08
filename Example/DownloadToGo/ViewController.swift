@@ -14,6 +14,8 @@ import PlayKit
 let setSmallerOfflineDRMExpirationMinutes: Int? = 5
 //let setSmallerOfflineDRMExpirationMinutes: Int? = nil
 
+let defaultAudioBitrateEstimation: Int = 64000
+
 class Item {
     let id: String
     let title: String
@@ -122,7 +124,7 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        cm.setDefaultAudioBitrateEstimation(bitrate: 128000)
+        cm.setDefaultAudioBitrateEstimation(bitrate: defaultAudioBitrateEstimation)
 
         // initialize UI
         selectedItem = items.first!
