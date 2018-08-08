@@ -12,8 +12,6 @@
 import Foundation
 import RealmSwift
 
-fileprivate var realmMigrated = false
-
 /// returns a configured realm object.
 func getRealm() throws -> Realm {
     return try Realm(configuration: config)
