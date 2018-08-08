@@ -68,10 +68,10 @@ class ViewController: UIViewController {
     
     let items = [
         Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
-        Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
-        Item("FPS: QA 2", id: "0_7o8zceol", partnerId: 4171, env: "http://qa-apache-php7.dev.kaltura.com"),
+        Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://cdntesting.qa.mkaltura.com"),
+        Item("FPS: QA 2", id: "0_7o8zceol", partnerId: 4171, env: "http://cdntesting.qa.mkaltura.com"),
         Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
-        Item(id: "QA multi/multi", url: "http://qa-apache-testing-ubu-01.dev.kaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
+        Item(id: "QA multi/multi", url: "http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
         Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
@@ -492,15 +492,11 @@ extension ViewController: UIPickerViewDataSource {
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if pickerView === self.languageCodePickerView {
-            do {
-                guard let item = selectedDTGItem else { return 0 }
-                if component == 0 {
-                    return item.selectedTextTracks.count
-                } else {
-                    return item.selectedAudioTracks.count
-                }
-            } catch {
-                return 0
+            guard let item = selectedDTGItem else { return 0 }
+            if component == 0 {
+                return item.selectedTextTracks.count
+            } else {
+                return item.selectedAudioTracks.count
             }
         } else {
             return self.items.count
@@ -516,15 +512,11 @@ extension ViewController: UIPickerViewDelegate {
     
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if pickerView === self.languageCodePickerView {
-            do {
-                guard let item = selectedDTGItem else { return "" }
-                if component == 0 {
-                    return item.selectedTextTracks[row].title
-                } else {
-                    return item.selectedAudioTracks[row].title
-                }
-            } catch {
-                return ""
+            guard let item = selectedDTGItem else { return "" }
+            if component == 0 {
+                return item.selectedTextTracks[row].title
+            } else {
+                return item.selectedAudioTracks[row].title
             }
         } else {
             return items[row].title
@@ -533,19 +525,15 @@ extension ViewController: UIPickerViewDelegate {
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         if pickerView === self.languageCodePickerView {
-            do {
-                guard let item = selectedDTGItem else { return }
-                if component == 0 {
-                    guard item.selectedTextTracks.count > 0 else { return }
-                    self.selectedTextLanguageCode = item.selectedTextTracks[row].languageCode
-                } else {
-                    guard item.selectedAudioTracks.count > 0 else { return }
-                    self.selectedAudioLanguageCode = item.selectedAudioTracks[row].languageCode
-                }
-                self.languageCodeTextField.text = "text code: \(self.selectedTextLanguageCode ?? ""), audio code: \(self.selectedAudioLanguageCode ?? "")"
-            } catch {
-                
+            guard let item = selectedDTGItem else { return }
+            if component == 0 {
+                guard item.selectedTextTracks.count > 0 else { return }
+                self.selectedTextLanguageCode = item.selectedTextTracks[row].languageCode
+            } else {
+                guard item.selectedAudioTracks.count > 0 else { return }
+                self.selectedAudioLanguageCode = item.selectedAudioTracks[row].languageCode
             }
+            self.languageCodeTextField.text = "text code: \(self.selectedTextLanguageCode ?? ""), audio code: \(self.selectedAudioLanguageCode ?? "")"
         } else {
             self.itemTextField.text = items[row].title
             self.selectedItem = items[row]
