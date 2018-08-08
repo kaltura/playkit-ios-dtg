@@ -96,6 +96,9 @@ public protocol DTGContentManager: class {
     ///
     /// ```func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool```
     func setup() throws
+    
+    /// Set the default audio bitrate for size-estimation purposes. Defaults to 64000.
+    func setDefaultAudioBitrateEstimation(bitrate: Int)
 }
 
 extension DTGContentManager {

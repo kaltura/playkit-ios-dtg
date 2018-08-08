@@ -84,11 +84,12 @@ struct DownloadItem: DTGItem {
     let remoteUrl: URL
     var state: DTGItemState = .new 
     var estimatedSize: Int64? 
-    var downloadedSize: Int64 = 0 
+    var downloadedSize: Int64 = 0
+    var duration: TimeInterval?
     var availableTextTracks: [TrackInfo] = [] 
     var availableAudioTracks: [TrackInfo] = [] 
     var selectedTextTracks: [TrackInfo] = [] 
-    var selectedAudioTracks: [TrackInfo] = [] 
+    var selectedAudioTracks: [TrackInfo] = []
     
     init(id: String, url: URL) {
         self.id = id
@@ -139,7 +140,6 @@ class DTGFilePaths {
 /* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
-    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
     
@@ -157,6 +157,8 @@ public class ContentManager: NSObject, DTGContentManager {
     public var storagePath: URL {
         return DTGFilePaths.storagePath
     }
+    
+    var defaultAudioBitrateEstimation: Int = 64000
     
     var started = false
     var server = GCDWebServer()
@@ -201,6 +203,10 @@ public class ContentManager: NSObject, DTGContentManager {
         #endif
         log.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
         log.debug("*** ContentManager ***")
+    }
+    
+    public func setDefaultAudioBitrateEstimation(bitrate: Int) {
+        self.defaultAudioBitrateEstimation = bitrate
     }
     
     private func startServer() throws {
@@ -286,13 +292,17 @@ public class ContentManager: NSObject, DTGContentManager {
         
         let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
-        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
+        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), 
+                                     downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), 
+                                     preferredVideoBitrate: preferredVideoBitrate, 
+                                     audioBitrateEstimation: defaultAudioBitrateEstimation)
         
         try localizer.loadMetadata()
         try localizer.saveLocalFiles()
         // when localizer finished add the tasks and update the item
         try self.db.set(tasks: localizer.tasks)
         item.state = .metadataLoaded
+        item.duration = localizer.duration
         item.estimatedSize = localizer.estimatedSize
         item.availableTextTracks = localizer.availableTextTracksInfo
         item.availableAudioTracks = localizer.availableAudioTracksInfo
@@ -333,12 +343,22 @@ public class ContentManager: NSObject, DTGContentManager {
         }
         
         // make sure we have tasks to perform
-        let tasks = try db.getTasks(forItemId: id)
+        var tasks = try db.getTasks(forItemId: id)
         guard tasks.count > 0 else {
             log.warning("no tasks for this id")
             // if an item was started and his state allows to start and has no tasks set the state to completed.
             try self.update(itemState: .completed, byId: id)
             return
+        }
+        
+        // If the tasks are not ordered, shuffle them!
+        if tasks.first?.order == nil {
+            // Shuffle to mix large and small files together, making download speed look smooth.
+            // Otherwise, all small files (subtitles, keys) are downloaded together. Because of
+            // http request overhead the download speed is very slow when downloading the small
+            // files and fast when downloading the large ones (video).
+            // This is not needed if the tasks are correctly ordered.
+            tasks.shuffle()
         }
         
         try self.update(itemState: .inProgress, byId: id)
@@ -595,3 +615,22 @@ private extension ContentManager {
         self.downloaders[itemId] = nil
     }
 }
+
+
+// From https://stackoverflow.com/a/24029847/38557
+extension MutableCollection {
+    /// Shuffles the contents of this collection.
+    mutating func shuffle() {
+        let c = count
+        guard c > 1 else { return }
+        
+        for (firstUnshuffled, unshuffledCount) in zip(indices, stride(from: c, to: 1, by: -1)) {
+            // Change `Int` in the next line to `IndexDistance` in < Swift 4.1
+            let d: Int = numericCast(arc4random_uniform(numericCast(unshuffledCount)))
+            let i = index(firstUnshuffled, offsetBy: d)
+            swapAt(firstUnshuffled, i)
+        }
+    }
+}
+
+

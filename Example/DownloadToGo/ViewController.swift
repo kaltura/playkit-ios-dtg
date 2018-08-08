@@ -118,6 +118,8 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        cm.setDefaultAudioBitrateEstimation(bitrate: 128000)
 
         // initialize UI
         selectedItem = items.first!

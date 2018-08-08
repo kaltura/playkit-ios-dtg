@@ -52,6 +52,8 @@ class DTGItemRealm: Object {
     /// Downloaded size in bytes.
     @objc dynamic var downloadedSize: Int64 = 0
     
+    var duration = RealmOptional<TimeInterval>()
+
     let textTracks = List<TrackInfoRealm>()
     let audioTracks = List<TrackInfoRealm>()
     
@@ -73,6 +75,7 @@ class DTGItemRealm: Object {
         let remoteUrl = URL(string: self.remoteUrl)!
         var item = DownloadItem(id: id, url: remoteUrl)
         item.state = DTGItemState(value: self.state)!
+        item.duration = self.duration.value
         item.estimatedSize = self.estimatedSize.value
         item.downloadedSize = self.downloadedSize
         item.availableTextTracks = self.textTracks.filter("type = 'text'").compactMap({ $0.asTrackInfo() })

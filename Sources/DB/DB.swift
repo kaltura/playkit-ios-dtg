@@ -135,6 +135,7 @@ extension RealmDB {
         
         try write(getRealm()) {
             realmItem.state = DTGItemState.metadataLoaded.asString()
+            realmItem.duration.value = item.duration
             realmItem.estimatedSize.value = item.estimatedSize ?? -1
             convertTracks(itemId: item.id, type: .text, available: item.availableTextTracks, selected: item.selectedTextTracks, list: realmItem.textTracks)
             convertTracks(itemId: item.id, type: .audio, available: item.availableAudioTracks, selected: item.selectedAudioTracks, list: realmItem.audioTracks)
@@ -169,7 +170,7 @@ extension RealmDB {
 
         guard let realmItem = try realmItem(id) else {
             log.error("No such item \(id)")
-            return (-1, -1)            
+            return (-1, -1)
         }
         
         try write(getRealm()) {
@@ -216,7 +217,7 @@ extension RealmDB {
     func updateItemState(id: String, newState: DTGItemState) throws -> Bool {
         guard let item = try self.realmItem(id) else {
             log.error("No such item \(id)")
-            return false            
+            return false
         }
         
         let oldStateStr = item.state
@@ -248,7 +249,7 @@ extension RealmDB {
     }
     
     func getTasks(forItemId id: String) throws -> [DownloadItemTask] {
-        let realmTasks = try RealmDB.getTasks(itemId: id, rlm: getRealm())
+        let realmTasks = try RealmDB.getTasks(itemId: id, rlm: getRealm()).sorted(byKeyPath: "order")
         return realmTasks.map({$0.asObject()})
     }
     

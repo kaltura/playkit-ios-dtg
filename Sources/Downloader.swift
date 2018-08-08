@@ -21,14 +21,17 @@ struct DownloadItemTask {
     /// The destination to save the download item to.
     let destinationUrl: URL
     
+    let order: Int?
+    
     var retry: Int = 1
     var resumeData: Data? = nil
     
-    init(dtgItemId: String, contentUrl: URL, type: DownloadItemTaskType, destinationUrl: URL) {
+    init(dtgItemId: String, contentUrl: URL, type: DownloadItemTaskType, destinationUrl: URL, order: Int?) {
         self.dtgItemId = dtgItemId
         self.contentUrl = contentUrl
         self.type = type
         self.destinationUrl = destinationUrl
+        self.order = order
     }
 }
 

@@ -12,7 +12,6 @@
 import Foundation
 import M3U8Kit
 
-fileprivate let defaultAudioBitrate = 160*1024
 
 struct MockVideoTrack: DTGVideoTrack {
     var width: Int?
@@ -95,12 +94,15 @@ class HLSLocalizer {
     var selectedVideoStream: VideoStream?
     var selectedAudioStreams = [MediaStream]()
     var selectedTextStreams = [MediaStream]()
+    
+    let audioBitrateEstimation: Int
 
-    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?) {
+    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?, audioBitrateEstimation: Int) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
         self.downloadPath = downloadPath
+        self.audioBitrateEstimation = audioBitrateEstimation
     }
     
     private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
@@ -325,13 +327,15 @@ class HLSLocalizer {
                     
         var downloadItemTasks = [DownloadItemTask]()
         var duration = 0.0
+        var order = 0
         for i in 0 ..< segmentList.countInt {
             duration += segmentList[i].duration
             
             guard let trackType = type.asDownloadItemTaskType() else {
                 throw HLSLocalizerError.unknownPlaylistType
             }
-            downloadItemTasks.append(downloadItemTask(url: segmentList[i].mediaURL(), type: trackType))
+            order += 1
+            downloadItemTasks.append(downloadItemTask(url: segmentList[i].mediaURL(), type: trackType, order: order))
         }
         
         if setDuration {
@@ -341,11 +345,11 @@ class HLSLocalizer {
         self.tasks.append(contentsOf: downloadItemTasks)
     }
     
-    private func downloadItemTask(url: URL, type: DownloadItemTaskType) -> DownloadItemTask {
+    private func downloadItemTask(url: URL, type: DownloadItemTaskType, order: Int) -> DownloadItemTask {
         let destinationUrl = downloadPath.appendingPathComponent(type.asString(), isDirectory: true)
             .appendingPathComponent(url.absoluteString.md5())
             .appendingPathExtension(url.pathExtension)
-        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, type: type, destinationUrl: destinationUrl)
+        return DownloadItemTask(dtgItemId: self.itemId, contentUrl: url, type: type, destinationUrl: destinationUrl, order: order)
     }
     
     /// Adds download tasks for all encrpytion keys from the provided playlist.
@@ -356,8 +360,10 @@ class HLSLocalizer {
         
         var downloadItemTasks = [DownloadItemTask]()
         
+        var order = 0
         for line in lines {
             if isHLSAESKey(line: line) {
+                order += 1
                 // the attributes of the key are seperated by commas, need to seperate and get the URI to create the download task.
                 let keyAttributes = self.getSegmentAttributes(fromSegment: line, segmentPrefix: keySegmentTagPrefix, seperatedBy: ",")
                 for attribute in keyAttributes {
@@ -372,7 +378,7 @@ class HLSLocalizer {
                         // create the content url
                         guard let url = createContentUrl(from: uri, originalContentUrl: stream.mediaUrl) else { break }
                         // create and add download task
-                        let downloadTask = downloadItemTask(url: url, type: .key)
+                        let downloadTask = downloadItemTask(url: url, type: .key, order: order)
                         downloadItemTasks.append(downloadTask)
                     }
                 }
@@ -417,7 +423,7 @@ class HLSLocalizer {
                 switch type {
                 case M3U8MediaPlaylistTypeAudio:
                     let bitrate = streams[i].bandwidth()
-                    aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : defaultAudioBitrate)
+                    aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : audioBitrateEstimation)
                     selectedAudioStreams.append(stream)
                 case M3U8MediaPlaylistTypeSubtitle:
                     selectedTextStreams.append(stream)
