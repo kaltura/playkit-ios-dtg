@@ -98,9 +98,9 @@ struct DownloadItem: DTGItem {
 }
 
 public struct TrackInfo: Hashable {
+    public let type: TrackType
     public let languageCode: String
     public let title: String
-    public let type: TrackType
     
     var id: String {
         return "\(self.languageCode):\(self.title)"
@@ -169,7 +169,7 @@ public class ContentManager: NSObject, DTGContentManager {
     var startCompletionHandler: (() -> Void)?
     
     // db interface instance
-    let db: DB
+    let db: RealmDB
     
     static let megabyteInBytes: Int64 = 1000000
     /// the minimum free space we need to have in addition to the estimated size, to prevent no disk space issues.
@@ -270,12 +270,12 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func itemById(_ id: String) throws -> DTGItem? {
-        
         return try db.getItem(byId: id)
     }
     
     public func addItem(id: String, url: URL) throws -> DTGItem? {
         if try db.getItem(byId: id) != nil {
+            log.error("Item already exists: \(id)")
             return nil
         }
         
@@ -440,7 +440,7 @@ public class ContentManager: NSObject, DTGContentManager {
 
 extension ContentManager: GCDWebServerDelegate {
     
-    public func webServerDidStart(_ server: GCDWebServer!) {
+    public func webServerDidStart(_ server: GCDWebServer) {
         self.startCompletionHandler?()
         self.startCompletionHandler = nil
     }
