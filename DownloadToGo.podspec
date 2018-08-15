@@ -6,6 +6,7 @@ Pod::Spec.new do |s|
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
   s.author           = { 'Kaltura' => 'community@kaltura.com' }
   s.source           = { :git => 'https://github.com/kaltura/playkit-ios-dtg.git', :tag => s.version.to_s }
+  s.swift_version    = '4.0'
 
   s.ios.deployment_target = '8.0'
 
