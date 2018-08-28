@@ -9,5 +9,7 @@ notifications:
   email:
     recipients:
       - noam.tamim@kaltura.com
+      - nilit.danan@kaltura.com
+      - gilad.nadav@kaltura.com
     on_success: change
     on_failure: always
