@@ -70,8 +70,8 @@ public enum DTGError: LocalizedError {
             return "The item (id: \(itemId)) of the action was not found"
         case .invalidState(let itemId):
             return "try to make an action with an invalid state (item id: \(itemId))"
-        case .metadataLoading(itemId: _):
-            return "Item is already in the process of loading metadata"
+        case .metadataLoading(let itemId):
+            return "Item \(itemId) is already in the process of loading metadata"
         case .insufficientDiskSpace(let freeSpaceInMegabytes):
             return "insufficient disk space to start or continue the download, only have \(freeSpaceInMegabytes)MB free..."
         }
