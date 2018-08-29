@@ -57,8 +57,10 @@ enum DownloadItemTaskType {
 
 public enum DTGError: LocalizedError {
     case itemNotFound(itemId: String)
-    /// sent when item cannot be started (casued when item state is other than metadata loaded)
+    /// Thrown when item cannot be started (casued when item state is other than metadata loaded)
     case invalidState(itemId: String)
+    /// Thrown when item is already in the process of loading metadata
+    case metadataLoading(itemId: String)
     /// insufficient disk space to start or continue the download
     case insufficientDiskSpace(freeSpaceInMegabytes: Int)
     
@@ -68,6 +70,8 @@ public enum DTGError: LocalizedError {
             return "The item (id: \(itemId)) of the action was not found"
         case .invalidState(let itemId):
             return "try to make an action with an invalid state (item id: \(itemId))"
+        case .metadataLoading(let itemId):
+            return "Item \(itemId) is already in the process of loading metadata"
         case .insufficientDiskSpace(let freeSpaceInMegabytes):
             return "insufficient disk space to start or continue the download, only have \(freeSpaceInMegabytes)MB free..."
         }
@@ -151,6 +155,9 @@ public class ContentManager: NSObject, DTGContentManager {
     let sessionId = UUID()
     /// A custom referrer, used for requesting the play manifest, if no referrer is set app id is used.
     public var referrer: String?
+    
+    // Set of items that are currently in the transient metadata-loading state.
+    private var metadataLoading = Set<String>()
     
     public weak var delegate: ContentManagerDelegate?
 
@@ -286,9 +293,18 @@ public class ContentManager: NSObject, DTGContentManager {
     }
 
     public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
+        
         var item = try findItemOrThrow(id)
+        
         // can only load metadata on item in `.new` state.
         guard item.state == .new else { throw DTGError.invalidState(itemId: id) }
+        if metadataLoading.contains(id) { throw DTGError.metadataLoading(itemId: id)}
+        
+        metadataLoading.update(with: id)
+        defer {
+            log.debug("removing \(id) from metadataLoading")
+            metadataLoading.remove(id)  // done, with or without error
+        }
         
         let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
@@ -297,8 +313,10 @@ public class ContentManager: NSObject, DTGContentManager {
                                      preferredVideoBitrate: preferredVideoBitrate, 
                                      audioBitrateEstimation: defaultAudioBitrateEstimation)
         
+        
         try localizer.loadMetadata()
         try localizer.saveLocalFiles()
+        
         // when localizer finished add the tasks and update the item
         try self.db.set(tasks: localizer.tasks)
         item.state = .metadataLoaded
