@@ -96,10 +96,10 @@ fileprivate let config = Realm.Configuration(
 )
 
 class RealmDB {
-    func write(_ rlm: Realm, _ block: (() -> Void)) throws {
+    func write(_ rlm: Realm, _ block: (() throws -> Void)) throws {
         try autoreleasepool {
             try rlm.write {
-                block()
+                try block()
             }
         }
     }
@@ -145,6 +145,9 @@ extension RealmDB {
     func add(item: DownloadItem) throws {
         let rlm = try getRealm()
         try write(rlm) {
+            if rlm.object(ofType: DTGItemRealm.self, forPrimaryKey: item.id) != nil {
+                throw DTGError.invalidState(itemId: item.id)
+            }
             rlm.add(DTGItemRealm(object: item))
         }
     }
