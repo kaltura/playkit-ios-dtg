@@ -8,7 +8,7 @@
 
 import UIKit
 import DownloadToGo
-import Toast_Swift
+import Toast
 import PlayKit
 
 let setSmallerOfflineDRMExpirationMinutes: Int? = 5
@@ -385,17 +385,17 @@ class ViewController: UIViewController {
     
     func toastShort(_ message: String) {
         print(message)
-        self.view.makeToast(message, duration: 0.6, position: .center)
+        self.view!.makeToast(message, duration: 0.6, position: CSToastPositionCenter)
     }
     
     func toastMedium(_ message: String) {
         print(message)
-        self.view.makeToast(message, duration: 1.0, position: .center)
+        self.view!.makeToast(message, duration: 1.0, position: CSToastPositionCenter)
     }
     
     func toastLong(_ message: String) {
         print(message)
-        self.view.makeToast(message, duration: 4, position: .center)
+        self.view!.makeToast(message, duration: 4, position: CSToastPositionCenter)
     }
 }
 

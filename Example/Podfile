@@ -7,7 +7,7 @@ target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
   pod 'PlayKit'	, :path => '../../playkit-ios'
   
-  pod 'Toast-Swift'
+  pod 'Toast', '~> 4.0.0'
 
   target 'DownloadToGo_Tests' do
     inherit! :search_paths
