@@ -16,5 +16,5 @@ Pod::Spec.new do |s|
   s.dependency 'GCDWebServer', '~> 3.4.2'
   s.dependency 'RealmSwift', '~> 3.7.6'
   s.dependency 'XCGLogger', '~> 6.1.0'
-  s.dependency 'PlayKitUtils', '~> 0.1.5'
+  s.dependency 'PlayKitUtils', '~> 0.1.6'
 end
