@@ -28,7 +28,7 @@ class DownloadItemTaskRealm: Object {
     let order = RealmOptional<Int>()
     
     override static func primaryKey() -> String? {
-        return "contentUrl"
+        return "destinationUrl"
     }
     
     public override class func shouldIncludeInDefaultSchema() -> Bool { return false } 
@@ -38,10 +38,14 @@ class DownloadItemTaskRealm: Object {
         self.dtgItemId = object.dtgItemId
         self.contentUrl = object.contentUrl.absoluteString
         self.type = object.type.asString()
-        self.destinationUrl = String(object.destinationUrl.absoluteString[DTGFilePaths.storagePath.absoluteString.endIndex...])
+        self.destinationUrl = DownloadItemTaskRealm.relativeDestUrl(object)
         self.resumeData = object.resumeData
         self.order.value = object.order
     }
+    
+    static func relativeDestUrl(_ obj: DownloadItemTask) -> String {
+        return String(obj.destinationUrl.absoluteString[DTGFilePaths.storagePath.absoluteString.endIndex...])
+    } 
     
     func asObject() -> DownloadItemTask {
         let contentUrl = URL(string: self.contentUrl)!
