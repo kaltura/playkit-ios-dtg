@@ -23,6 +23,16 @@ public enum DownloaderError: Error {
     case noSpaceLeftOnDevice
 }
 
+// In iOS 12+, sometimes cancel(byProducingResumeData:) returns an invalid resume
+// data. The blob returned is very small (around 160 bytes; a valid blob is a few
+// kbs). The workaround is in two places: when receiving a blob smaller than 200
+// bytes, don't save it; when loading a blob, if it's smaller than 200 bytes don't
+// use it. The latter makes sure that if the db is already polluted with bad blobs
+// we'll still be able to resume. 
+// When there's no resume data, we resume by downloading the chunk again, from scratch.
+// This is not too bad because chunks are relatively small.
+fileprivate let invalidResumeDataSize = 200
+
 /// `Downloader` object is responsible for downloading files locally and reporting progres.
 class DefaultDownloader: NSObject, Downloader {
     
@@ -30,30 +40,32 @@ class DefaultDownloader: NSObject, Downloader {
     // MARK: - Private Properties
     /************************************************************/
     
-    /// Holds all the active downloads map of session task and the corresponding download task.
-    fileprivate var activeDownloads = [URLSessionDownloadTask: DownloadItemTask]()
+    private var blockNewTasks = false
     
-    fileprivate var downloadURLSession: URLSession!
+    /// Holds all the active downloads map of session task and the corresponding download task.
+    private var activeDownloads = [URLSessionDownloadTask: DownloadItemTask]()
+    
+    private lazy var downloadURLSession: URLSession = createSession()
     
     /// Queue for holding all the download tasks (FIFO)
-    fileprivate var downloadItemTasksQueue = Queue<DownloadItemTask>()
+    private var downloadItemTasksQueue = Queue<DownloadItemTask>()
     
-    fileprivate let synchronizedQueue = DispatchQueue(label: "com.kaltura.dtg.session.synchronizedQueue")
+    private let synchronizedQueue = DispatchQueue(label: "com.kaltura.dtg.session.synchronizedQueue")
     
     /// Progress updates are throttled as to ensure Realm isn't overloaded with write calls.
-    fileprivate var lastProgressRefreshTime: Date = Date()
+    private var lastProgressRefreshTime: Date = Date()
     /// The duration to wait before allowing forwarding a progress update.
-    fileprivate let progressUpdateThrottle: Double = 0.2
+    private let progressUpdateThrottle: Double = 0.2
     /// Any throttled progress is stored locally until the throttle permits a subsequent update.
-    fileprivate var throttledBytesWritten: Int64 = 0
+    private var throttledBytesWritten: Int64 = 0
     
-    fileprivate var currentTasksCount: Int {
+    private var currentTasksCount: Int {
         return synchronizedQueue.sync {
             return self.activeDownloads.count
         }
     }
     
-    fileprivate var invalidatedSession: URLSession? = nil
+    private var invalidatedSession: URLSession? = nil
     
     /************************************************************/
     // MARK: - Downloader Properties
@@ -81,18 +93,21 @@ class DefaultDownloader: NSObject, Downloader {
     /************************************************************/
     // MARK: - Initialization
     /************************************************************/
-    
     required init(itemId: String, tasks: [DownloadItemTask]) {
         self.dtgItemId = itemId
         super.init()
         self.downloadItemTasksQueue.enqueue(tasks)
-        self.setBackgroundURLSession()
         self.state.onChange { [weak self] (state) in
             guard let strongSelf = self else { return }
             strongSelf.delegate?.downloader(strongSelf, didChangeToState: state)
         }
     }
     
+    private func createSession() -> URLSession {
+        let backgroundSessionConfiguration = URLSessionConfiguration.background(withIdentifier: self.sessionIdentifier)
+        return URLSession(configuration: backgroundSessionConfiguration, delegate: self, delegateQueue: nil)
+    }
+
     deinit {
         self.invokeBackgroundSessionCompletionHandler()
     }
@@ -105,12 +120,15 @@ class DefaultDownloader: NSObject, Downloader {
 extension DefaultDownloader {
     
     func start() throws {
+        blockNewTasks = false
+        
         guard self.state.value == .new else { throw DownloaderError.downloadAlreadyStarted }
         self.state.value = .downloading
         self.downloadIfAvailable()
     }
     
     func addDownloadItemTasks(_ tasks: [DownloadItemTask]) throws {
+        
         let state = self.state.value
         guard state == .downloading else {
             log.error("cannot add downloads make sure you started the downloader")
@@ -127,6 +145,8 @@ extension DefaultDownloader {
     }
     
     func pause() {
+        self.blockNewTasks = true
+
         self.pauseDownloadTasks { (pausedTasks) in
             self.state.value = .paused
             self.delegate?.downloader(self, didPauseDownloadTasks: pausedTasks)
@@ -141,11 +161,11 @@ extension DefaultDownloader {
     }
     
     func invalidateSession() {
-        self.downloadURLSession.invalidateAndCancel()
+        downloadURLSession.invalidateAndCancel()
     }
     
     func refreshSession() {
-        self.setBackgroundURLSession()
+        self.downloadURLSession = createSession()
         self.state.value = .new
     }
 }
@@ -158,24 +178,30 @@ private extension DefaultDownloader {
     
     /// Starts downloading if any tasks are available in the queue and current tasks isn't more than max allowed.
     func downloadIfAvailable() {
-        if self.currentTasksCount < self.maxConcurrentDownloadItemTasks && self.downloadItemTasksQueue.count > 0 {
-            repeat {
-                guard let downloadTask = self.downloadItemTasksQueue.dequeue() else { continue }
-                self.start(downloadTask: downloadTask)
-            } while self.currentTasksCount < self.maxConcurrentDownloadItemTasks && self.downloadItemTasksQueue.count > 0
+        if blockNewTasks {
+            return
+        }
+        
+        while self.currentTasksCount < self.maxConcurrentDownloadItemTasks && self.downloadItemTasksQueue.count > 0 {
+            guard let downloadTask = self.downloadItemTasksQueue.dequeue() else { continue }
+            self.start(downloadTask: downloadTask)
         }
     }
     
     func start(downloadTask: DownloadItemTask) {
+        
         // Validate that the downloadURLSession wasn't invalidated
         if self.downloadURLSession != self.invalidatedSession {
-            let urlSessionDownloadTask: URLSessionDownloadTask
-            if let downloadTaskResumeData = downloadTask.resumeData {
+            var urlSessionDownloadTask: URLSessionDownloadTask
+            
+            if let downloadTaskResumeData = downloadTask.resumeData, downloadTaskResumeData.count >= invalidResumeDataSize {
+                log.verbose("Resume data before resuming: \(downloadTaskResumeData.base64EncodedString())")
                 // if we have resume data create a task with the resume data and remove it from the downloadTask
-                urlSessionDownloadTask = self.downloadURLSession.downloadTask(withResumeData: downloadTaskResumeData)
+                urlSessionDownloadTask = downloadURLSession.downloadTask(withResumeData: downloadTaskResumeData)
             } else {
-                urlSessionDownloadTask = self.downloadURLSession.downloadTask(with: downloadTask.contentUrl)
+                urlSessionDownloadTask = downloadURLSession.downloadTask(with: downloadTask.contentUrl)
             }
+            
             self.activeDownloads[urlSessionDownloadTask] = downloadTask
             urlSessionDownloadTask.resume()
             log.debug("Started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
@@ -186,6 +212,7 @@ private extension DefaultDownloader {
     }
     
     func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {
+        
         guard self.activeDownloads.count > 0 else {
             completionHandler([])
             return
@@ -194,17 +221,22 @@ private extension DefaultDownloader {
         
         // make sure to wait for all active downloads to pause by using dispatch queue wait.
         let dispatchGroup = DispatchGroup()
-        for (_, _) in self.activeDownloads {
-            dispatchGroup.enter()
-        }
+        
         for (sessionTask, downloadTask) in self.activeDownloads {
+            dispatchGroup.enter()
             sessionTask.cancel { (data) in
+                log.verbose("Resume data: \(data?.base64EncodedString() ?? "-")")
                 var downloadTask = downloadTask
-                downloadTask.resumeData = data
+                
+                if data?.count ?? 0 >= invalidResumeDataSize {
+                    downloadTask.resumeData = data
+                }
+                
                 pausedTasks.append(downloadTask)
                 dispatchGroup.leave()
             }
         }
+        
         // waits for all active download tasks to cancel
         dispatchGroup.notify(queue: DispatchQueue.global()) {
             self.invalidateSession()
@@ -222,12 +254,6 @@ private extension DefaultDownloader {
             sessionTask.cancel()
         }
         self.activeDownloads.removeAll()
-    }
-    
-    func setBackgroundURLSession() {
-        let backgroundSessionConfiguration = URLSessionConfiguration.background(withIdentifier: self.sessionIdentifier)
-        // initialize download url session with background configuration
-        self.downloadURLSession = URLSession(configuration: backgroundSessionConfiguration, delegate: self, delegateQueue: nil)
     }
 }
 
@@ -264,7 +290,7 @@ extension DefaultDownloader: URLSessionDelegate {
         
         if let e = error as NSError?, let downloadTask = task as? URLSessionDownloadTask {
             // if cancelled no need to handle error
-            guard e.code != NSURLErrorCancelled else { return }
+            guard e.domain != NSURLErrorDomain || e.code != NSURLErrorCancelled else { return }
             
             if e.domain == NSPOSIXErrorDomain && e.code == 28 {
                 cancel(with: DownloaderError.noSpaceLeftOnDevice)
