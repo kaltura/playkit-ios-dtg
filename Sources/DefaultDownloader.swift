@@ -154,6 +154,8 @@ extension DefaultDownloader {
     }
     
     func cancel() {
+        self.blockNewTasks = true
+        
         // Invalidate the session before canceling, so that no new tasks will start
         self.invalidateSession()
         self.cancelDownloadTasks()
