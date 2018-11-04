@@ -185,13 +185,16 @@ extension RealmDB {
         }
         
         try write(getRealm()) {
+            if realmItem.isInvalidated {
+                return
+            } 
             realmItem.downloadedSize += incrementDownloadSize
             if let state = state {
                 realmItem.state = state.asString()
             }
         }
         
-        return (realmItem.downloadedSize, realmItem.estimatedSize.value ?? -1)
+        return realmItem.isInvalidated ? (-1, -1) : (realmItem.downloadedSize, realmItem.estimatedSize.value ?? -1)
     }
 
     func removeItem(byId id: String) throws {
