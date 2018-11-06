@@ -29,7 +29,7 @@ class Item {
         self.title = id
         self.url = URL(string: url)!
         
-        let source = PKMediaSource.init(id, contentUrl: URL(string: url))
+        let source = PKMediaSource(id, contentUrl: URL(string: url))
         self.entry = PKMediaEntry(id, sources: [source])
         
         self.partnerId = nil
@@ -81,15 +81,9 @@ class ViewController: UIViewController {
         Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
     ]
     
-    let itemPickerView: UIPickerView = {
-        let picker = UIPickerView()
-        return picker
-    }()
+    let itemPickerView = UIPickerView()
     
-    let languageCodePickerView: UIPickerView = {
-        let picker = UIPickerView()
-        return picker
-    }()
+    let languageCodePickerView = UIPickerView()
     
     var selectedItem: Item! {
         didSet {
