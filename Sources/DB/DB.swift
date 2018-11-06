@@ -260,7 +260,7 @@ extension RealmDB {
         try write(rlm) {
             for t in realmTasks {
                 if let et = rlm.object(ofType: DownloadItemTaskRealm.self, forPrimaryKey: t.destinationUrl) {
-                    log.warning("Task with key \(et.destinationUrl) already exists with url=\(et.contentUrl) type=\(et.type)")
+                    log.warning("Task with key \(et.destinationUrl) already exists (item=\(et.dtgItemId) url=\(et.contentUrl) type=\(et.type))")
                 } else {
                     rlm.add(t, update: true)    // Using update so it won't crash if exists
                 }
