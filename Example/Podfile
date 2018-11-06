@@ -8,6 +8,7 @@ target 'DownloadToGo_Example' do
   pod 'PlayKit'	, :path => '../../playkit-ios'
   
   pod 'Toast', '~> 4.0.0'
+  pod 'GCDWebServer', :git => 'https://github.com/noamtamim/GCDWebServer', :branch => 'no-implicit-retain-self'
 
   target 'DownloadToGo_Tests' do
     inherit! :search_paths
