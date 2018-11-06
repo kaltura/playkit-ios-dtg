@@ -17,7 +17,7 @@ func getRealm() throws -> Realm {
     return try Realm(configuration: config)
 }
 
-fileprivate func migrateTrackInfoObjects(_ migration: Migration) {
+fileprivate func migrate_to_3(_ migration: Migration) {
     
     // In schema v2, DTGItemRealm had 4 lists of TrackInfoRealm objects:
     // selectedTextTracks, availableTextTracks, selectedAudioTracks, availableAudioTracks
@@ -75,7 +75,7 @@ fileprivate func migrateTrackInfoObjects(_ migration: Migration) {
 
 fileprivate let config = Realm.Configuration(
     fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
-    schemaVersion: 3,
+    schemaVersion: 4,
     migrationBlock: { migration, oldSchemaVersion in
         
         // We haven’t migrated anything yet, so oldSchemaVersion == 0
@@ -83,13 +83,21 @@ fileprivate let config = Realm.Configuration(
             // The renaming operation should be done outside of calls to `enumerateObjects(ofType: _:)`.
             migration.renameProperty(onType: DownloadItemTaskRealm.className(), from: "trackType", to: "type")
         }
+        
+        // 1 -> 2
         if (oldSchemaVersion < 2) {
             // nothing to do just detect new properties on realm item
         }
         
+        // 2 -> 3
         if (oldSchemaVersion == 2) {    
             // TrackInfo object were only added in schema 2 so this migration is not required if old is 0 or 1
-            migrateTrackInfoObjects(migration)
+            migrate_to_3(migration)
+        }
+        
+        // 3 -> 4
+        if (oldSchemaVersion < 4) {
+            // Primary key for DownloadItemTaskRealm has changed, nothing to do
         }
     },
     objectTypes: [DTGItemRealm.self, DownloadItemTaskRealm.self, TrackInfoRealm.self]
@@ -177,13 +185,16 @@ extension RealmDB {
         }
         
         try write(getRealm()) {
+            if realmItem.isInvalidated {
+                return
+            } 
             realmItem.downloadedSize += incrementDownloadSize
             if let state = state {
                 realmItem.state = state.asString()
             }
         }
         
-        return (realmItem.downloadedSize, realmItem.estimatedSize.value ?? -1)
+        return realmItem.isInvalidated ? (-1, -1) : (realmItem.downloadedSize, realmItem.estimatedSize.value ?? -1)
     }
 
     func removeItem(byId id: String) throws {
@@ -247,7 +258,13 @@ extension RealmDB {
         let realmTasks = tasks.map { DownloadItemTaskRealm(object: $0) }
         let rlm = try getRealm()
         try write(rlm) {
-            rlm.add(realmTasks)
+            for t in realmTasks {
+                if let et = rlm.object(ofType: DownloadItemTaskRealm.self, forPrimaryKey: t.destinationUrl) {
+                    log.warning("Task with key \(et.destinationUrl) already exists (item=\(et.dtgItemId) url=\(et.contentUrl) type=\(et.type))")
+                } else {
+                    rlm.add(t, update: true)    // Using update so it won't crash if exists
+                }
+            }
         }
     }
     
@@ -274,8 +291,9 @@ extension RealmDB {
     
     func removeTask(_ task: DownloadItemTask) throws {
         let rlm = try getRealm()
-        guard let realmTask = rlm.object(ofType: DownloadItemTaskRealm.self, forPrimaryKey: task.contentUrl.absoluteString) else {
-            log.error("No such task \(task.contentUrl)")
+        guard let realmTask = rlm.object(ofType: DownloadItemTaskRealm.self, 
+                                         forPrimaryKey: DownloadItemTaskRealm.relativeDestUrl(task)) else {
+            log.error("No such task \(task.destinationUrl)")
             return
         }
         
@@ -286,9 +304,10 @@ extension RealmDB {
     
     func pauseTasks(_ tasks: [DownloadItemTask]) throws {
         let rlm = try getRealm()
-        try write(rlm) { 
+        try write(rlm) {
             for t in tasks {
-                if let rt = rlm.object(ofType: DownloadItemTaskRealm.self, forPrimaryKey: t.contentUrl.absoluteString) {
+                if let rt = rlm.object(ofType: DownloadItemTaskRealm.self, 
+                                       forPrimaryKey: DownloadItemTaskRealm.relativeDestUrl(t)) {
                     rt.resumeData = t.resumeData
                 }
             }

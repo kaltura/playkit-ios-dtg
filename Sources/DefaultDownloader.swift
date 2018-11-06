@@ -45,7 +45,7 @@ class DefaultDownloader: NSObject, Downloader {
     /// Holds all the active downloads map of session task and the corresponding download task.
     private var activeDownloads = [URLSessionDownloadTask: DownloadItemTask]()
     
-    private lazy var downloadURLSession: URLSession = createSession()
+    private lazy var downloadURLSession: URLSession? = createSession()
     
     /// Queue for holding all the download tasks (FIFO)
     private var downloadItemTasksQueue = Queue<DownloadItemTask>()
@@ -65,7 +65,6 @@ class DefaultDownloader: NSObject, Downloader {
         }
     }
     
-    private var invalidatedSession: URLSession? = nil
     
     /************************************************************/
     // MARK: - Downloader Properties
@@ -88,7 +87,7 @@ class DefaultDownloader: NSObject, Downloader {
     
     let dtgItemId: String
     
-    fileprivate(set) var state = SynchronizedProperty<DownloaderState>(initialValue: .new)
+    private(set) var state = SynchronizedProperty<DownloaderState>(initialValue: .new)
     
     /************************************************************/
     // MARK: - Initialization
@@ -163,7 +162,8 @@ extension DefaultDownloader {
     }
     
     func invalidateSession() {
-        downloadURLSession.invalidateAndCancel()
+        downloadURLSession?.invalidateAndCancel()
+        downloadURLSession = nil
     }
     
     func refreshSession() {
@@ -193,24 +193,23 @@ private extension DefaultDownloader {
     func start(downloadTask: DownloadItemTask) {
         
         // Validate that the downloadURLSession wasn't invalidated
-        if self.downloadURLSession != self.invalidatedSession {
-            var urlSessionDownloadTask: URLSessionDownloadTask
-            
-            if let downloadTaskResumeData = downloadTask.resumeData, downloadTaskResumeData.count >= invalidResumeDataSize {
-                log.verbose("Resume data before resuming: \(downloadTaskResumeData.base64EncodedString())")
-                // if we have resume data create a task with the resume data and remove it from the downloadTask
-                urlSessionDownloadTask = downloadURLSession.downloadTask(withResumeData: downloadTaskResumeData)
-            } else {
-                urlSessionDownloadTask = downloadURLSession.downloadTask(with: downloadTask.contentUrl)
-            }
-            
-            self.activeDownloads[urlSessionDownloadTask] = downloadTask
-            urlSessionDownloadTask.resume()
-            log.debug("Started download task with identifier: \(urlSessionDownloadTask.taskIdentifier)")
-        }
-        else {
+        guard let session = self.downloadURLSession else {
             log.debug("Can't start downloading, the session has been invalidated")
+            return
         }
+        
+        let newTask: URLSessionDownloadTask
+        
+        if let resumeData = downloadTask.resumeData, resumeData.count >= invalidResumeDataSize {
+            // if we have resume data create a task with the resume data and remove it from the downloadTask
+            newTask = session.downloadTask(withResumeData: resumeData)
+        } else {
+            newTask = session.downloadTask(with: downloadTask.contentUrl)
+        }
+        
+        self.activeDownloads[newTask] = downloadTask
+        newTask.resume()
+        log.debug("Started download task with identifier: \(newTask.taskIdentifier)")
     }
     
     func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {
@@ -336,8 +335,6 @@ extension DefaultDownloader: URLSessionDelegate {
         if let e = error {
             self.failed(with: e)
         }
-        
-        self.invalidatedSession = session
     }
 }
 
