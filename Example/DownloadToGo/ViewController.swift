@@ -69,6 +69,8 @@ class ViewController: UIViewController {
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
     let items = [
+        Item(id: "bunny", url: "https://noamtamim.com/hls-bunny/index.m3u8"),
+        
         Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
         Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://cdntesting.qa.mkaltura.com"),
         Item("FPS: QA 2", id: "0_7o8zceol", partnerId: 4171, env: "http://cdntesting.qa.mkaltura.com"),
