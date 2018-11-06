@@ -1,3 +1,5 @@
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
 use_frameworks!
 
 platform :ios, '9.0'
