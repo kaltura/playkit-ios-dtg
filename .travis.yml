@@ -4,7 +4,7 @@ before_install:
   - gem install cocoapods # Since Travis is not always on latest version
   - pod repo update
 script:
-  - bash travis-build.sh
+  - ./travis-build.sh
 notifications:
   email:
     recipients:
