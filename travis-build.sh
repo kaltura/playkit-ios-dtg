@@ -23,17 +23,20 @@ keepAlive() {
 }
 
 trunkPush() {
+  echo Pushing to Cocoapods trunk
   login
   pod trunk push --allow-warnings
 }
 
 justBuild() {
+  echo Building the test app
   cd Example
   pod install
   xcodebuild build -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO | xcpretty
 }
 
 libLint() {
+  echo Linting the pod
   pod lib lint --allow-warnings
 }
 
@@ -41,7 +44,7 @@ libLint() {
 FLAG=$(mktemp)
 keepAlive $FLAG &
 
-if [[ $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ $TRAVIS_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   # If we're building a release tag (v1.2.3) push to cocoapods
   trunkPush
 elif [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
