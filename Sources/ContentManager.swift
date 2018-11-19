@@ -14,8 +14,33 @@ import GCDWebServer
 import XCGLogger
 import PlayKitUtils
 import RealmSwift
+import AVFoundation
+import VideoToolbox
 
 let log = XCGLogger.default
+
+struct CodecSupport {
+    // AC-3 (Dolby Atmos)
+    static let ac3: Bool = AVURLAsset.audiovisualTypes().contains(AVFileType.ac3)
+    
+    // Enhanced AC-3 is supported only since iOS 9 (but not on all devices)
+    static let ec3: Bool = {
+        if #available(iOS 9.0, *) {
+            return AVURLAsset.audiovisualTypes().contains(AVFileType.eac3)
+        } else {
+            return false
+        }
+    }()
+    
+    // HEVC is supported from iOS11, but we don't want to use it without hardware support
+    static let hevc: Bool = {
+        if #available(iOS 11.0, *) {
+            return VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
+        } else {
+            return false
+        }
+    }()
+}
 
 /************************************************************/
 // MARK: - DownloadItemTaskType
@@ -57,7 +82,7 @@ enum DownloadItemTaskType {
 
 public enum DTGError: LocalizedError {
     case itemNotFound(itemId: String)
-    /// Thrown when item cannot be started (casued when item state is other than metadata loaded)
+    /// Thrown when item cannot be started (caused when item state is other than metadata loaded)
     case invalidState(itemId: String)
     /// Thrown when item is already in the process of loading metadata
     case metadataLoading(itemId: String)
@@ -144,6 +169,10 @@ class DTGFilePaths {
 /* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
+    public func loadItemMetadata(id: String, prefs: DTGSelectionPrefs?) throws {
+        
+    }
+    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
     

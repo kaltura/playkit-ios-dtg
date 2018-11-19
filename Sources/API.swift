@@ -55,6 +55,8 @@ public protocol DTGContentManager: class {
     /// - Throws: DTGError.itemNotFound
     func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws
     
+    func loadItemMetadata(id: String, prefs: DTGSelectionPrefs?) throws
+    
     /// Start or resume item download.
     /// - Throws: DTGError.itemNotFound
     func startItem(id: String) throws
@@ -100,6 +102,100 @@ public protocol DTGContentManager: class {
     /// Set the default audio bitrate for size-estimation purposes. Defaults to 64000.
     func setDefaultAudioBitrateEstimation(bitrate: Int)
 }
+
+public class DTGSelectionPrefs {
+    
+//    public static let `default` = DTGSelectionParams()
+    
+//    public init(width: Int, height: Int) {
+//        self.videoWidth = width
+//        self.videoHeight = height
+//    }
+//    
+//    public init(width: Int, height: Int, audioLang: [String], textLang: [String]) {
+//        self.videoWidth = width
+//        self.videoHeight = height
+//        self.audioLang = audioLang
+//        self.textLang = textLang
+//    }
+//    
+//    public init(width: Int, height: Int, allAudio: Bool, allText: Bool) {
+//        self.videoWidth = width
+//        self.videoHeight = height
+//        self.allAudio = allAudio
+//        self.allText = allText
+//    }
+    
+    public init() {}
+    
+    public func setVideoSize(width: Int, height: Int) -> DTGSelectionPrefs {
+        self.videoWidth = width
+        self.videoHeight = height
+        return self
+    }
+    
+    public func setVideoBitrate(_ prefs: [VideoBitrate]) -> DTGSelectionPrefs {
+        self.videoBitrate = prefs
+        return self
+    }
+    
+    public func setVideoCodecs(_ codecs: [VideoCodec]) -> DTGSelectionPrefs {
+        self.videoCodecs = codecs
+        return self
+    }
+        
+    public func setAudioCodecs(_ codecs: [AudioCodec]) -> DTGSelectionPrefs {
+        self.audioCodecs = codecs
+        return self
+    }
+    
+    public func setAudioLanguages(_ langs: [String]) -> DTGSelectionPrefs {
+        self.audioLang = langs
+        return self
+    }
+    
+    public func setTextLanguages(_ langs: [String]) -> DTGSelectionPrefs {
+        self.textLang = langs
+        return self
+    }
+    
+    public func allAudioLanguages() -> DTGSelectionPrefs {
+        self.allAudio = true
+        return self
+    }
+    
+    public func allTextLanguages() -> DTGSelectionPrefs {
+        self.allText = true
+        return self
+    }
+    
+    var videoBitrate: [VideoBitrate]? = nil
+    var videoCodecs: [VideoCodec]? = nil
+    var audioCodecs: [AudioCodec]? = nil
+    var videoWidth: Int? = nil
+    var videoHeight: Int? = nil
+    var audioLang: [String]? = nil
+    var textLang: [String]? = nil
+    var allAudio: Bool = false
+    var allText: Bool = false
+
+    public enum VideoBitrate {
+        case avc1(_ preferredBitrate: Int32)
+        case hevc(_ preferredBitrate: Int32)
+    }
+    
+    public enum VideoCodec {
+        case avc1
+        case hevc
+    }
+
+    public enum AudioCodec {
+        case mp4a, ac3, ec3
+    }
+}
+
+
+
 
 extension DTGContentManager {
     
