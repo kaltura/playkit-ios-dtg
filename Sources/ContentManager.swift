@@ -169,7 +169,7 @@ class DTGFilePaths {
 /* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
-    public func loadItemMetadata(id: String, prefs: DTGSelectionPrefs?) throws {
+    public func loadItemMetadata(id: String, prefs: DTGSelectionSettings?) throws {
         
     }
     

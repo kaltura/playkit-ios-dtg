@@ -179,10 +179,10 @@ class ViewController: UIViewController {
         
         DispatchQueue.global().async {
             do {
-                let prefs = DTGSelectionPrefs()
-                    .setVideoCodecs([.hevc])
-                    .setAudioCodecs([.ac3])
-                    .setVideoSize(width: 800, height: 450)
+                let prefs = DTGSelectionSettings()
+                    .setPreferredVideoCodecs([.hevc])
+                    .setPreferredAudioCodecs([.ac3])
+                    .setPreferredVideoSize(width: 800, height: 450)
                 
                 try self.cm.loadItemMetadata(id: self.selectedItem.id, prefs: prefs)
 //                try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)

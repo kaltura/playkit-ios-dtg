@@ -105,115 +105,12 @@ public protocol DTGContentManager: class {
 
 public class DTGSelectionSettings {
     
+    /// Initialize a new SelectionSettings object.
+    /// The default behavior is as follows:
+    /// - Video: select the track most suitable for the current device (codec, width, height)
+    /// - Audio: select the default, as specified by the HLS playlist
+    /// - Subtitles: select nothing
     public init() {}
-    
-    /// Set maximum video size in pixels.
-    ///
-    /// - Parameters:
-    ///   - width: video width in pixels
-    ///   - height: video height in pixels
-    /// - Returns: self
-    public func setMaxVideoSize(width: Int, height: Int) -> DTGSelectionSettings {
-        self.videoWidth = width
-        self.videoHeight = height
-        return self
-    }
-    
-    /// Set Maximal video bitrates, **per codec**.
-    ///
-    /// If using this method, it is advised to include the max bitrate for every codec.
-    /// Otherwise, if a codec not on this list is selected for download, the selected
-    /// bitrate is not defined.
-    ///
-    /// By default, the best bitrate for the device is selected. If specified, this list
-    /// overrides `videoCodecs`.
-    ///
-    /// Example: `[.hevc(2700000), .avc1(3200000)]`
-    /// - Parameter prefs: list of preferred codecs+bitrates.
-    /// - Returns: self
-    public func setMaxVideoBitrates(_ prefs: [VideoBitrate]) -> DTGSelectionSettings {
-        self.videoBitrates = prefs
-        self.videoCodecs = nil
-        return self
-    }
-    
-    /// Select allowed video codecs, in preference order.
-    ///
-    /// The default is to allow all codecs in quality order: [.hevc, .avc1].
-    ///
-    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
-    /// For example, if the list is `[.hevc]`, but the stream has only `avc1`, `avc1` will be selected. Likewise,
-    /// if the list contains only `.hevc` but the device does not support it, `.avc1` will be selected.
-    ///
-    /// - Parameter codecs: list of codecs
-    /// - Returns: self
-    public func setVideoCodecs(_ codecs: [VideoCodec]) -> DTGSelectionSettings {
-        self.videoCodecs = codecs
-        return self
-    }
-        
-    /// Select allowed audio codecs, in preference order.
-    ///
-    /// The default is to allow all codecs in quality order: [ec3, ac3, mp4a].
-    ///
-    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
-    /// For example, if the list is `[.ac3, .ec3]`, but the stream has only `mp4a`, `mp4a` will be selected. Likewise,
-    /// if the list contains only `.ec3` but the device does not support it, `.ac3` or `.mp4a` will be selected.
-    ///
-    /// - Parameter codecs: list of codecs
-    /// - Returns: self
-    public func setAudioCodecs(_ codecs: [AudioCodec]) -> DTGSelectionSettings {
-        self.audioCodecs = codecs
-        return self
-    }
-    
-    /// Select text languages to download.
-    ///
-    /// Select French and German subtitles:
-    /// ```
-    /// prefs.setAudioLanguages(["fr", "de"])
-    /// ```
-    ///
-    /// - Parameter langs: list of languages to download, in ISO-639-1 (2 letters) or ISO-639-2 (3 letters) codes.
-    /// - Returns: self
-    public func setAudioLanguages(_ langs: [String]) -> DTGSelectionSettings {
-        self.audioLangs = langs
-        self.allAudio = false
-        return self
-    }
-    
-    /// Select text languages to download.
-    ///
-    /// Select English subtitles:
-    /// ```
-    /// prefs.setTextLanguages(["en"])
-    /// ```
-    ///
-    /// - Parameter langs: list of languages to download, in ISO-639-1 (2 letters) or ISO-639-2 (3 letters) codes.
-    /// - Returns: self
-    public func setTextLanguages(_ langs: [String]) -> DTGSelectionSettings {
-        self.textLangs = langs
-        self.allText = false
-        return self
-    }
-    
-    /// Select all audio languages.
-    ///
-    /// - Returns: self
-    public func allAudioLanguages() -> DTGSelectionSettings {
-        self.allAudio = true
-        self.audioLangs = nil
-        return self
-    }
-    
-    /// Select all subtitle languages.
-    ///
-    /// - Returns: self
-    public func allTextLanguages() -> DTGSelectionSettings {
-        self.allText = true
-        self.textLangs = nil
-        return self
-    }
 
     public enum VideoBitrate {
         case avc1(_ preferredBitrate: Int32)
@@ -221,61 +118,151 @@ public class DTGSelectionSettings {
     }
     
     public enum VideoCodec {
-        case avc1
-        case hevc
         
-        public static let defaultSet = [hevc, avc1]
+        /// AVC1 codec, AKA H.264
+        case avc1
+        
+        /// HEVC codec, AKA HVC1 or H.265
+        case hevc
     }
     
     public enum AudioCodec {
-        case mp4a, ac3, ec3
+        /// MP4A
+        case mp4a
+        
+        /// AC3: Dolby Atmos
+        case ac3
+        
+        /// E-AC3: Dolby Digital Plus (Enhanced AC3)
+        case eac3
     }
     
-    var videoBitrates: [VideoBitrate]? = nil
-    var videoCodecs: [VideoCodec]? = nil
-    var audioCodecs: [AudioCodec]? = nil
-    var videoWidth: Int? = nil
-    var videoHeight: Int? = nil
-    var audioLangs: [String]? = nil
-    var textLangs: [String]? = nil
-    var allAudio: Bool = false
-    var allText: Bool = false
-}
-
-/// Easy selection presets for common cases
-public extension DTGSelectionSettings {
-    
-    /// Best settings for device: the best available video codec with default audio and
-    /// text tracks. Video size is restricted to device display size.
-    /// 
-    /// Usage: 
-    /// ```
-    /// let prefs = DTGSelectionParams.bestVideoForDevice()
-    /// ```
-    /// With German and French audio and English subtitles:
-    /// ```
-    /// let prefs = DTGSelectionParams.bestVideoForDevice().setAudioLanguages(["de", "fr"]).setTextLanguages(["en"])
-    /// ```
-    /// With all audio and subtitles languages:
-    /// ```
-    /// let prefs = DTGSelectionParams.bestVideoForDevice().allAudioLanguages().allTextLanguages()
-    /// ```
-    /// Restrict video size:
-    /// ```
-    /// let prefs = DTGSelectionParams.bestVideoForDevice().setVideoSize(width: 640, height: 360)
-    /// ```
+    /// Preferred video bitrates, **per codec**.
     ///
-    /// - Returns: DTGSelectionSettings with default for best experience.    
-    public static func bestVideoForDevice() -> DTGSelectionSettings {
-        return DTGSelectionSettings()
-    } 
+    /// By default, the best bitrate for the device is selected. If specified, this list
+    /// overrides `videoCodecs`.
+    ///
+    /// Example: `[.hevc(2700000), .avc1(3200000)]`
+    ///
+    /// - Attention:
+    /// When setting this property, it is advised to include the max bitrate for every codec.
+    /// Otherwise, if a codec not on this list is selected for download, the selected
+    /// bitrate is not defined.
+    public var videoBitrates: [VideoBitrate]? = nil {
+        didSet {
+            videoCodecs = nil
+        }
+    }
+    
+    /// Preferred video codecs.
+    ///
+    /// The default is to allow all codecs in quality order: `[.hevc, .avc1]`.
+    ///
+    /// - Note:
+    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
+    /// For example, if the list is `[.hevc]`, but the stream has only `avc1`, `avc1` will be selected. Likewise,
+    /// if the list contains only `.hevc` but the device does not support it, `.avc1` will be selected.
+    public var videoCodecs: [VideoCodec]? = nil 
+    
+    /// Preferred audio codecs.
+    ///
+    /// The default is to allow all codecs in quality order: [.eac3, .ac3, .mp4a].
+    ///
+    /// - Note:
+    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
+    /// For example, if the list is `[.ac3, .eac3]`, but the stream has only `mp4a`, `mp4a` will be selected. Likewise,
+    /// if the list contains only `.eac3` but the device does not support it, `.ac3` or `.mp4a` will be selected.
+    public var audioCodecs: [AudioCodec]? = nil
+    
+    /// Preferred video size in pixels.
+    public var preferredVideoSize: (width: Int, height: Int)? = nil
+    
+    /// Audio languages to download.
+    ///
+    /// The languages are specified in ISO-639-1 (2 letters) or ISO-639-2 (3 letters) codes.
+    ///
+    /// Example: selecting French and German audio:
+    /// ```
+    /// ["fr", "de"]
+    /// ```
+    public var audioLanguages: [String]? = nil {
+        didSet {
+            allAudioLanguages = false
+        }
+    }
+    
+    /// Text languages to download.
+    ///
+    /// The languages are specified in ISO-639-1 (2 letters) or ISO-639-2 (3 letters) codes.
+    ///
+    /// Example: selecting English subtitles:
+    /// ```
+    /// ["en"]
+    /// ```
+    public var textLanguages: [String]? = nil {
+        didSet {
+            allTextLanguages = false
+        }
+    }
+    
+    /// Select all audio languages.
+    public var allAudioLanguages: Bool = false {
+        didSet {
+            audioLanguages = nil
+        }
+    }
+    
+    /// Select all subtitle languages.
+    public var allTextLanguages: Bool = false {
+        didSet {
+            textLanguages = nil
+        }
+    }
+    
+    // Convenience methods for setting the properties.
+    
+    public func setPreferredVideoSize(width: Int, height: Int) -> DTGSelectionSettings {
+        self.preferredVideoSize = (width, height)
+        return self
+    }
+    
+    public func setPreferredVideoBitrates(_ prefs: [VideoBitrate]) -> DTGSelectionSettings {
+        self.videoBitrates = prefs
+        return self
+    }
+    
+    public func setPreferredVideoCodecs(_ codecs: [VideoCodec]) -> DTGSelectionSettings {
+        self.videoCodecs = codecs
+        return self
+    }
+    
+    public func setPreferredAudioCodecs(_ codecs: [AudioCodec]) -> DTGSelectionSettings {
+        self.audioCodecs = codecs
+        return self
+    }
+    
+    public func setAudioLanguages(_ langs: [String]) -> DTGSelectionSettings {
+        self.audioLanguages = langs
+        return self
+    }
+    
+    public func setTextLanguages(_ langs: [String]) -> DTGSelectionSettings {
+        self.textLanguages = langs
+        return self
+    }
+    
+    public func setAllAudioLanguages(_ all: Bool = true) -> DTGSelectionSettings {
+        self.allAudioLanguages = true
+        return self
+    }
+    
+    public func setAllTextLanguages(_ all: Bool = true) -> DTGSelectionSettings {
+        self.allTextLanguages = true
+        return self
+    }
 }
-
-
-
 
 extension DTGContentManager {
-    
     public func setLogLevel(_ logLevel: LogLevel) {
         log.outputLevel = logLevel.asXCGLoggerLevel()
     }
