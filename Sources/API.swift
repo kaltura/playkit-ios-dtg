@@ -194,6 +194,11 @@ public class DTGSelectionSettings {
         }
     }
     
+    /// Allow or disallow codecs that are not implemented in hardware.
+    /// iOS 11 and up support HEVC, but hardware support is only available in iPhone 7 and later.
+    /// Using a software decoder causes higher energy consumption, affecting battery life.
+    public var allowInefficientCodecs: Bool = false
+    
     public enum VideoBitrate {
         case avc1(_ preferredBitrate: Int32)
         case hevc(_ preferredBitrate: Int32)
