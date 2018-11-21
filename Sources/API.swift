@@ -112,71 +112,6 @@ public class DTGSelectionSettings {
     /// - Subtitles: select nothing
     public init() {}
 
-    public enum VideoBitrate {
-        case avc1(_ preferredBitrate: Int32)
-        case hevc(_ preferredBitrate: Int32)
-    }
-    
-    public enum VideoCodec {
-        
-        /// AVC1 codec, AKA H.264
-        case avc1
-        
-        /// HEVC codec, AKA HVC1 or H.265
-        case hevc
-    }
-    
-    public enum AudioCodec {
-        /// MP4A
-        case mp4a
-        
-        /// AC3: Dolby Atmos
-        case ac3
-        
-        /// E-AC3: Dolby Digital Plus (Enhanced AC3)
-        case eac3
-    }
-    
-    /// Preferred video bitrates, **per codec**.
-    ///
-    /// By default, the best bitrate for the device is selected. If specified, this list
-    /// overrides `videoCodecs`.
-    ///
-    /// Example: `[.hevc(2700000), .avc1(3200000)]`
-    ///
-    /// - Attention:
-    /// When setting this property, it is advised to include the max bitrate for every codec.
-    /// Otherwise, if a codec not on this list is selected for download, the selected
-    /// bitrate is not defined.
-    public var videoBitrates: [VideoBitrate]? = nil {
-        didSet {
-            videoCodecs = nil
-        }
-    }
-    
-    /// Preferred video codecs.
-    ///
-    /// The default is to allow all codecs in quality order: `[.hevc, .avc1]`.
-    ///
-    /// - Note:
-    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
-    /// For example, if the list is `[.hevc]`, but the stream has only `avc1`, `avc1` will be selected. Likewise,
-    /// if the list contains only `.hevc` but the device does not support it, `.avc1` will be selected.
-    public var videoCodecs: [VideoCodec]? = nil 
-    
-    /// Preferred audio codecs.
-    ///
-    /// The default is to allow all codecs in quality order: [.eac3, .ac3, .mp4a].
-    ///
-    /// - Note:
-    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
-    /// For example, if the list is `[.ac3, .eac3]`, but the stream has only `mp4a`, `mp4a` will be selected. Likewise,
-    /// if the list contains only `.eac3` but the device does not support it, `.ac3` or `.mp4a` will be selected.
-    public var audioCodecs: [AudioCodec]? = nil
-    
-    /// Preferred video size in pixels.
-    public var preferredVideoSize: (width: Int, height: Int)? = nil
-    
     /// Audio languages to download.
     ///
     /// The languages are specified in ISO-639-1 (2 letters) or ISO-639-2 (3 letters) codes.
@@ -219,44 +154,109 @@ public class DTGSelectionSettings {
         }
     }
     
+    /// Preferred video codecs.
+    ///
+    /// The default is to allow all codecs in quality order: `[.hevc, .avc1]`.
+    ///
+    /// - Note:
+    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
+    /// For example, if the list is `[.hevc]`, but the stream has only `avc1`, `avc1` will be selected. Likewise,
+    /// if the list contains only `.hevc` but the device does not support it, `.avc1` will be selected.
+    public var videoCodecs: [VideoCodec]? = nil 
+    
+    /// Preferred audio codecs.
+    ///
+    /// The default is to allow all codecs in quality order: [.eac3, .ac3, .mp4a].
+    ///
+    /// - Note:
+    /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
+    /// For example, if the list is `[.ac3, .eac3]`, but the stream has only `mp4a`, `mp4a` will be selected. Likewise,
+    /// if the list contains only `.eac3` but the device does not support it, `.ac3` or `.mp4a` will be selected.
+    public var audioCodecs: [AudioCodec]? = nil
+    
+    /// Preferred video size in pixels.
+    public var preferredVideoSize: (width: Int, height: Int)? = nil
+    
+    /// Preferred video bitrates, **per codec**.
+    ///
+    /// By default, the best bitrate for the device is selected. If specified, this list
+    /// overrides `videoCodecs`.
+    ///
+    /// Example: `[.hevc(2700000), .avc1(3200000)]`
+    ///
+    /// - Attention:
+    /// When setting this property, it is advised to include the max bitrate for every codec.
+    /// Otherwise, if a codec not on this list is selected for download, the selected
+    /// bitrate is not defined.
+    public var videoBitrates: [VideoBitrate]? = nil {
+        didSet {
+            videoCodecs = nil
+        }
+    }
+    
+    public enum VideoBitrate {
+        case avc1(_ preferredBitrate: Int32)
+        case hevc(_ preferredBitrate: Int32)
+    }
+    
+    public enum VideoCodec {
+        
+        /// AVC1 codec, AKA H.264
+        case avc1
+        
+        /// HEVC codec, AKA HVC1 or H.265
+        case hevc
+    }
+    
+    public enum AudioCodec {
+        /// MP4A
+        case mp4a
+        
+        /// AC3: Dolby Atmos
+        case ac3
+        
+        /// E-AC3: Dolby Digital Plus (Enhanced AC3)
+        case eac3
+    }
+    
     // Convenience methods for setting the properties.
     
-    public func setPreferredVideoSize(width: Int, height: Int) -> DTGSelectionSettings {
+    public func setPreferredVideoSize(width: Int, height: Int) -> Self {
         self.preferredVideoSize = (width, height)
         return self
     }
     
-    public func setPreferredVideoBitrates(_ prefs: [VideoBitrate]) -> DTGSelectionSettings {
+    public func setPreferredVideoBitrates(_ prefs: [VideoBitrate]) -> Self {
         self.videoBitrates = prefs
         return self
     }
     
-    public func setPreferredVideoCodecs(_ codecs: [VideoCodec]) -> DTGSelectionSettings {
+    public func setPreferredVideoCodecs(_ codecs: [VideoCodec]) -> Self {
         self.videoCodecs = codecs
         return self
     }
     
-    public func setPreferredAudioCodecs(_ codecs: [AudioCodec]) -> DTGSelectionSettings {
+    public func setPreferredAudioCodecs(_ codecs: [AudioCodec]) -> Self {
         self.audioCodecs = codecs
         return self
     }
     
-    public func setAudioLanguages(_ langs: [String]) -> DTGSelectionSettings {
+    public func setAudioLanguages(_ langs: [String]) -> Self {
         self.audioLanguages = langs
         return self
     }
     
-    public func setTextLanguages(_ langs: [String]) -> DTGSelectionSettings {
+    public func setTextLanguages(_ langs: [String]) -> Self {
         self.textLanguages = langs
         return self
     }
     
-    public func setAllAudioLanguages(_ all: Bool = true) -> DTGSelectionSettings {
+    public func setAllAudioLanguages(_ all: Bool = true) -> Self {
         self.allAudioLanguages = true
         return self
     }
     
-    public func setAllTextLanguages(_ all: Bool = true) -> DTGSelectionSettings {
+    public func setAllTextLanguages(_ all: Bool = true) -> Self {
         self.allTextLanguages = true
         return self
     }
