@@ -22,7 +22,7 @@ class HLSLocalizerTests: QuickSpec {
                 .appendingPathComponent("master.m3u8")
             let downloadPath = DTGFilePaths.itemDirUrl(forItemId: id)
             
-            let localizer = HLSLocalizer(id: id, url: url, downloadPath: downloadPath, preferredVideoBitrate: nil, audioBitrateEstimation: 64000)
+            let localizer = HLSLocalizer(id: id, url: url, downloadPath: downloadPath, options: nil, audioBitrateEstimation: 64000)
             
             it("can localize hls m3u8 index file") {
                 try! localizer.loadMetadata()

@@ -81,8 +81,8 @@ class HLSLocalizer {
     
     let itemId: String
     let masterUrl: URL
-    let preferredVideoBitrate: Int?
     let downloadPath: URL
+    let options: DTGSelectionOptions?
     
     var tasks = [DownloadItemTask]()
     var duration: Double = Double.nan
@@ -97,10 +97,10 @@ class HLSLocalizer {
     
     let audioBitrateEstimation: Int
 
-    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?, audioBitrateEstimation: Int) {
+    init(id: String, url: URL, downloadPath: URL, options: DTGSelectionOptions?, audioBitrateEstimation: Int) {
         self.itemId = id
         self.masterUrl = url
-        self.preferredVideoBitrate = preferredVideoBitrate
+        self.options = options
         self.downloadPath = downloadPath
         self.audioBitrateEstimation = audioBitrateEstimation
     }
@@ -305,7 +305,15 @@ class HLSLocalizer {
         streams.sortByBandwidth(inOrder: .orderedAscending)
         
         var selectedStreamInfo: M3U8ExtXStreamInf?
-        if let bitrate = preferredVideoBitrate {
+        var bitrate: Int?
+        for vb in options?.videoBitrates ?? [] {
+            if case let DTGSelectionOptions.VideoBitrate.avc1(b) = vb {
+                bitrate = b
+                break
+            }
+        }
+        
+        if let bitrate = bitrate { 
             for i in 0 ..< streams.countInt {
                 if streams[i].bandwidth >= bitrate {
                     selectedStreamInfo = streams[i]

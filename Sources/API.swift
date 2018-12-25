@@ -55,7 +55,7 @@ public protocol DTGContentManager: class {
     /// - Throws: DTGError.itemNotFound
     func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws
     
-    func loadItemMetadata(id: String, prefs: DTGSelectionSettings?) throws
+    func loadItemMetadata(id: String, options: DTGSelectionOptions?) throws
     
     /// Start or resume item download.
     /// - Throws: DTGError.itemNotFound
@@ -103,7 +103,7 @@ public protocol DTGContentManager: class {
     func setDefaultAudioBitrateEstimation(bitrate: Int)
 }
 
-public class DTGSelectionSettings {
+public class DTGSelectionOptions {
     
     /// Initialize a new SelectionSettings object.
     /// The default behavior is as follows:
@@ -122,7 +122,9 @@ public class DTGSelectionSettings {
     /// ```
     public var audioLanguages: [String]? = nil {
         didSet {
-            allAudioLanguages = false
+            if audioLanguages != nil {
+                allAudioLanguages = false
+            }
         }
     }
     
@@ -136,21 +138,27 @@ public class DTGSelectionSettings {
     /// ```
     public var textLanguages: [String]? = nil {
         didSet {
-            allTextLanguages = false
+            if textLanguages != nil {
+                allTextLanguages = false
+            }
         }
     }
     
     /// Select all audio languages.
     public var allAudioLanguages: Bool = false {
         didSet {
-            audioLanguages = nil
+            if allAudioLanguages {
+                audioLanguages = nil
+            }
         }
     }
     
     /// Select all subtitle languages.
     public var allTextLanguages: Bool = false {
         didSet {
-            textLanguages = nil
+            if allTextLanguages {
+                textLanguages = nil
+            }
         }
     }
     
@@ -200,8 +208,8 @@ public class DTGSelectionSettings {
     public var allowInefficientCodecs: Bool = false
     
     public enum VideoBitrate {
-        case avc1(_ preferredBitrate: Int32)
-        case hevc(_ preferredBitrate: Int32)
+        case avc1(_ preferredBitrate: Int)
+        case hevc(_ preferredBitrate: Int)
     }
     
     public enum VideoCodec {

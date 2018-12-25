@@ -169,10 +169,6 @@ class DTGFilePaths {
 /* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
-    public func loadItemMetadata(id: String, prefs: DTGSelectionSettings?) throws {
-        
-    }
-    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
     
@@ -321,7 +317,7 @@ public class ContentManager: NSObject, DTGContentManager {
         return item
     }
 
-    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
+    public func loadItemMetadata(id: String, options: DTGSelectionOptions?) throws {
         
         var item = try findItemOrThrow(id)
         
@@ -339,7 +335,7 @@ public class ContentManager: NSObject, DTGContentManager {
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
         let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), 
                                      downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), 
-                                     preferredVideoBitrate: preferredVideoBitrate, 
+                                     options: options, 
                                      audioBitrateEstimation: defaultAudioBitrateEstimation)
         
         
@@ -357,6 +353,17 @@ public class ContentManager: NSObject, DTGContentManager {
         item.selectedAudioTracks = localizer.selectedAudioTracksInfo
         try self.db.updateAfterMetadataLoaded(item: item)
         notifyItemState(item.id, newState: .metadataLoaded, error: nil)
+        
+    }
+    
+    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
+        
+        let options = DTGSelectionOptions()
+        
+        if let pvb = preferredVideoBitrate {
+            options.videoBitrates = [.avc1(pvb)]
+        }
+        try loadItemMetadata(id: id, options: options)
     }
     
     public func startItem(id: String) throws {
