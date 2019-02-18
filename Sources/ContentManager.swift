@@ -17,7 +17,19 @@ import RealmSwift
 import AVFoundation
 import VideoToolbox
 
-let log = XCGLogger.default
+public let log: XCGLogger = {
+    #if DEBUG
+    let logLevel: XCGLogger.Level = .debug
+    #else
+    let logLevel: XCGLogger.Level = .info
+    #endif
+    
+    let logger = XCGLogger(identifier: "DTG")
+    logger.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
+    return logger
+}()
+
+
 
 struct CodecSupport {
     // AC-3 (Dolby Atmos)
@@ -235,13 +247,6 @@ public class ContentManager: NSObject, DTGContentManager {
         // initialize db
         self.db = RealmDB()
         super.init()
-        // setup log default log level
-        #if DEBUG
-            let logLevel: XCGLogger.Level = .debug
-        #else
-            let logLevel: XCGLogger.Level = .info
-        #endif
-        log.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
         log.debug("*** ContentManager ***")
     }
     
