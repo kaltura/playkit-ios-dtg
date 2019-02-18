@@ -294,7 +294,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${SRCROOT}/Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/DownloadToGo/DownloadToGo.framework",
 				"${BUILT_PRODUCTS_DIR}/GCDWebServer/GCDWebServer.framework",
 				"${BUILT_PRODUCTS_DIR}/KalturaNetKit/KalturaNetKit.framework",
@@ -329,7 +329,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		3349F0EF70B41247BF80C311 /* [CP] Embed Pods Frameworks */ = {
@@ -338,7 +338,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${SRCROOT}/Pods/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests-frameworks.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/Nimble/Nimble.framework",
 				"${BUILT_PRODUCTS_DIR}/Quick/Quick.framework",
 			);
@@ -349,7 +349,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		4C8564ACF3015E49BFBB7F9E /* [CP] Check Pods Manifest.lock */ = {
