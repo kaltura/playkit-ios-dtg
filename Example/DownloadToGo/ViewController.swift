@@ -10,6 +10,7 @@ import UIKit
 import DownloadToGo
 import Toast
 import PlayKit
+import PlayKitProviders
 
 let setSmallerOfflineDRMExpirationMinutes: Int? = 5
 //let setSmallerOfflineDRMExpirationMinutes: Int? = nil
@@ -69,6 +70,7 @@ class ViewController: UIViewController {
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
     let items = [
+        Item(id: "test-avc1-hevc", url: "http://lbd.kaltura.com:8002/hls/p/2035982/sp/203598200/serveFlavor/entryId/1_zxezl831/flavorId/,0_zoobwgln,0_mhl1fsft,0_gh6vzyb4,0_3dmdm4j2,0_n6a8hl92,0_qt48opc3,1_vu1kvcyq,1_cl2gibmr,1_4frehgzh,1_c041jqe6,1_4kmrfoti,1_cbeqmb4n,1_z5t1xpeo,1_ayvsoa0u,1_3kidxbjz,/a.mp4.urlset/master.m3u8"),
         Item(id: "QA multi/multi", url: "http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
         Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
         Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
@@ -183,22 +185,25 @@ class ViewController: UIViewController {
                 var options: DTGSelectionOptions
                 
                 options = DTGSelectionOptions()
-                    .setPreferredVideoSize(width: 800, height: 450)
+                    .setPreferredVideoHeight(1000)
+                    .setPreferredVideoWidth(1900)
+                    .setPreferredVideoBitrates([.hevc(10000000), .avc1(2000000)])
                     .setPreferredVideoCodecs([.hevc, .avc1])
                     .setPreferredAudioCodecs([.ac3, .mp4a])
                     .setAllTextLanguages()
                 
-                options = DTGSelectionOptions()
-                    .setTextLanguages(["he", "eng"])
-                    .setAudioLanguages(["fr", "de"])
-                    .setPreferredVideoSize(width: 800, height: 450)
-                
-                options = DTGSelectionOptions()
-                    .setPreferredVideoCodecs([.hevc])
-                    .setPreferredAudioCodecs([.ac3])
-                
-                options = DTGSelectionOptions()
-                    .setPreferredVideoBitrates([.hevc(10000000), .avc1(2000000)])
+//                options = DTGSelectionOptions()
+//                    .setTextLanguages(["he", "eng"])
+//                    .setAudioLanguages(["fr", "de"])
+//                    .setPreferredVideoHeight(600)
+//                    .setPreferredVideoWidth(800)
+//                
+//                options = DTGSelectionOptions()
+//                    .setPreferredVideoCodecs([.hevc])
+//                    .setPreferredAudioCodecs([.ac3])
+//                
+//                options = DTGSelectionOptions()
+//                    .setPreferredVideoBitrates([.hevc(10000000), .avc1(2000000)])
                 
                 
                 

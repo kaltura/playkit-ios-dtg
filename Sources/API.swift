@@ -182,8 +182,12 @@ public class DTGSelectionOptions {
     /// if the list contains only `.eac3` but the device does not support it, `.ac3` or `.mp4a` will be selected.
     public var audioCodecs: [AudioCodec]? = nil
     
-    /// Preferred video size in pixels.
-    public var preferredVideoSize: (width: Int, height: Int)? = nil
+    /// Preferred video width in pixels. DTG will prefer the smallest rendition that is large enough.
+    public var videoWidth: Int? = nil
+    
+    /// Preferred video height in pixels. DTG will prefer the smallest rendition that is large enough.
+    public var videoHeight: Int? = nil
+    
     
     /// Preferred video bitrates, **per codec**.
     ///
@@ -234,8 +238,13 @@ public class DTGSelectionOptions {
     
     // Convenience methods for setting the properties.
     
-    public func setPreferredVideoSize(width: Int, height: Int) -> Self {
-        self.preferredVideoSize = (width, height)
+    public func setPreferredVideoWidth(_ width: Int) -> Self {
+        self.videoWidth = width
+        return self
+    }
+    
+    public func setPreferredVideoHeight(_ height: Int) -> Self {
+        self.videoHeight = height
         return self
     }
     

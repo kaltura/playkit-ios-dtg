@@ -298,7 +298,53 @@ class HLSLocalizer {
     }
     
     private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
+        // The following options affect video stream selection:
+//        options?.allowInefficientCodecs (select HEVC even if device does not support it in hardware)
+//        options?.videoSize
+//        options?.videoBitrates
+//        options?.videoCodecs
+        
+        let allowHEVC = CodecSupport.hevc || CodecSupport.softwareHEVC && (options?.allowInefficientCodecs ?? false)
+        
         let streams = master.videoStreams()
+        
+        var validStreams = [M3U8ExtXStreamInf]()
+        for i in 0..<streams.count {
+            validStreams.append(streams.xStreamInf(at: i))
+        }
+
+        
+        // Remove streams that don't satisfy height requirement
+        if validStreams.count > 1, let height = options?.videoHeight {
+            validStreams = validStreams.filter( { $0.resolution.height >= Float(height) } )
+            // sort by height
+            validStreams = validStreams.sorted(by: {$0.resolution.height < $1.resolution.height})
+        }
+        
+        // Remove streams that don't satisfy width requirement
+        if validStreams.count > 1, let width = options?.videoWidth {
+            validStreams = validStreams.filter( { $0.resolution.width >= Float(width) } )
+            // stable-sort by width
+            validStreams = validStreams.stableSorted(by: {$0.resolution.width < $1.resolution.width})
+        }
+        
+        // Split by codec
+        func hasCodec(_ stream: M3U8ExtXStreamInf, _ codec: String) -> Bool {
+            return stream.codecs.contains{($0 as? String)?.hasPrefix(codec) ?? false}
+        }
+        
+        var hevcStreams = allowHEVC ? validStreams.filter{hasCodec($0, "hvc1")} : []
+        var avc1Streams = validStreams.filter{hasCodec($0, "avc1")}
+//        {($0.codecs.first as? String)?.hasPrefix("hvc1") ?? false})
+//        var avc1Streams = validStreams.filter({($0.codecs.first as? String)?.hasPrefix("hvc1") ?? false})
+        
+        
+        // Remove streams that don't satisfy width requirement
+        if validStreams.count > 1, let width = options?.videoWidth {
+            validStreams = validStreams.filter( { $0.resolution.width >= Float(width) } )
+            // stable-sort by width
+            validStreams = validStreams.stableSorted(by: {$0.resolution.width < $1.resolution.width})
+        }
         
         // Algorithm: sort ascending. Then find the first stream with bandwidth >= preferredVideoBitrate.
         

@@ -7,7 +7,9 @@ swift_version = '4.0'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
-  pod 'PlayKit', '~> 3.6.3'	#, :path => '../../playkit-ios'
+  pod 'PlayKit', :path => '../../playkit-ios'
+  pod 'PlayKitProviders', :path => '../../playkit-ios-providers'
+  
   
   pod 'Toast', '~> 4.0.0'
   pod 'GCDWebServer', :git => 'https://github.com/noamtamim/GCDWebServer', :branch => 'no-implicit-retain-self'

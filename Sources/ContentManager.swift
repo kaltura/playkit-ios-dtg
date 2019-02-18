@@ -32,10 +32,18 @@ struct CodecSupport {
         }
     }()
     
-    // HEVC is supported from iOS11, but we don't want to use it without hardware support
+    // HEVC is supported from iOS11, but by default we don't want to use it without hardware support
     static let hevc: Bool = {
         if #available(iOS 11.0, *) {
             return VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
+        } else {
+            return false
+        }
+    }()
+    
+    static let softwareHEVC: Bool = {
+        if #available(iOS 11.0, *) {
+            return !VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
         } else {
             return false
         }
