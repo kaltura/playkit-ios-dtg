@@ -116,7 +116,7 @@ class HLSLocalizer {
         let master = try loadMasterPlaylist(url: masterUrl)
         
         // Only one video stream
-        let videoStream = try selectVideoStream(master: master)
+        let videoStream = try selectVideoStream(master: master)!
         
         try addAllSegments(segmentList: videoStream.mediaPlaylist.segmentList, type: M3U8MediaPlaylistTypeVideo, setDuration: true)
         
@@ -297,84 +297,124 @@ class HLSLocalizer {
         try save(text: localLines.joined(separator: "\n") as String, as: target)
     }
     
-    private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
+    private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream? {
         // The following options affect video stream selection:
 //        options?.allowInefficientCodecs (select HEVC even if device does not support it in hardware)
-//        options?.videoSize
+//        options?.videoWidth|videoHeight
 //        options?.videoBitrates
 //        options?.videoCodecs
         
+        
+        func hasCodec(_ s: M3U8ExtXStreamInf, _ codec: String) -> Bool {
+            return s.codecs.contains{($0 as? String)?.hasPrefix(codec) ?? false}
+        }
+        
         let allowHEVC = CodecSupport.hevc || CodecSupport.softwareHEVC && (options?.allowInefficientCodecs ?? false)
         
-        let streams = master.videoStreams()
+        var avc1Streams = [M3U8ExtXStreamInf]()
+        var hevcStreams = [M3U8ExtXStreamInf]()
         
-        var validStreams = [M3U8ExtXStreamInf]()
-        for i in 0..<streams.count {
-            validStreams.append(streams.xStreamInf(at: i))
-        }
-
-        
-        // Remove streams that don't satisfy height requirement
-        if validStreams.count > 1, let height = options?.videoHeight {
-            validStreams = validStreams.filter( { $0.resolution.height >= Float(height) } )
-            // sort by height
-            validStreams = validStreams.sorted(by: {$0.resolution.height < $1.resolution.height})
-        }
-        
-        // Remove streams that don't satisfy width requirement
-        if validStreams.count > 1, let width = options?.videoWidth {
-            validStreams = validStreams.filter( { $0.resolution.width >= Float(width) } )
-            // stable-sort by width
-            validStreams = validStreams.stableSorted(by: {$0.resolution.width < $1.resolution.width})
-        }
-        
-        // Split by codec
-        func hasCodec(_ stream: M3U8ExtXStreamInf, _ codec: String) -> Bool {
-            return stream.codecs.contains{($0 as? String)?.hasPrefix(codec) ?? false}
-        }
-        
-        var hevcStreams = allowHEVC ? validStreams.filter{hasCodec($0, "hvc1")} : []
-        var avc1Streams = validStreams.filter{hasCodec($0, "avc1")}
-//        {($0.codecs.first as? String)?.hasPrefix("hvc1") ?? false})
-//        var avc1Streams = validStreams.filter({($0.codecs.first as? String)?.hasPrefix("hvc1") ?? false})
-        
-        
-        // Remove streams that don't satisfy width requirement
-        if validStreams.count > 1, let width = options?.videoWidth {
-            validStreams = validStreams.filter( { $0.resolution.width >= Float(width) } )
-            // stable-sort by width
-            validStreams = validStreams.stableSorted(by: {$0.resolution.width < $1.resolution.width})
-        }
-        
-        // Algorithm: sort ascending. Then find the first stream with bandwidth >= preferredVideoBitrate.
-        
-        streams.sortByBandwidth(inOrder: .orderedAscending)
-        
-        var selectedStreamInfo: M3U8ExtXStreamInf?
-        var bitrate: Int?
-        for vb in options?.videoBitrates ?? [] {
-            if case let DTGSelectionOptions.VideoBitrate.avc1(b) = vb {
-                bitrate = b
-                break
+        let m3u8Streams = master.videoStreams()
+        for i in 0 ..< m3u8Streams.count {
+            guard let s = m3u8Streams.xStreamInf(at: i) else {continue}
+            
+            if hasCodec(s, "avc1") {
+                avc1Streams.append(s)
+            } else if allowHEVC && hasCodec(s, "hvc1") {
+                hevcStreams.append(s)
             }
         }
         
-        if let bitrate = bitrate { 
-            for i in 0 ..< streams.countInt {
-                if streams[i].bandwidth >= bitrate {
-                    selectedStreamInfo = streams[i]
-                    break
+        func filter(streams: [M3U8ExtXStreamInf], 
+                    sortOrder: (M3U8ExtXStreamInf, M3U8ExtXStreamInf) -> Bool?, 
+                    filter: (M3U8ExtXStreamInf) -> Bool) -> [M3U8ExtXStreamInf] {
+            
+            if streams.count < 2 {
+                return streams
+            }
+            
+            let sorted = streams.stableSorted(by: sortOrder)
+            
+            let filtered = sorted.filter( filter )
+            
+            if filtered.isEmpty {
+                if let s = sorted.last {
+                    return [s]
+                } else {
+                    return []
+                }
+            }
+            return filtered
+        }
+        
+        // Filter streams by video width and height
+        
+        func filterByWidth(streams: [M3U8ExtXStreamInf]) -> [M3U8ExtXStreamInf] {
+            guard let width = options?.videoWidth else { return streams }
+            return filter(streams: streams, 
+                          sortOrder: {$0.resolution.width < $1.resolution.width}, 
+                          filter: { $0.resolution.width >= Float(width) })
+        }
+
+        func filterByHeight(streams: [M3U8ExtXStreamInf]) -> [M3U8ExtXStreamInf] {
+            guard let height = options?.videoHeight else { return streams }
+            return filter(streams: streams, 
+                          sortOrder: {$0.resolution.height < $1.resolution.height}, 
+                          filter: { $0.resolution.height >= Float(height) })
+        }
+
+        avc1Streams = filterByHeight(streams: avc1Streams)
+        avc1Streams = filterByWidth(streams: avc1Streams)
+        hevcStreams = filterByHeight(streams: hevcStreams)
+        hevcStreams = filterByWidth(streams: hevcStreams)
+        
+        func filterByBitrate(streams: [M3U8ExtXStreamInf], bitrate: Int) -> [M3U8ExtXStreamInf] {
+            return filter(streams: streams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
+        }
+        
+        if let bitrates = options?.videoBitrates {
+            for br in bitrates {
+                switch br {
+                case .avc1(let value):
+                    avc1Streams = filterByBitrate(streams: avc1Streams, bitrate: value)
+                case .hevc(let value):
+                    hevcStreams = filterByBitrate(streams: hevcStreams, bitrate: value)
                 }
             }
         }
         
-        if selectedStreamInfo == nil {
-            selectedStreamInfo = streams.lastXStreamInf() // highest bitrate
+        
+        print(avc1Streams)
+        print(hevcStreams)
+
+        // Now we have two lists -- hevc and avc1. Look at codec prefs.
+        
+        func videoStreamWithFirst(of streams: [M3U8ExtXStreamInf]) throws -> VideoStream {
+            guard let selected = streams.first else {throw HLSLocalizerError.malformedPlaylist}
+            return try VideoStream(streamInfo: selected, mediaUrl: selected.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
         }
         
-        guard let streamInfo = selectedStreamInfo else {throw NSError()}
+        // The easy case: only one codec has valid streams. Select the first stream from that codec.
+        if avc1Streams.isEmpty {
+            return try videoStreamWithFirst(of: hevcStreams)
+        } else if hevcStreams.isEmpty {
+            return try videoStreamWithFirst(of: avc1Streams)
+        }
         
-        return try VideoStream(streamInfo: streamInfo, mediaUrl: streamInfo.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+        // Ok, both codecs have valid streams. What does the app prefer?
+        if let firstCodec = options?.videoCodecs?.first {
+            switch firstCodec {
+                
+            case .avc1:
+                return try videoStreamWithFirst(of: avc1Streams)
+            case .hevc:
+                return try videoStreamWithFirst(of: hevcStreams)
+            }
+            
+        } else {
+            // app did not select -- we'll go with hevc (remember it's not empty)
+            return try videoStreamWithFirst(of: hevcStreams)
+        }
     }
     
     private func addAllSegments(segmentList: M3U8SegmentInfoList, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
