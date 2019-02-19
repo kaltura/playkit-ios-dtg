@@ -9,9 +9,6 @@ import Foundation
 
 extension RandomAccessCollection {
     
-    /// return a sorted collection
-    /// this use a stable sort algorithm
-    ///
     /// - Parameter areInIncreasingOrder: return nil when two element are equal
     /// - Returns: the sorted collection
     public func stableSorted(by areInIncreasingOrder: (Iterator.Element, Iterator.Element) -> Bool?) -> [Iterator.Element] {

@@ -25,7 +25,7 @@ public let log: XCGLogger = {
     #endif
     
     let logger = XCGLogger(identifier: "DTG")
-    logger.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
+    logger.setup(level: logLevel, showLogIdentifier: true, showLevel: false, showFileNames: true, showLineNumbers: true, showDate: false)
     return logger
 }()
 
@@ -699,5 +699,3 @@ extension MutableCollection {
         }
     }
 }
-
-
