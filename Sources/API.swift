@@ -216,7 +216,7 @@ public class DTGSelectionOptions {
         case hevc(_ preferredBitrate: Int)
     }
     
-    public enum VideoCodec {
+    public enum VideoCodec: CaseIterable {
         
         /// AVC1 codec, AKA H.264
         case avc1

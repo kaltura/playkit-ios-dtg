@@ -304,8 +304,15 @@ class HLSLocalizer {
 //        options?.videoBitrates
 //        options?.videoCodecs
         
+        // Aliases
+        
         typealias Codec = DTGSelectionOptions.VideoCodec
         typealias M3U8Stream = M3U8ExtXStreamInf
+        let avc1 = Codec.avc1
+        let hevc = Codec.hevc
+        let allCodecs = Codec.allCases
+
+        // Utils
         
         func hasCodec(_ s: M3U8Stream, _ codec: String) -> Bool {
             return s.codecs.contains{($0 as? String)?.hasPrefix(codec) ?? false}
@@ -333,17 +340,17 @@ class HLSLocalizer {
             return filtered
         }
         
+        // Check if HEVC should be used. If not, we'll throw away all HEVC streams.
+        
         let allowHEVC = CodecSupport.hevc || CodecSupport.softwareHEVC && (options?.allowInefficientCodecs ?? false)
         
-        let avc1 = Codec.avc1
-        let hevc = Codec.hevc
-        let allCodecs = [avc1, hevc]
-        
+        // Create a dictionary of streams by codec
         var streams = [Codec: [M3U8Stream]]()
         for c in allCodecs {
             streams[c] = []
         }
         
+        // Copy streams from M3U8Kit's structure
         let m3u8Streams = master.videoStreams()
         for i in 0 ..< m3u8Streams.count {
             guard let s = m3u8Streams.xStreamInf(at: i) else {continue}
@@ -356,20 +363,9 @@ class HLSLocalizer {
         }
         
         
-        // Filter streams by video width and height
+        // Filter streams by video HEIGHT and WIDTH
         
-        func filterByWidth() {
-            guard let width = options?.videoWidth else { return }
-            for c in allCodecs {
-                streams[c] = filter(streams: streams[c]!, 
-                                    sortOrder: {$0.resolution.width < $1.resolution.width}, 
-                                    filter: { $0.resolution.width >= Float(width) })
-            }
-            return 
-        }
-
-        func filterByHeight() {
-            guard let height = options?.videoHeight else { return }
+        if let height = options?.videoHeight {
             for c in allCodecs {
                 streams[c] = filter(streams: streams[c]!, 
                               sortOrder: {$0.resolution.height < $1.resolution.height}, 
@@ -377,8 +373,15 @@ class HLSLocalizer {
             }
         }
         
-        filterByHeight()
-        filterByWidth()
+        if let width = options?.videoWidth {
+            for c in allCodecs {
+                streams[c] = filter(streams: streams[c]!, 
+                                    sortOrder: {$0.resolution.width < $1.resolution.width}, 
+                                    filter: { $0.resolution.width >= Float(width) })
+            }
+        }
+        
+        // Filter by bitrate
 
         if let bitrates = options?.videoBitrates {
             for br in bitrates {
