@@ -365,16 +365,13 @@ class HLSLocalizer {
         
         // Filter streams by video HEIGHT and WIDTH
         
-        if let height = options?.videoHeight {
-            for c in allCodecs {
+        for c in allCodecs {
+            if let height = options?.videoHeight {
                 streams[c] = filter(streams: streams[c]!, 
-                              sortOrder: {$0.resolution.height < $1.resolution.height}, 
-                              filter: { $0.resolution.height >= Float(height) })
+                                    sortOrder: {$0.resolution.height < $1.resolution.height}, 
+                                    filter: { $0.resolution.height >= Float(height) })
             }
-        }
-        
-        if let width = options?.videoWidth {
-            for c in allCodecs {
+            if let width = options?.videoWidth {
                 streams[c] = filter(streams: streams[c]!, 
                                     sortOrder: {$0.resolution.width < $1.resolution.width}, 
                                     filter: { $0.resolution.width >= Float(width) })
@@ -383,22 +380,20 @@ class HLSLocalizer {
         
         // Filter by bitrate
 
-        if let bitrates = options?.videoBitrates {
-            for br in bitrates {
-                let bitrate: Int
-                let codec: Codec
-                switch br {
-                case .avc1(let value):
-                    bitrate = value
-                    codec = avc1
-                case .hevc(let value):
-                    bitrate = value
-                    codec = hevc
-                }
-
-                guard let codecStreams = streams[codec] else { continue }
-                streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
+        for br in options?.videoBitrates ?? [] {
+            let bitrate: Int
+            let codec: Codec
+            switch br {
+            case .avc1(let value):
+                bitrate = value
+                codec = avc1
+            case .hevc(let value):
+                bitrate = value
+                codec = hevc
             }
+
+            guard let codecStreams = streams[codec] else { continue }
+            streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
         }
         
         
