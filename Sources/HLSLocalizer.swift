@@ -14,11 +14,15 @@ import M3U8Kit
 
 
 struct MockVideoTrack: DTGVideoTrack {
-    var width: Int?
+    let width: Int?
     
-    var height: Int?
+    let height: Int?
     
-    var bitrate: Int
+    let bitrate: Int
+    
+    let audioGroup: String?
+    
+    let textGroup: String?
 }
 
 public enum HLSLocalizerError: Error {
@@ -56,6 +60,7 @@ class Stream<T> {
     let mediaUrl: URL
     let mediaPlaylist: M3U8MediaPlaylist
     let type: M3U8MediaPlaylistType
+    let mapUrl: URL?
     
     init(streamInfo: T, mediaUrl: URL, type: M3U8MediaPlaylistType) throws {
         
@@ -65,19 +70,34 @@ class Stream<T> {
         self.mediaPlaylist = playlist
         self.mediaUrl = mediaUrl
         self.type = type
+        
+        self.mapUrl = Stream.findMap(text: playlist.originalText)
+    }
+    
+    static func findMap(text: String) -> URL? {
+        let reader = M3U8LineReader(text: text)
+        while true {
+            guard let line = reader?.next() else {return nil}
+            
+            if line.starts(with: M3U8_EXT_X_MAP) {
+                let attr = line.parseM3U8Attributes(after: M3U8_EXT_X_MAP)
+                if let uri = attr[M3U8_EXT_X_MAP_URI] {
+                    return URL(string: uri)
+                } else {
+                    return nil
+                }
+            }            
+        }
     }
 }
 
 typealias VideoStream = Stream<M3U8ExtXStreamInf>
 typealias MediaStream = Stream<M3U8ExtXMedia>
 
+fileprivate let KEYFORMAT_FAIRPLAY = "KEYFORMAT=\"com.apple.streamingkeydelivery\""
+
 class HLSLocalizer {
     
-    enum Constants {
-        static let EXT_X_KEY = "#EXT-X-KEY:"
-        static let EXT_X_KEY_URI = "URI"
-        static let KEYFORMAT_FAIRPLAY = "KEYFORMAT=\"com.apple.streamingkeydelivery\""
-    }
     
     let itemId: String
     let masterUrl: URL
@@ -88,7 +108,7 @@ class HLSLocalizer {
     var duration: Double = Double.nan
     var estimatedSize: Int64?
     
-    var videoTrack: DTGVideoTrack?
+    var videoTrack: MockVideoTrack?
     
     var masterPlaylist: MasterPlaylist?
     var selectedVideoStream: VideoStream?
@@ -105,10 +125,12 @@ class HLSLocalizer {
         self.audioBitrateEstimation = audioBitrateEstimation
     }
     
-    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
+    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> MockVideoTrack {
         return MockVideoTrack(width: Int(videoStream.resolution.width), 
                               height: Int(videoStream.resolution.height), 
-                              bitrate: videoStream.bandwidth)
+                              bitrate: videoStream.bandwidth, 
+                              audioGroup: videoStream.audio, 
+                              textGroup: videoStream.subtitles)
     }
     
     func loadMetadata() throws {
@@ -117,6 +139,10 @@ class HLSLocalizer {
         
         // Only one video stream
         let videoStream = try selectVideoStream(master: master)!
+        
+        if let mapUrl = videoStream.mapUrl {
+            self.tasks.append(downloadItemTask(url: mapUrl, type: .video, order: 0))
+        }
         
         try addAllSegments(segmentList: videoStream.mediaPlaylist.segmentList, type: M3U8MediaPlaylistTypeVideo, setDuration: true)
         
@@ -149,7 +175,7 @@ class HLSLocalizer {
             if line.trimmingCharacters(in: .whitespaces).isEmpty {
                 continue
             }
-            if line.hasPrefix("#EXT-X-STREAM-INF") {
+            if line.hasPrefix(M3U8_EXT_X_STREAM_INF) {
                 if line.range(of: "BANDWIDTH=\(selectedBitrate),") == nil {
                     removeStream = true
                 } else {
@@ -160,7 +186,9 @@ class HLSLocalizer {
                     // just don't add it.
                     removeStream = false    // don't remove next line
                 } else {
-                    reducedLines.append(line)
+                    if !line.hasPrefix(M3U8_EXT_X_I_FRAME_STREAM_INF) {
+                        reducedLines.append(line)
+                    }
                 }
             }
         }
@@ -214,41 +242,27 @@ class HLSLocalizer {
         try save(text: reducedMasterPlaylist, as: "master.m3u8")        
 
         // Localize the selected video stream
-        try saveMediaPlaylist(videoStream.mediaPlaylist, originalUrl: videoStream.mediaUrl, type: .video)
+        try saveMediaPlaylist(videoStream, type: .video)
         
         // Localize the selected audio and text streams
         for stream in selectedAudioStreams {
-            try saveMediaPlaylist(stream.mediaPlaylist, originalUrl: stream.mediaUrl, type: .audio)
+            try saveMediaPlaylist(stream, type: .audio)
         }
 
         for stream in selectedTextStreams {
-            try saveMediaPlaylist(stream.mediaPlaylist, originalUrl: stream.mediaUrl, type: .text)
+            try saveMediaPlaylist(stream, type: .text)
         }
 }
     
-    private func _saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
-        
-        guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
-        #if DEBUG
-            try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
-        #endif
-
-        let localText = NSMutableString(string: originalText)
-        
-        guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
-        for i in 0 ..< segments.countInt {
-            try localText.replace(segmentUrl: segments[i].uri.absoluteString, relativeTo: originalUrl.deletingLastPathComponent())
-        }
-        
-        let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
-        try save(text: localText as String, as: target)
-    }
-    
     private func isHLSAESKey(line: String) -> Bool {
-        return line.hasPrefix(Constants.EXT_X_KEY) && !line.contains(Constants.KEYFORMAT_FAIRPLAY)
+        return line.hasPrefix(M3U8_EXT_X_KEY) && !line.contains(KEYFORMAT_FAIRPLAY)
     }
     
-    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
+    private func saveMediaPlaylist<T>(_ stream: Stream<T>, type: DownloadItemTaskType) throws {
+        let mediaPlaylist = stream.mediaPlaylist
+        let originalUrl = stream.mediaUrl
+        let mapUrl = stream.mapUrl
+        
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
             try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
@@ -261,35 +275,48 @@ class HLSLocalizer {
             if line.isEmpty {
                 continue
             }
-            if !line.hasPrefix("#") && i < segments.countInt && line == segments[i].uri.absoluteString {
-                localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
-                i += 1
-            } else if isHLSAESKey(line: line) { 
-                // has AES-128 key replace uri with local path
-                let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY, seperatedBy: ",")
-                var updatedLine = Constants.EXT_X_KEY
-                for (index, attribute) in keyAttributes.enumerated() {
-                    var updatedAttribute = attribute
-                    if attribute.hasPrefix(Constants.EXT_X_KEY_URI) {
-                        var mutableAttribute = attribute
-                        // remove the url attribute tag
-                        mutableAttribute = mutableAttribute.replacingOccurrences(of: Constants.EXT_X_KEY_URI + "=", with: "")
-                        // remove quotation marks
-                        let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
-                        // create the content url
-                        let mediaUrl: URL = segments[i].mediaURL()
-                        guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
-                        updatedAttribute = "\(Constants.EXT_X_KEY_URI)=\"../key/\(url.segmentRelativeLocalPath())\""
+            
+            if line.hasPrefix("#") {
+                // Tag
+                
+                if isHLSAESKey(line: line) { 
+                    // has AES-128 key replace uri with local path
+                    let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: M3U8_EXT_X_KEY, seperatedBy: ",")
+                    var updatedLine = M3U8_EXT_X_KEY
+                    for (index, attribute) in keyAttributes.enumerated() {
+                        var updatedAttribute = attribute
+                        if attribute.hasPrefix(M3U8_EXT_X_KEY_URI) {
+                            var mutableAttribute = attribute
+                            // remove the url attribute tag
+                            mutableAttribute = mutableAttribute.replacingOccurrences(of: M3U8_EXT_X_KEY_URI + "=", with: "")
+                            // remove quotation marks
+                            let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
+                            // create the content url
+                            let mediaUrl: URL = segments[i].mediaURL()
+                            guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
+                            updatedAttribute = "\(M3U8_EXT_X_KEY_URI)=\"../key/\(url.segmentRelativeLocalPath())\""
+                        }
+                        if index != keyAttributes.count - 1 {
+                            updatedLine.append("\(updatedAttribute),")
+                        } else {
+                            updatedLine.append(updatedAttribute)
+                        }
                     }
-                    if index != keyAttributes.count - 1 {
-                        updatedLine.append("\(updatedAttribute),")
-                    } else {
-                        updatedLine.append(updatedAttribute)
-                    }
+                    localLines.append(updatedLine)
+                    
+                } else {
+                    localLines.append(line)
                 }
-                localLines.append(updatedLine)
+                
+                
             } else {
-                localLines.append(line)
+                // Not a tag
+                if i < segments.countInt && line == segments[i].uri.absoluteString {
+                    localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
+                    i += 1
+                } else {
+                    localLines.append(line)
+                }
             }
         }
         
@@ -315,7 +342,7 @@ class HLSLocalizer {
         // Utils
         
         func hasCodec(_ s: M3U8Stream, _ codec: String) -> Bool {
-            return s.codecs.contains{($0 as? String)?.hasPrefix(codec) ?? false}
+            return s.codecs?.contains{($0 as? String)?.hasPrefix(codec) ?? false} ?? false
         }
         
         func filter(streams: [M3U8Stream], 
@@ -352,10 +379,10 @@ class HLSLocalizer {
         
         // Copy streams from M3U8Kit's structure
         let m3u8Streams = master.videoStreams()
-        for i in 0 ..< m3u8Streams.count {
-            guard let s = m3u8Streams.xStreamInf(at: i) else {continue}
+        for i in 0 ..< m3u8Streams.countInt {
+            let s = m3u8Streams[i]
             
-            if hasCodec(s, "avc1") {
+            if s.codecs == nil || hasCodec(s, "avc1") {
                 streams[avc1]?.append(s)
             } else if allowHEVC && hasCodec(s, "hvc1") {
                 streams[hevc]?.append(s)
@@ -454,8 +481,8 @@ class HLSLocalizer {
     
     /// Adds download tasks for all encrpytion keys from the provided playlist.
     private func addKeyDownloadTasks<T>(from stream: Stream<T>) {
-        let keySegmentTagPrefix = Constants.EXT_X_KEY
-        let uriAttributePrefix = Constants.EXT_X_KEY_URI + "="
+        let keySegmentTagPrefix = M3U8_EXT_X_KEY
+        let uriAttributePrefix = M3U8_EXT_X_KEY_URI + "="
         let lines = stream.mediaPlaylist.originalText.components(separatedBy: .newlines)
         
         var downloadItemTasks = [DownloadItemTask]()
@@ -514,6 +541,12 @@ class HLSLocalizer {
         guard let streams = streams else { return }
         
         for i in 0 ..< streams.countInt {
+            
+            if type == M3U8MediaPlaylistTypeAudio, let videoGroupId = videoTrack?.audioGroup {
+                if videoGroupId != streams[i].groupId() {continue}
+            } else if type == M3U8MediaPlaylistTypeSubtitle, let videoGroupId = videoTrack?.textGroup {
+                if videoGroupId != streams[i].groupId() {continue}
+            }
             
             let url: URL! = streams[i].m3u8URL()
             do {
