@@ -185,14 +185,18 @@ class ViewController: UIViewController {
                 var options: DTGSelectionOptions
                 
                 options = DTGSelectionOptions()
-                    .setPreferredVideoHeight(1000)
-                    .setPreferredVideoWidth(1900)
-                    .setPreferredVideoBitrates([.hevc(1_000_000), .avc1(2_000_000)])
+                    .setPreferredVideoHeight(300)
+//                    .setPreferredVideoWidth(1000)
+//                    .setPreferredVideoBitrates([.hevc(3_000_000), .avc1(5_000_000)])
+//                    .setPreferredVideoBitrates([.hevc(300_000), .avc1(5_000_000)])
                     .setPreferredVideoCodecs([.hevc, .avc1])
                     .setPreferredAudioCodecs([.ac3, .mp4a])
-                    .setAllTextLanguages()
+//                    .setAllTextLanguages()
+                    .setTextLanguages(["en"])
+                    .setAudioLanguages(["es", "ru"])
+//                    .setAllAudioLanguages()
                 
-//                options.allowInefficientCodecs = true
+                options.allowInefficientCodecs = true
                                 
 //                options = DTGSelectionOptions()
 //                    .setTextLanguages(["he", "eng"])
