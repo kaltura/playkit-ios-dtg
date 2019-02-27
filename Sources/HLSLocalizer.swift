@@ -10,8 +10,6 @@
 
 
 import Foundation
-import M3U8Kit
-
 
 struct MockVideoTrack: DTGVideoTrack {
     let width: Int?
@@ -215,7 +213,7 @@ class HLSLocalizer {
             }
         }
         
-        return reducedLines.joined(separator: "\n")
+        return reducedLines.joined(separator: "\n") + "\n"
     }
     
     private func createDirectories() throws {
