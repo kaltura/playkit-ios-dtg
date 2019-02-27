@@ -818,7 +818,7 @@ extension DTGSelectionOptions.VideoCodec: CustomStringConvertible {
 extension DTGSelectionOptions.AudioCodec: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .mp4a: return "hevc"
+        case .mp4a: return "mp4a"
         case .ac3: return "ac3"
         case .eac3: return "eac3"
         }
