@@ -7,7 +7,5 @@
 
 #import <Foundation/Foundation.h>
 
-@interface NSString (m3u8)
-- (NSDictionary<NSString*,NSString*> * _Nonnull)parseM3U8AttributesAfter:(NSString*)prefix;
-@end
-
+NSDictionary<NSString*,NSString*> * _Nonnull parseM3U8Attributes(NSString* str, NSString* prefix);
+NSString* md5WithString(NSString* str);

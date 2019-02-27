@@ -6,13 +6,14 @@
 //
 
 #import "ObjCUtils.h"
+#import <CommonCrypto/CommonCrypto.h>
 
-@implementation NSString (m3u8)
-
-- (NSMutableDictionary<NSString*,NSString*> * _Nonnull)parseM3U8AttributesAfter:(NSString*)prefix {
+NSDictionary<NSString*,NSString*> * parseM3U8Attributes(NSString* str, NSString* prefix) {
     
-    NSRange range = [self rangeOfString:prefix];
-    NSString *attribute_list = [self substringFromIndex:range.location + range.length];
+    if (![str hasPrefix:prefix]) {
+        return nil;
+    }
+    NSString *attribute_list = [str substringFromIndex:prefix.length];
     
     NSMutableDictionary *dict = [NSMutableDictionary dictionary];
     
@@ -47,5 +48,14 @@
     return dict;
 }
 
-
-@end
+NSString* md5WithString(NSString* str) {
+    NSData* data = [str dataUsingEncoding:NSUTF8StringEncoding];
+    unsigned char digest[CC_MD5_DIGEST_LENGTH];
+    CC_MD5(data.bytes, (CC_LONG)data.length, digest);
+    
+    NSMutableString* hex = [[NSMutableString alloc] init];
+    for (int i = 0; i < CC_MD5_DIGEST_LENGTH; i++) {
+        [hex appendFormat:@"%02x", digest[i]];
+    }
+    return hex;
+}
