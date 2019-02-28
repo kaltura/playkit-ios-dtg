@@ -83,7 +83,11 @@ class Stream<T>: CustomStringConvertible {
         self.mediaUrl = mediaUrl
         self.type = type
         
-        self.mapUrl = Stream.findMap(text: playlist.originalText)
+        if type != M3U8MediaPlaylistTypeSubtitle {
+            self.mapUrl = Stream.findMap(text: playlist.originalText)
+        } else {
+            self.mapUrl = nil
+        }
     }
     
     static func findMap(text: String) -> URL? {
@@ -103,16 +107,7 @@ class Stream<T>: CustomStringConvertible {
     }
     
     var description: String {
-        return String(describing: streamInfo)
-    }
-    
-    var masterLine: String {
-        if let s = streamInfo as? M3U8ExtXStreamInf {
-            return s.m3u8PlanString()
-        } else if let s = streamInfo as? M3U8ExtXMedia {
-            return s.m3u8PlanString()
-        }
-        return ""
+        return localMasterLine().replacingOccurrences(of: "\n", with: "\t")//String(describing: streamInfo)
     }
     
     func localMasterLine() -> String {
@@ -149,12 +144,17 @@ class VideoStream: Stream<M3U8ExtXStreamInf> {
 
         attribs.append((M3U8_EXT_X_STREAM_INF_RESOLUTION, "\(Int(stream.resolution.width))x\(Int(stream.resolution.height))"))
 
-        if !stream.audio.isEmpty {
-            attribs.append((M3U8_EXT_X_STREAM_INF_AUDIO, qs(stream.audio)))
+        if let audio = stream.audio, audio.count > 0 {
+            attribs.append((M3U8_EXT_X_STREAM_INF_AUDIO, qs(audio)))
         }
         
-        if !stream.subtitles.isEmpty {
-            attribs.append((M3U8_EXT_X_STREAM_INF_SUBTITLES, qs(stream.subtitles)))
+        if let subtitles = stream.subtitles, subtitles.count > 0 {
+            attribs.append((M3U8_EXT_X_STREAM_INF_SUBTITLES, qs(subtitles)))
+        }
+        
+        if let codecsArray = stream.codecs as NSArray?, codecsArray.count > 0 {
+            let codecs = codecsArray.componentsJoined(by: ",")
+            attribs.append((M3U8_EXT_X_STREAM_INF_CODECS, qs(codecs)))
         }
         
         return M3U8_EXT_X_STREAM_INF +
@@ -423,7 +423,6 @@ class HLSLocalizer {
                     guard let mapUrl = mapUrl else {continue}
                     let localPath = mapUrl.segmentRelativeLocalPath()
                     let localLine = line.replacingOccurrences(of: "URI=\"\(mapUrl)\"", with: "URI=\"\(localPath)\"")
-                    print(line, localLine)
                     localLines.append(localLine)
 
                 } else {
@@ -584,7 +583,7 @@ class HLSLocalizer {
         }
         
         
-        print(streams)
+//        print(streams)
 
         // Now we have two lists -- hevc and avc1. Look at codec prefs.
         
@@ -719,6 +718,10 @@ class HLSLocalizer {
             let url: URL = stream.m3u8URL()
             do {
                 let mediaStream = try MediaStream(streamInfo: stream, mediaUrl: url, type: type)
+                if let mapUrl = mediaStream.mapUrl {
+                    self.tasks.append(downloadItemTask(url: mapUrl, type: mediaStream.trackType, order: 0))
+                }
+                
                 try addAllSegments(segmentList: mediaStream.mediaPlaylist.segmentList, type: type)
                 
                 if type.isAudio() {
