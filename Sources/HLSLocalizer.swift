@@ -10,6 +10,7 @@
 
 
 import Foundation
+import M3U8Kit
 
 fileprivate let YES = "YES"
 fileprivate let NO = "NO"
