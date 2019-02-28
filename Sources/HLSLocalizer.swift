@@ -273,35 +273,6 @@ class HLSLocalizer {
     }
     
 
-    private func reduceMasterPlaylist(_ localText: String, _ selectedBitrate: Int) -> String {
-        let lines = localText.components(separatedBy: CharacterSet.newlines)
-        var reducedLines = [String]()
-        var removeStream = false
-        for line in lines {
-            if line.trimmingCharacters(in: .whitespaces).isEmpty {
-                continue
-            }
-            if line.hasPrefix(M3U8_EXT_X_STREAM_INF) {
-                if line.range(of: "BANDWIDTH=\(selectedBitrate),") == nil {
-                    removeStream = true
-                } else {
-                    reducedLines.append(line)
-                }
-            } else {
-                if removeStream {
-                    // just don't add it.
-                    removeStream = false    // don't remove next line
-                } else {
-                    if !line.hasPrefix(M3U8_EXT_X_I_FRAME_STREAM_INF) {
-                        reducedLines.append(line)
-                    }
-                }
-            }
-        }
-        
-        return reducedLines.joined(separator: "\n") + "\n"
-    }
-    
     private func createDirectories() throws {
         for type in DownloadItemTaskType.allTypes {
             try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
@@ -318,15 +289,6 @@ class HLSLocalizer {
         try save(text: oText, as: relativePath + ".orig.txt")
     }
     
-//    func masterLine<T>(stream: Stream<T>) -> String {
-//        let line = NSMutableString(string: stream.masterLine)
-//        
-//        line.replaceOccurrences(of: "CODECS=\"(null)\",", with: "", options: [], range: NSMakeRange(0, line.length))
-//        line.replace(playlistUrl: stream.mediaUrl, type: stream.trackType)
-//        
-//        return line as String
-//    }
-    
     func saveLocalFiles() throws {
         
         try createDirectories()
@@ -338,53 +300,30 @@ class HLSLocalizer {
 #if DEBUG
         try saveOriginal(text: masterText, url: masterUrl, as: MASTER_PLAYLIST_NAME )
 #endif
-        let localText = NSMutableString(string: masterText)
 
         guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
-        
-        localText.replace(playlistUrl: videoStream.mediaUrl, type: .video)
-        
+                
+        var localMaster = [M3U8_EXTM3U]
+        localMaster.append(videoStream.localMasterLine())
         for stream in selectedAudioStreams {
-            localText.replace(playlistUrl: stream.mediaUrl, type: .audio)
-        }
-        
-        for stream in selectedTextStreams {
-            localText.replace(playlistUrl: stream.mediaUrl, type: .text)
-        }
-        
-        let selectedVideoBitrate = videoStream.streamInfo.bandwidth
-        
-        let reducedMasterPlaylist = reduceMasterPlaylist(localText as String, selectedVideoBitrate)
-
-        try save(text: reducedMasterPlaylist, as: MASTER_PLAYLIST_NAME + ".txt" )        
-
-        var local2 = [M3U8_EXTM3U]
-//        local2.append(masterLine(stream: videoStream))
-        local2.append(videoStream.localMasterLine())
-//        local2.append(videoStream.streamInfo.m3u8PlanString().replacing(playlistUrl: videoStream.mediaUrl, type: .video))
-        for stream in selectedAudioStreams {
-            local2.append(stream.localMasterLine())
-//            local2.append(masterLine(stream: stream))
-//            local2.append(stream.streamInfo.m3u8PlanString().replacing(playlistUrl: stream.mediaUrl, type: .audio))
+            localMaster.append(stream.localMasterLine())
         }
         for stream in selectedTextStreams {
-            local2.append(stream.localMasterLine())
-//            local2.append(masterLine(stream: stream))
-//            local2.append(stream.streamInfo.m3u8PlanString().replacing(playlistUrl: stream.mediaUrl, type: .text))
+            localMaster.append(stream.localMasterLine())
         }
         
-        try save(text: local2.joined(separator: "\n") + "\n", as: MASTER_PLAYLIST_NAME)
+        try save(text: localMaster.joined(separator: "\n") + "\n", as: MASTER_PLAYLIST_NAME)
         
         // Localize the selected video stream
-        try saveMediaPlaylist(videoStream, type: .video)
+        try saveMediaPlaylist(videoStream)
         
         // Localize the selected audio and text streams
         for stream in selectedAudioStreams {
-            try saveMediaPlaylist(stream, type: .audio)
+            try saveMediaPlaylist(stream)
         }
 
         for stream in selectedTextStreams {
-            try saveMediaPlaylist(stream, type: .text)
+            try saveMediaPlaylist(stream)
         }
 }
     
@@ -392,10 +331,11 @@ class HLSLocalizer {
         return line.hasPrefix(M3U8_EXT_X_KEY) && !line.contains(KEYFORMAT_FAIRPLAY)
     }
     
-    private func saveMediaPlaylist<T>(_ stream: Stream<T>, type: DownloadItemTaskType) throws {
+    private func saveMediaPlaylist<T>(_ stream: Stream<T>) throws {
         let mediaPlaylist = stream.mediaPlaylist
         let originalUrl = stream.mediaUrl
         let mapUrl = stream.mapUrl
+        let type = stream.trackType
         
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
@@ -472,10 +412,10 @@ class HLSLocalizer {
 
     private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
         // The following options affect video stream selection:
-//        options?.allowInefficientCodecs (select HEVC even if device does not support it in hardware)
-//        options?.videoWidth|videoHeight
-//        options?.videoBitrates
-//        options?.videoCodecs
+        //options?.allowInefficientCodecs (select HEVC even if device does not support it in hardware)
+        //options?.videoWidth|videoHeight
+        //options?.videoBitrates
+        //options?.videoCodecs
         
         // Aliases
         
