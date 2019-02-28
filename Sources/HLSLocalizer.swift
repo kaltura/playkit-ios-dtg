@@ -11,6 +11,9 @@
 
 import Foundation
 
+fileprivate let YES = "YES"
+fileprivate let NO = "NO"
+
 struct MockVideoTrack: DTGVideoTrack {
     let width: Int?
     
@@ -101,12 +104,94 @@ class Stream<T>: CustomStringConvertible {
     var description: String {
         return String(describing: streamInfo)
     }
+    
+    var masterLine: String {
+        if let s = streamInfo as? M3U8ExtXStreamInf {
+            return s.m3u8PlanString()
+        } else if let s = streamInfo as? M3U8ExtXMedia {
+            return s.m3u8PlanString()
+        }
+        return ""
+    }
+    
+    func localMasterLine() -> String {
+        return ""   // must be overriden
+    }
+    
+    var trackType: DownloadItemTaskType {
+        switch type {
+        case M3U8MediaPlaylistTypeAudio:
+            return .audio
+        case M3U8MediaPlaylistTypeVideo: 
+            fallthrough
+        case M3U8MediaPlaylistTypeMedia:
+            return .video
+        case M3U8MediaPlaylistTypeSubtitle:
+            return .text
+        default:
+            return .video
+        }
+    }
 }
 
-typealias VideoStream = Stream<M3U8ExtXStreamInf>
-typealias MediaStream = Stream<M3U8ExtXMedia>
+fileprivate func qs(_ s: String) -> String {
+    return "\"\(s)\""
+}
 
-fileprivate let KEYFORMAT_FAIRPLAY =    "KEYFORMAT=\"com.apple.streamingkeydelivery\""
+class VideoStream: Stream<M3U8ExtXStreamInf> {
+    override func localMasterLine() -> String {
+        let stream = streamInfo;
+        
+        var attribs = [(String, String)]()
+        
+        attribs.append((M3U8_EXT_X_STREAM_INF_BANDWIDTH, String(stream.bandwidth)))
+
+        attribs.append((M3U8_EXT_X_STREAM_INF_RESOLUTION, "\(Int(stream.resolution.width))x\(Int(stream.resolution.height))"))
+
+        if !stream.audio.isEmpty {
+            attribs.append((M3U8_EXT_X_STREAM_INF_AUDIO, qs(stream.audio)))
+        }
+        
+        if !stream.subtitles.isEmpty {
+            attribs.append((M3U8_EXT_X_STREAM_INF_SUBTITLES, qs(stream.subtitles)))
+        }
+        
+        return M3U8_EXT_X_STREAM_INF +
+            attribs.map { $0 + "=" + $1 }.joined(separator: ",") +
+            "\n" +
+            self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType)
+    }
+}
+
+class MediaStream: Stream<M3U8ExtXMedia> {
+    override func localMasterLine() -> String {
+        
+        let stream = streamInfo;
+        
+        var attribs = [(String, String)]()
+        
+        attribs.append((M3U8_EXT_X_MEDIA_TYPE, stream.type()))
+        attribs.append((M3U8_EXT_X_MEDIA_AUTOSELECT, stream.autoSelect() ? YES : NO))
+        attribs.append((M3U8_EXT_X_MEDIA_DEFAULT, stream.isDefault() ? YES : NO))
+        
+        attribs.append((M3U8_EXT_X_MEDIA_LANGUAGE, qs(stream.language())))
+        attribs.append((M3U8_EXT_X_MEDIA_GROUP_ID, qs(stream.groupId())))
+        attribs.append((M3U8_EXT_X_MEDIA_NAME, qs(stream.name())))
+        
+        attribs.append((M3U8_EXT_X_MEDIA_FORCED, stream.forced() ? YES : NO))
+        
+        if stream.bandwidth() > 0 {
+            attribs.append((M3U8_EXT_X_MEDIA_BANDWIDTH, String(stream.bandwidth())))
+        }
+        
+        attribs.append((M3U8_EXT_X_MEDIA_URI, qs(self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType))))
+        
+        return M3U8_EXT_X_MEDIA + attribs.map { $0 + "=" + $1 }.joined(separator: ",")
+    }
+    
+}
+
+fileprivate let KEYFORMAT_FAIRPLAY =    M3U8_EXT_X_KEY_KEYFORMAT + "=\"com.apple.streamingkeydelivery\""
 fileprivate let MASTER_PLAYLIST_NAME =  "master.m3u8"
 
 class HLSLocalizer {
@@ -232,6 +317,15 @@ class HLSLocalizer {
         try save(text: oText, as: relativePath + ".orig.txt")
     }
     
+//    func masterLine<T>(stream: Stream<T>) -> String {
+//        let line = NSMutableString(string: stream.masterLine)
+//        
+//        line.replaceOccurrences(of: "CODECS=\"(null)\",", with: "", options: [], range: NSMakeRange(0, line.length))
+//        line.replace(playlistUrl: stream.mediaUrl, type: stream.trackType)
+//        
+//        return line as String
+//    }
+    
     func saveLocalFiles() throws {
         
         try createDirectories()
@@ -261,8 +355,25 @@ class HLSLocalizer {
         
         let reducedMasterPlaylist = reduceMasterPlaylist(localText as String, selectedVideoBitrate)
 
-        try save(text: reducedMasterPlaylist, as: MASTER_PLAYLIST_NAME )        
+        try save(text: reducedMasterPlaylist, as: MASTER_PLAYLIST_NAME + ".txt" )        
 
+        var local2 = [M3U8_EXTM3U]
+//        local2.append(masterLine(stream: videoStream))
+        local2.append(videoStream.localMasterLine())
+//        local2.append(videoStream.streamInfo.m3u8PlanString().replacing(playlistUrl: videoStream.mediaUrl, type: .video))
+        for stream in selectedAudioStreams {
+            local2.append(stream.localMasterLine())
+//            local2.append(masterLine(stream: stream))
+//            local2.append(stream.streamInfo.m3u8PlanString().replacing(playlistUrl: stream.mediaUrl, type: .audio))
+        }
+        for stream in selectedTextStreams {
+            local2.append(stream.localMasterLine())
+//            local2.append(masterLine(stream: stream))
+//            local2.append(stream.streamInfo.m3u8PlanString().replacing(playlistUrl: stream.mediaUrl, type: .text))
+        }
+        
+        try save(text: local2.joined(separator: "\n") + "\n", as: MASTER_PLAYLIST_NAME)
+        
         // Localize the selected video stream
         try saveMediaPlaylist(videoStream, type: .video)
         
@@ -373,6 +484,9 @@ class HLSLocalizer {
         let avc1 = Codec.avc1
         let hevc = Codec.hevc
         let allCodecs = Codec.allCases
+        let mp4a = DTGSelectionOptions.AudioCodec.mp4a
+        let ac3 = DTGSelectionOptions.AudioCodec.ac3
+        let eac3 = DTGSelectionOptions.AudioCodec.eac3
 
         // Utils
         
@@ -404,7 +518,7 @@ class HLSLocalizer {
         
         // Check if HEVC should be used. If not, we'll throw away all HEVC streams.
         
-        let allowHEVC = CodecSupport.hevc || CodecSupport.softwareHEVC && (options.allowInefficientCodecs ?? false)
+        let allowHEVC = CodecSupport.hevc || (CodecSupport.softwareHEVC && options.allowInefficientCodecs)
         
         let allowAC3 = CodecSupport.ac3
         let allowEC3 = CodecSupport.ec3
@@ -421,16 +535,16 @@ class HLSLocalizer {
             let s = m3u8Streams[i]
 
             // if the stream uses an audio codec we can't play, skip it.
-            if hasCodec(s, "ac-3") && !allowAC3 {
+            if hasCodec(s, ac3.tag) && !allowAC3 {
                 continue
-            } else if hasCodec(s, "ec-3") && !allowEC3{
+            } else if hasCodec(s, eac3.tag) && !allowEC3{
                 continue
             }
             
             // add the stream to the correct array
-            if s.codecs == nil || hasCodec(s, "avc1") {
+            if s.codecs == nil || hasCodec(s, avc1.tag) {
                 streams[avc1]?.append(s)
-            } else if allowHEVC && hasCodec(s, "hvc1") {
+            } else if allowHEVC && hasCodec(s, hevc.tag) {
                 streams[hevc]?.append(s)
             }
         }
@@ -794,6 +908,16 @@ extension NSMutableString {
     }
 }
 
+extension String {
+    func replacing(playlistUrl: URL?, type: DownloadItemTaskType) -> String {
+        if let url = playlistUrl {
+            return self.replacingOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type))
+        } else {
+            return self
+        }
+    }
+}
+
 extension DTGSelectionOptions: CustomStringConvertible {
     public var description: String {
         return """
@@ -806,19 +930,28 @@ extension DTGSelectionOptions: CustomStringConvertible {
 
 extension DTGSelectionOptions.VideoCodec: CustomStringConvertible {
     public var description: String {
+        return tag
+    }
+    
+    var tag: String {
         switch self {
         case .avc1: return "avc1"
-        case .hevc: return "hevc"
+        case .hevc: return "hvc1"
         }
     }
 }
 
 extension DTGSelectionOptions.AudioCodec: CustomStringConvertible {
     public var description: String {
+        return tag
+    }
+    
+    var tag: String {
         switch self {
         case .mp4a: return "mp4a"
-        case .ac3: return "ac3"
-        case .eac3: return "eac3"
+        case .ac3: return "ac-3"
+        case .eac3: return "ec-3"
         }
     }
 }
+
