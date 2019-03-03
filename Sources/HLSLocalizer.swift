@@ -489,6 +489,11 @@ class HLSLocalizer {
             }
         }
         
+        #if DEBUG
+        print("Playable video streams:", streams)
+        #endif
+
+        
         // Filter streams by video HEIGHT and WIDTH
         
         for c in allCodecs {
@@ -522,8 +527,9 @@ class HLSLocalizer {
             streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
         }
         
-        
-//        print(streams)
+        #if DEBUG
+        print("Filtered video streams:", streams)
+        #endif
 
         // Now we have two lists -- hevc and avc1. Look at codec prefs.
         
