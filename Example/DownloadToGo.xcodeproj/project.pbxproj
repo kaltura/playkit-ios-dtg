@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		20AD661C1F174B0900E8E6D7 /* VideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20AD661B1F174B0900E8E6D7 /* VideoViewController.swift */; };
 		20AD661E1F17A30C00E8E6D7 /* TracksViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20AD661D1F17A30C00E8E6D7 /* TracksViewController.swift */; };
-		20EEC2081F28BA0B00535A42 /* HLSLocalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EEC2061F28B9C000535A42 /* HLSLocalizerTests.swift */; };
 		20EEC25B1F28DA3600535A42 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = 20EEC25A1F28DA3600535A42 /* Resources */; };
 		24DB0C162EDDF8BF6A493539 /* Pods_DownloadToGo_Tests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA4F3EDA67A5435C5B8522DC /* Pods_DownloadToGo_Tests.framework */; };
 		403D41C56B9FFDF0B83F5774 /* Pods_DownloadToGo_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B402B6E39A3C14EF02EE7E7A /* Pods_DownloadToGo_Example.framework */; };
@@ -18,8 +17,8 @@
 		607FACDB1AFB9204008FA782 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 607FACD91AFB9204008FA782 /* Main.storyboard */; };
 		607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDC1AFB9204008FA782 /* Images.xcassets */; };
 		607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDE1AFB9204008FA782 /* LaunchScreen.xib */; };
-		607FACEC1AFB9204008FA782 /* Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACEB1AFB9204008FA782 /* Tests.swift */; };
 		CAB012E1206CCBC400EB3F69 /* Samples.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB012E0206CCBC400EB3F69 /* Samples.swift */; };
+		CAE8915B222BC015004ACD30 /* HLSLocalizerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,7 +34,6 @@
 /* Begin PBXFileReference section */
 		20AD661B1F174B0900E8E6D7 /* VideoViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoViewController.swift; sourceTree = "<group>"; };
 		20AD661D1F17A30C00E8E6D7 /* TracksViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TracksViewController.swift; sourceTree = "<group>"; };
-		20EEC2061F28B9C000535A42 /* HLSLocalizerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HLSLocalizerTests.swift; path = HLSLocalizer/HLSLocalizerTests.swift; sourceTree = "<group>"; };
 		20EEC25A1F28DA3600535A42 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
 		25C82E71DD5DC2FA8D73C02C /* DownloadToGo.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = DownloadToGo.podspec; path = ../DownloadToGo.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		607FACD01AFB9204008FA782 /* DownloadToGo_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DownloadToGo_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -47,13 +45,13 @@
 		607FACDF1AFB9204008FA782 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		607FACE51AFB9204008FA782 /* DownloadToGo_Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DownloadToGo_Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACEA1AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		607FACEB1AFB9204008FA782 /* Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests.swift; sourceTree = "<group>"; };
 		61D6218AB1BC44DF1DBA1592 /* Pods-DownloadToGo_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Tests.release.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests.release.xcconfig"; sourceTree = "<group>"; };
 		7F3B47A466BC8A36FE06F00A /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		8031456F9885A9779A8DB1CA /* Pods-DownloadToGo_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Example.release.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example.release.xcconfig"; sourceTree = "<group>"; };
 		B402B6E39A3C14EF02EE7E7A /* Pods_DownloadToGo_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA4F3EDA67A5435C5B8522DC /* Pods_DownloadToGo_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAB012E0206CCBC400EB3F69 /* Samples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Samples.swift; sourceTree = "<group>"; };
+		CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSLocalizerTest.swift; sourceTree = "<group>"; };
 		DC9E0E3C7F4B72EB61E261A5 /* Pods-DownloadToGo_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Example.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		E2377F8A42CA921D4A467108 /* Pods-DownloadToGo_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Tests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		EBD962729B0E7C93B9B967A2 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
@@ -82,7 +80,6 @@
 		20EEC2051F28B96F00535A42 /* HLSLocalizer */ = {
 			isa = PBXGroup;
 			children = (
-				20EEC2061F28B9C000535A42 /* HLSLocalizerTests.swift */,
 			);
 			name = HLSLocalizer;
 			sourceTree = "<group>";
@@ -146,9 +143,9 @@
 			isa = PBXGroup;
 			children = (
 				20EEC2051F28B96F00535A42 /* HLSLocalizer */,
-				607FACEB1AFB9204008FA782 /* Tests.swift */,
 				20EEC25A1F28DA3600535A42 /* Resources */,
 				607FACE91AFB9204008FA782 /* Supporting Files */,
+				CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -407,8 +404,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				607FACEC1AFB9204008FA782 /* Tests.swift in Sources */,
-				20EEC2081F28BA0B00535A42 /* HLSLocalizerTests.swift in Sources */,
+				CAE8915B222BC015004ACD30 /* HLSLocalizerTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
