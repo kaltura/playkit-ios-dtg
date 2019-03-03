@@ -471,6 +471,7 @@ class HLSLocalizer {
         
         // Copy streams from M3U8Kit's structure
         let m3u8Streams = master.videoStreams()
+        m3u8Streams.sortByBandwidth(inOrder: .orderedAscending)
         for i in 0 ..< m3u8Streams.countInt {
             let s = m3u8Streams[i]
 
@@ -488,6 +489,7 @@ class HLSLocalizer {
                 streams[hevc]?.append(s)
             }
         }
+                
         
         #if DEBUG
         print("Playable video streams:", streams)
