@@ -15,8 +15,5 @@ target 'DownloadToGo_Example' do
 
   target 'DownloadToGo_Tests' do
     inherit! :search_paths
-
-    pod 'Quick', '1.3.1'
-    pod 'Nimble', '7.1.3'
   end
 end
