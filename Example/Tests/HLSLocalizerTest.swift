@@ -41,8 +41,8 @@ class HLSLocalizerTest: XCTestCase {
     func verify(_ hls: HLSLocalizer, 
                 duration: Double,
                 taskCount: Int,
-                estimatedSize: Int64,
                 videoBitrate: Int,
+                estimatedSize: Double,
                 videoHeight: Int? = nil,
                 videoWidth: Int? = nil,
                 resolution: String? = nil
@@ -50,8 +50,8 @@ class HLSLocalizerTest: XCTestCase {
 
         eq(hls.duration, duration)
         eq(hls.tasks.count, taskCount)
-        eq(hls.estimatedSize, estimatedSize)
         eq(hls.selectedVideoStream?.streamInfo.bandwidth, videoBitrate)
+        eq(hls.estimatedSize, Int64(estimatedSize))
         
         if let videoHeight = videoHeight {
             eq(Int(hls.selectedVideoStream?.streamInfo.resolution.height ?? -1), videoHeight)
@@ -98,8 +98,8 @@ class HLSLocalizerTest: XCTestCase {
         verify(hlsLoc, 
                duration: 25.12,
                taskCount: 6, 
+               videoBitrate: 488448, 
                estimatedSize: 1533726,
-               videoBitrate: 488448,
                videoHeight: 360,
                videoWidth: 640
         )
@@ -113,8 +113,8 @@ class HLSLocalizerTest: XCTestCase {
         verify(hlsLoc, 
                duration: 25.12,
                taskCount: 18, 
+               videoBitrate: 488_448, 
                estimatedSize: 1_935_646,
-               videoBitrate: 488_448,
                videoHeight: 360,
                videoWidth: 640
         )
@@ -129,8 +129,8 @@ class HLSLocalizerTest: XCTestCase {
         verify(hlsLoc, 
                duration: 25.12,
                taskCount: 18, 
+               videoBitrate: 900_000, 
                estimatedSize: 3227920,
-               videoBitrate: 900_000,
                videoHeight: 720,
                videoWidth: 1280
         )
@@ -145,19 +145,36 @@ class HLSLocalizerTest: XCTestCase {
         verify(hlsLoc, 
                duration: 25.12,
                taskCount: 18, 
+               videoBitrate: 900_000, 
                estimatedSize: 3227920,
-               videoBitrate: 900_000,
                videoHeight: 720,
                videoWidth: 1280
         )
     }
+    
+    
+    func testLocalAssetHEVC_1() {
+        let options = DTGSelectionOptions()
+        options.setPreferredVideoWidth(1280)
+        let hls = load("t2", options)
+        verify(hls, duration: 883.148, taskCount: 93, videoBitrate: 1400032, estimatedSize: 883.148*1400032/8, resolution: "1280x544")
+    }
+    
+    func testLocalAssetHEVC_2() {
+        let options = DTGSelectionOptions()
+        options.allowInefficientCodecs = true
+        options.setPreferredVideoWidth(1280)
+        let hls = load("t2", options)
+        verify(hls, duration: 883.148, taskCount: 93, videoBitrate: 781707, estimatedSize: 883.148*781707/8, resolution: "1280x544")
+    }
+
     
     let url_2 = "http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"
     func testMultiMulti_1() {
         let options = DTGSelectionOptions()
         let hls = load(url_2, options)
         
-        verify(hls, duration: 741.081, taskCount: 187, estimatedSize: 95172864, videoBitrate: 1027395, videoHeight: 360, videoWidth: 640)
+        verify(hls, duration: 741.081, taskCount: 187, videoBitrate: 1027395, estimatedSize: 95172864, videoHeight: 360, videoWidth: 640)
     }
     
     func testMultiMulti_2() {
@@ -165,7 +182,7 @@ class HLSLocalizerTest: XCTestCase {
             .setPreferredVideoWidth(700)
         let hls = load(url_2, options)
         
-        verify(hls, duration: 741.081, taskCount: 187, estimatedSize: 159528060, videoBitrate: 1722112, resolution: "1280x720")
+        verify(hls, duration: 741.081, taskCount: 187, videoBitrate: 1722112, estimatedSize: 159528060, resolution: "1280x720")
     }
     
     func testMultiMulti_3() {
@@ -175,6 +192,23 @@ class HLSLocalizerTest: XCTestCase {
             .setTextLanguages(["nl", "en"])
         let hls = load(url_2, options)
         
-        verify(hls, duration: 741.081, taskCount: 187+187*2+25*2, estimatedSize: Int64(741.081*(1027395+2*64000)/8), videoBitrate: 1027395, resolution: "640x360")
+        verify(hls, duration: 741.081, taskCount: 187+187*2+25*2, videoBitrate: 1027395, estimatedSize: 741.081*(1027395+2*64000)/8, resolution: "640x360")
+    }
+    
+    let url_3 = "https://cdnapisec.kaltura.com/p/2215841/sp/2215841/playManifest/entryId/1_w9zx2eti/flavorIds/1_r6q0xdb6,1_yq8tg3pq,1_1obpcggb,1_huc2wn1a,1_yyuvftfz,1_3f4sp5qu,1_1ybsfwrp,1_1xdbzoa6,1_k16ccgto,1_djdf6bk8/deliveryProfileId/19201/protocol/https/format/applehttp/a.m3u8"
+    func testHEVC_1() {
+        let options = DTGSelectionOptions()
+        options.setAllTextLanguages()
+        options.setAllAudioLanguages()
+        let hls = load(url_3, options)
+        
+        verify(hls, duration: 883.148, taskCount: 2*92, videoBitrate: 456999, estimatedSize: 883.148*(456999+64000)/8, resolution: "640x272")
+    }
+    
+    let url_4 = "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"
+    func testMultiAESKey() {
+        let options = DTGSelectionOptions()
+        let hls = load(url_4, options)
+        verify(hls, duration: 598.0333259999995, taskCount: 2*149, videoBitrate: 1000000, estimatedSize: 598.0333259999995*1000000/8, resolution: "640x360")
     }
 }
