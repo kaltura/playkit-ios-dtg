@@ -238,46 +238,55 @@ public class DTGSelectionOptions {
     
     // Convenience methods for setting the properties.
     
+    @discardableResult
     public func setPreferredVideoWidth(_ width: Int) -> Self {
         self.videoWidth = width
         return self
     }
     
+    @discardableResult
     public func setPreferredVideoHeight(_ height: Int) -> Self {
         self.videoHeight = height
         return self
     }
     
+    @discardableResult
     public func setPreferredVideoBitrates(_ prefs: [VideoBitrate]) -> Self {
         self.videoBitrates = prefs
         return self
     }
     
+    @discardableResult
     public func setPreferredVideoCodecs(_ codecs: [VideoCodec]) -> Self {
         self.videoCodecs = codecs
         return self
     }
     
+    @discardableResult
     public func setPreferredAudioCodecs(_ codecs: [AudioCodec]) -> Self {
         self.audioCodecs = codecs
         return self
     }
     
+    @discardableResult
     public func setAudioLanguages(_ langs: [String]) -> Self {
         self.audioLanguages = langs
         return self
     }
     
+    @discardableResult
     public func setTextLanguages(_ langs: [String]) -> Self {
         self.textLanguages = langs
         return self
     }
     
+    @discardableResult
     public func setAllAudioLanguages(_ all: Bool = true) -> Self {
         self.allAudioLanguages = true
         return self
     }
     
+    @discardableResult
     public func setAllTextLanguages(_ all: Bool = true) -> Self {
         self.allTextLanguages = true
         return self
