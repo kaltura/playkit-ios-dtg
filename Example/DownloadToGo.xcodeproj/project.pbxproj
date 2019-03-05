@@ -285,7 +285,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh",
+				"${SRCROOT}/Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/DownloadToGo/DownloadToGo.framework",
 				"${BUILT_PRODUCTS_DIR}/GCDWebServer/GCDWebServer.framework",
 				"${BUILT_PRODUCTS_DIR}/KalturaNetKit/KalturaNetKit.framework",
@@ -320,7 +320,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh\"\n";
+			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		B26C143877ECFA94F1CB580C /* [CP] Check Pods Manifest.lock */ = {
