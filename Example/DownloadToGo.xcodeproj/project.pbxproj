@@ -17,6 +17,7 @@
 		607FACDB1AFB9204008FA782 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 607FACD91AFB9204008FA782 /* Main.storyboard */; };
 		607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDC1AFB9204008FA782 /* Images.xcassets */; };
 		607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDE1AFB9204008FA782 /* LaunchScreen.xib */; };
+		CA0AA135222D198700FFF90F /* DownloadTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0AA134222D198700FFF90F /* DownloadTest.swift */; };
 		CAB012E1206CCBC400EB3F69 /* Samples.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB012E0206CCBC400EB3F69 /* Samples.swift */; };
 		CAE8915B222BC015004ACD30 /* HLSLocalizerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */; };
 /* End PBXBuildFile section */
@@ -50,6 +51,7 @@
 		851B12624AD642C17B82940E /* Pods-DownloadToGo_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Tests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Tests/Pods-DownloadToGo_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		B402B6E39A3C14EF02EE7E7A /* Pods_DownloadToGo_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA4F3EDA67A5435C5B8522DC /* Pods_DownloadToGo_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		CA0AA134222D198700FFF90F /* DownloadTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadTest.swift; sourceTree = "<group>"; };
 		CAB012E0206CCBC400EB3F69 /* Samples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Samples.swift; sourceTree = "<group>"; };
 		CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSLocalizerTest.swift; sourceTree = "<group>"; };
 		DC9E0E3C7F4B72EB61E261A5 /* Pods-DownloadToGo_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Example.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example.debug.xcconfig"; sourceTree = "<group>"; };
@@ -77,13 +79,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		20EEC2051F28B96F00535A42 /* HLSLocalizer */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = HLSLocalizer;
-			sourceTree = "<group>";
-		};
 		554887763E034356B4C8131D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -142,10 +137,10 @@
 		607FACE81AFB9204008FA782 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				20EEC2051F28B96F00535A42 /* HLSLocalizer */,
 				20EEC25A1F28DA3600535A42 /* Resources */,
 				607FACE91AFB9204008FA782 /* Supporting Files */,
 				CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */,
+				CA0AA134222D198700FFF90F /* DownloadTest.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -388,6 +383,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CAE8915B222BC015004ACD30 /* HLSLocalizerTest.swift in Sources */,
+				CA0AA135222D198700FFF90F /* DownloadTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
