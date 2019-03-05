@@ -161,7 +161,7 @@ public enum DTGItemStartableState {
 }
 
 /// Item state.
-public enum DTGItemState: Int {
+public enum DTGItemState: Int, CaseIterable {
     /// Item was just added, no metadata is available except for the id and the URL.
     case new
     

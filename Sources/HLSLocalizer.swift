@@ -67,7 +67,7 @@ func loadMediaPlaylist(url: URL, type: M3U8MediaPlaylistType) throws -> M3U8Medi
     }
 }
 
-class Stream<T>: CustomStringConvertible {
+class Stream<T> {
     let streamInfo: T
     let mediaUrl: URL
     let mediaPlaylist: M3U8MediaPlaylist
@@ -106,14 +106,6 @@ class Stream<T>: CustomStringConvertible {
         }
     }
     
-    var description: String {
-        return localMasterLine().replacingOccurrences(of: "\n", with: "\t")//String(describing: streamInfo)
-    }
-    
-    func localMasterLine() -> String {
-        return ""   // must be overriden
-    }
-    
     var trackType: DownloadItemTaskType {
         switch type {
         case M3U8MediaPlaylistTypeAudio:
@@ -134,8 +126,13 @@ fileprivate func qs(_ s: String) -> String {
     return "\"\(s)\""
 }
 
-class VideoStream: Stream<M3U8ExtXStreamInf> {
-    override func localMasterLine() -> String {
+class VideoStream: Stream<M3U8ExtXStreamInf>, CustomStringConvertible {
+    
+    var description: String {
+        return localMasterLine(hasAudio: true, hasText: true).replacingOccurrences(of: "\n", with: "\t")
+    }
+    
+    func localMasterLine(hasAudio: Bool, hasText: Bool) -> String {
         let stream = streamInfo;
         
         var attribs = [(String, String)]()
@@ -144,11 +141,11 @@ class VideoStream: Stream<M3U8ExtXStreamInf> {
 
         attribs.append((M3U8_EXT_X_STREAM_INF_RESOLUTION, "\(Int(stream.resolution.width))x\(Int(stream.resolution.height))"))
 
-        if let audio = stream.audio, audio.count > 0 {
+        if let audio = stream.audio, audio.count > 0, hasAudio {
             attribs.append((M3U8_EXT_X_STREAM_INF_AUDIO, qs(audio)))
         }
         
-        if let subtitles = stream.subtitles, subtitles.count > 0 {
+        if let subtitles = stream.subtitles, subtitles.count > 0, hasText {
             attribs.append((M3U8_EXT_X_STREAM_INF_SUBTITLES, qs(subtitles)))
         }
         
@@ -164,8 +161,13 @@ class VideoStream: Stream<M3U8ExtXStreamInf> {
     }
 }
 
-class MediaStream: Stream<M3U8ExtXMedia> {
-    override func localMasterLine() -> String {
+class MediaStream: Stream<M3U8ExtXMedia>, CustomStringConvertible {
+
+    var description: String {
+        return localMasterLine().replacingOccurrences(of: "\n", with: "\t")
+    }
+    
+    func localMasterLine() -> String {
         
         let stream = streamInfo;
         
@@ -304,7 +306,8 @@ class HLSLocalizer {
         guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
                 
         var localMaster = [M3U8_EXTM3U]
-        localMaster.append(videoStream.localMasterLine())
+        localMaster.append(videoStream.localMasterLine(hasAudio: selectedAudioStreams.count > 0, hasText: selectedTextStreams.count > 0))
+        
         for stream in selectedAudioStreams {
             localMaster.append(stream.localMasterLine())
         }
