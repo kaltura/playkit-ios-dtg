@@ -121,6 +121,14 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        
+        let completedItems = try! self.cm.itemsByState(.completed)
+        for (index, item) in completedItems.enumerated() {
+            if item.id.hasPrefix("test") && item.id.hasSuffix("()") {
+                self.items.insert(Item(id: item.id, url: "file://localhost"), at: index)
+            }
+        }
+
         cm.setDefaultAudioBitrateEstimation(bitrate: defaultAudioBitrateEstimation)
 
         // initialize UI

@@ -14,7 +14,7 @@ import PlayKit
 
 class DownloadTest: XCTestCase, ContentManagerDelegate {
     
-    var expectation: XCTestExpectation?
+    var downloadedExp: XCTestExpectation?
     var id: String! // assigned in setUp() and removed in tearDown()
     var downloaded = false
     
@@ -31,7 +31,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
                 assert(id == selfId, "Id doesn't match")
                 print("QQQ item \(id) completed")
                 downloaded = true
-                expectation?.fulfill()
+                downloadedExp?.fulfill()
             }
         } else {
             // setUp
@@ -43,17 +43,17 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     let cm = ContentManager.shared
     
     func waitForDownload(_ timeout: TimeInterval = 300) {
-        if let e = expectation {
+        if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
             eq(item().state, DTGItemState.completed)
             XCTAssert(downloaded, "Not downloaded")
         }
     }
     
-    override func setUp() {
+    override class func setUp() {
         
-        self.id = nil
-        cm.delegate = self
+        let cm = ContentManager.shared
+        
         try! cm.start { 
             print("QQQ started dtg")
         }
@@ -67,7 +67,8 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         
     }
     
-    override func tearDown() {
+    override class func tearDown() {
+        let cm = ContentManager.shared
         cm.delegate = nil
         cm.stop()
     }
@@ -85,23 +86,18 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     func startItem() {
-        expectation = XCTestExpectation(description: "Download item")
+        downloadedExp = XCTestExpectation(description: "Download item")
         try! cm.startItem(id: self.id)
     }
     
-    func newItem(_ url: String, _ function: String = #function) {
-        var id = function
-        id.removeSubrange(id.range(of: "()")!)
-        
-        self.id = id
-        
-        print("QQQ new item with id=\(id)")
+    func newItem(_ url: String, _ function: String = #function) {        
+        self.id = function
 
         try! cm.addItem(id: id, url: URL(string: url)!)
     }
     
     func removeItem() {
-        try! cm.removeItem(id: id)
+//        try! cm.removeItem(id: id)
     }
     
     func loadItem(_ options: DTGSelectionOptions?) {
@@ -127,7 +123,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         let tracks = XCTestExpectation(description: "tracks for \(id!)")
         
         player.addObserver(self, event: PlayerEvent.error) { (e) in
-            print("QQQ Player error: \(e.error)")
+            print("QQQ Player error: \(String(describing: e.error))")
         }
         
         player.addObserver(self, event: PlayerEvent.tracksAvailable) { (e) in
@@ -155,19 +151,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         print("QQQ prepare \(entry)")
         player.prepare(MediaConfig(mediaEntry: entry))
         
-        
-        
-        //        player.addObserver(self, event: PlayerEvent.playheadUpdate) { (e) in
-        //            if let time = e.currentTime, time.doubleValue > 10 {
-        //                played.fulfill()
-        //            } 
-        //        }
-        //        
-        //        print("QQQ start to play")
-        //        player.play()
-        //        
-        wait(for: [canPlay, tracks], timeout: 3)
-        //        print("QQQ waited for playback")
+        wait(for: [canPlay, tracks], timeout: 10)
         
         player.destroy()
         
