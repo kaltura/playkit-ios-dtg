@@ -11,12 +11,10 @@ import XCTest
 
 import PlayKit
 
-
 class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     var downloadedExp: XCTestExpectation?
     var id: String! // assigned in setUp() and removed in tearDown()
-    var downloaded = false
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         print(id, "\(Double(totalBytesDownloaded)/1024/1024) / \(Double(totalBytesEstimated ?? -1)/1024/1024)")
@@ -30,7 +28,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             if newState == .completed {
                 assert(id == selfId, "Id doesn't match")
                 print("QQQ item \(id) completed")
-                downloaded = true
                 downloadedExp?.fulfill()
             }
         } else {
@@ -46,7 +43,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
             eq(item().state, DTGItemState.completed)
-            XCTAssert(downloaded, "Not downloaded")
         }
     }
     
@@ -72,6 +68,15 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         cm.delegate = nil
         cm.stop()
     }
+    
+    override func setUp() {
+        cm.delegate = self
+    }
+    
+    override func tearDown() {
+        try! cm.removeItem(id: id)
+    }
+    
     
     func item(_ id: String) -> DTGItem? {
         if let item = try! cm.itemById(id) {
