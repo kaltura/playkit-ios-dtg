@@ -18,6 +18,7 @@
 		607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDC1AFB9204008FA782 /* Images.xcassets */; };
 		607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 607FACDE1AFB9204008FA782 /* LaunchScreen.xib */; };
 		CA0AA135222D198700FFF90F /* DownloadTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0AA134222D198700FFF90F /* DownloadTest.swift */; };
+		CA0AA138223021D900FFF90F /* items.json in Resources */ = {isa = PBXBuildFile; fileRef = CA0AA137223021BE00FFF90F /* items.json */; };
 		CAB012E1206CCBC400EB3F69 /* Samples.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB012E0206CCBC400EB3F69 /* Samples.swift */; };
 		CAE8915B222BC015004ACD30 /* HLSLocalizerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */; };
 /* End PBXBuildFile section */
@@ -52,6 +53,7 @@
 		B402B6E39A3C14EF02EE7E7A /* Pods_DownloadToGo_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA4F3EDA67A5435C5B8522DC /* Pods_DownloadToGo_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DownloadToGo_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA0AA134222D198700FFF90F /* DownloadTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadTest.swift; sourceTree = "<group>"; };
+		CA0AA137223021BE00FFF90F /* items.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = items.json; sourceTree = "<group>"; };
 		CAB012E0206CCBC400EB3F69 /* Samples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Samples.swift; sourceTree = "<group>"; };
 		CAE8915A222BC015004ACD30 /* HLSLocalizerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSLocalizerTest.swift; sourceTree = "<group>"; };
 		DC9E0E3C7F4B72EB61E261A5 /* Pods-DownloadToGo_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DownloadToGo_Example.debug.xcconfig"; path = "Pods/Target Support Files/Pods-DownloadToGo_Example/Pods-DownloadToGo_Example.debug.xcconfig"; sourceTree = "<group>"; };
@@ -112,6 +114,7 @@
 		607FACD21AFB9204008FA782 /* Example for DownloadToGo */ = {
 			isa = PBXGroup;
 			children = (
+				CA0AA137223021BE00FFF90F /* items.json */,
 				607FACD51AFB9204008FA782 /* AppDelegate.swift */,
 				607FACD71AFB9204008FA782 /* ViewController.swift */,
 				20AD661B1F174B0900E8E6D7 /* VideoViewController.swift */,
@@ -262,6 +265,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA0AA138223021D900FFF90F /* items.json in Resources */,
 				607FACDB1AFB9204008FA782 /* Main.storyboard in Resources */,
 				607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */,
 				607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */,

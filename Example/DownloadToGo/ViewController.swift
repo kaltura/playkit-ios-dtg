@@ -202,8 +202,9 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        
-        let json = try! Data(contentsOf: URL(string: "http://localhost/dtg-items.json")!)
+        let jsonURL = Bundle.main.url(forResource: "items", withExtension: "json")!
+//        let jsonURL = URL(string: "http://localhost/items.json")!
+        let json = try! Data(contentsOf: jsonURL)
         let loadedItems = try! JSONDecoder().decode([ItemJSON].self, from: json)
         
         items = loadedItems.map{$0.toItem()}
@@ -211,7 +212,7 @@ class ViewController: UIViewController {
         let completedItems = try! self.cm.itemsByState(.completed)
         for (index, item) in completedItems.enumerated() {
             if item.id.hasPrefix("test") && item.id.hasSuffix("()") {
-                self.items.insert(Item(item.id, id: item.id, url: "file://localhost"), at: index)
+                self.items.insert(Item(item.id, id: item.id, url: "file://foo.bar/baz"), at: index)
             }
         }
 
@@ -285,10 +286,10 @@ class ViewController: UIViewController {
 //                    .setPreferredVideoBitrates([.hevc(300_000), .avc1(5_000_000)])
                     .setPreferredVideoCodecs([.hevc, .avc1])
                     .setPreferredAudioCodecs([.ac3, .mp4a])
-//                    .setAllTextLanguages()
-                    .setTextLanguages(["en"])
-                    .setAudioLanguages(["es", "ru"])
-//                    .setAllAudioLanguages()
+                    .setAllTextLanguages()
+//                    .setTextLanguages(["en"])
+//                    .setAudioLanguages(["en", "ru"])
+                    .setAllAudioLanguages()
                 
                 options.allowInefficientCodecs = true
                                 
