@@ -17,17 +17,109 @@ let setSmallerOfflineDRMExpirationMinutes: Int? = 5
 
 let defaultAudioBitrateEstimation: Int = 64000
 
+
+struct ItemJSON: Codable {
+    let id: String
+    let title: String?
+    let partnerId: Int?
+    let ks: String?
+    let env: String?
+
+    let url: String?
+    
+    let options: OptionsJSON?
+    
+    func toItem() -> Item {
+        let item: Item
+        let title = self.title ?? self.id
+        if let partnerId = self.partnerId {
+            item = Item(title, id: self.id, partnerId: partnerId, ks: self.ks, env: self.env)
+        } else if let url = self.url {
+            item = Item(title, id: self.id, url: url)
+        } else {
+            fatalError("Invalid item, missing `partnerId` and `url`")
+        }
+        item.options = options?.toOptions()
+        
+        return item
+    }
+}
+
+struct OptionsJSON: Codable {
+    let audioLangs: [String]?
+    let allAudioLangs: Bool?
+    let textLangs: [String]?
+    let allTextLangs: Bool?
+    let videoCodecs: [String]?
+    let audioCodecs: [String]?
+    let videoWidth: Int?
+    let videoHeight: Int?
+    let videoBitrates: [String:Int]?
+    let allowInefficientCodecs: Bool?
+    
+    func toOptions() -> DTGSelectionOptions {
+        let opts = DTGSelectionOptions()
+        
+        opts.allAudioLanguages = allAudioLangs ?? false
+        opts.audioLanguages = audioLangs
+        
+        opts.allTextLanguages = allTextLangs ?? false
+        opts.textLanguages = textLangs
+        
+        opts.allowInefficientCodecs = allowInefficientCodecs ?? false
+        
+        if let codecs = audioCodecs {
+            opts.audioCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.AudioCodec? in
+                switch tag {
+                case "mp4a": return .mp4a
+                case "ac3": return .ac3
+                case "eac3", "ec3": return .eac3
+                default: return nil
+                }
+            })
+        }
+
+        if let codecs = videoCodecs {
+            opts.videoCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.VideoCodec? in
+                switch tag {
+                case "avc1": return .avc1
+                case "hevc", "hvc1": return .hevc
+                default: return nil
+                }
+            })
+        }
+
+        opts.videoWidth = videoWidth
+        opts.videoHeight = videoHeight
+        
+        if let bitrates = videoBitrates {
+            opts.videoBitrates = bitrates.compactMap { (k ,v) -> DTGSelectionOptions.VideoBitrate? in
+                switch k {
+                case "avc1": return .avc1(v)
+                case "hevc", "hvc1": return .hevc(v)
+                default: return nil
+                }
+            }
+        }
+        
+        return opts
+    }
+}
+
 class Item {
+    static let defaultEnv = "http://cdnapi.kaltura.com"
     let id: String
     let title: String
     let partnerId: Int?
     
     var url: URL?
     var entry: PKMediaEntry?
+    
+    var options: DTGSelectionOptions?
 
-    init(id: String, url: String) {
+    init(_ title: String, id: String, url: String) {
         self.id = id
-        self.title = id
+        self.title = title
         self.url = URL(string: url)!
         
         let source = PKMediaSource(id, contentUrl: URL(string: url))
@@ -36,14 +128,14 @@ class Item {
         self.partnerId = nil
     }
     
-    init(_ title: String, id: String, partnerId: Int, env: String = "http://cdnapi.kaltura.com") {
+    init(_ title: String, id: String, partnerId: Int, ks: String? = nil, env: String? = nil) {
         self.id = id
         self.title = title
         self.partnerId = partnerId
         
         self.url = nil
         
-        OVPMediaProvider(SimpleSessionProvider(serverURL: env, partnerId: Int64(partnerId), ks: nil))
+        OVPMediaProvider(SimpleSessionProvider(serverURL: env ?? Item.defaultEnv, partnerId: Int64(partnerId), ks: ks))
             .set(entryId: id)
             .loadMedia { (entry, error) in
                 
@@ -69,18 +161,7 @@ class ViewController: UIViewController {
     let cm = ContentManager.shared
     let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
-    var items = [
-        Item(id: "test-avc1-hevc", url: "http://lbd.kaltura.com:8002/hls/p/2035982/sp/203598200/serveFlavor/entryId/1_zxezl831/flavorId/,0_zoobwgln,0_mhl1fsft,0_gh6vzyb4,0_3dmdm4j2,0_n6a8hl92,0_qt48opc3,1_vu1kvcyq,1_cl2gibmr,1_4frehgzh,1_c041jqe6,1_4kmrfoti,1_cbeqmb4n,1_z5t1xpeo,1_ayvsoa0u,1_3kidxbjz,/a.mp4.urlset/master.m3u8"),
-        Item(id: "QA multi/multi", url: "http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8"),
-        Item(id: "Eran multi audio", url: "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712"),
-        Item(id: "Trailer", url: "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8"),
-        Item(id: "AES-128 multi-key", url: "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8"),
-        Item(id: "bunny", url: "https://noamtamim.com/hls-bunny/index.m3u8"),
-        Item("FPS: Ella 1", id: "1_x14v3p06", partnerId: 1788671),
-        Item("FPS: QA 1", id: "0_4s6xvtx3", partnerId: 4171, env: "http://cdntesting.qa.mkaltura.com"),
-        Item("FPS: QA 2", id: "0_7o8zceol", partnerId: 4171, env: "http://cdntesting.qa.mkaltura.com"),
-        Item("Clear: Kaltura", id: "1_sf5ovm7u", partnerId: 243342),
-    ]
+    var items = [Item]()
     
     let itemPickerView = UIPickerView()
     
@@ -122,10 +203,15 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         
+        let json = try! Data(contentsOf: URL(string: "http://localhost/dtg-items.json")!)
+        let loadedItems = try! JSONDecoder().decode([ItemJSON].self, from: json)
+        
+        items = loadedItems.map{$0.toItem()}
+        
         let completedItems = try! self.cm.itemsByState(.completed)
         for (index, item) in completedItems.enumerated() {
             if item.id.hasPrefix("test") && item.id.hasSuffix("()") {
-                self.items.insert(Item(id: item.id, url: "file://localhost"), at: index)
+                self.items.insert(Item(item.id, id: item.id, url: "file://localhost"), at: index)
             }
         }
 
@@ -224,7 +310,7 @@ class ViewController: UIViewController {
                 
                 
                 
-                try self.cm.loadItemMetadata(id: self.selectedItem.id, options: options)
+                try self.cm.loadItemMetadata(id: self.selectedItem.id, options: self.selectedItem.options)
 //                try self.cm.loadItemMetadata(id: self.selectedItem.id, preferredVideoBitrate: 300000)
                 print("Item Metadata Loaded")
                 
@@ -401,6 +487,7 @@ class ViewController: UIViewController {
                 }
             }
         }))
+        
         self.present(actionAlertController, animated: true, completion: nil)
     }
     

@@ -14,7 +14,7 @@ import PlayKit
 class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     var downloadedExp: XCTestExpectation?
-    var id: String! // assigned in setUp() and removed in tearDown()
+    var id: String?
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         print(id, "\(Double(totalBytesDownloaded)/1024/1024) / \(Double(totalBytesEstimated ?? -1)/1024/1024)")
@@ -74,7 +74,8 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     override func tearDown() {
-        try! cm.removeItem(id: id)
+        guard let id = self.id else {return}
+//        try! cm.removeItem(id: id)
     }
     
     
@@ -87,18 +88,20 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     func item() -> DTGItem {
-        return self.item(self.id)!
+        guard let id = self.id else {fatalError()}
+        return self.item(id)!
     }
     
     func startItem() {
+        guard let id = self.id else {return}
         downloadedExp = XCTestExpectation(description: "Download item")
-        try! cm.startItem(id: self.id)
+        try! cm.startItem(id: id)
     }
     
     func newItem(_ url: String, _ function: String = #function) {        
         self.id = function
 
-        try! cm.addItem(id: id, url: URL(string: url)!)
+        try! cm.addItem(id: function, url: URL(string: url)!)
     }
     
     func removeItem() {
@@ -106,7 +109,8 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     func loadItem(_ options: DTGSelectionOptions?) {
-        try! cm.loadItemMetadata(id: self.id, options: options)
+        guard let id = self.id else {return}
+        try! cm.loadItemMetadata(id: id, options: options)
     }
     
     func allLangs() -> DTGSelectionOptions {
@@ -118,6 +122,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     func localEntry() -> PKMediaEntry {
+        guard let id = self.id else {fatalError()}
         return PKMediaEntry(id, sources: [PKMediaSource(id, contentUrl: try! cm.itemPlaybackUrl(id: id))])
     }
     
