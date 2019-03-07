@@ -32,7 +32,7 @@ justBuild() {
   echo Building the test app
   cd Example
   pod install
-  xcodebuild test  -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,OS=12.1,name=iPhone X' | tee xcodebuild.log | xcpretty -r html
+  xcodebuild test  -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone X' | tee xcodebuild.log | xcpretty -r html
   zip --junk-paths data.zip xcodebuild.log build/reports/tests.html
   curl -v "$ARTIFACT_UPLOAD_URL" -Fdata.zip=@data.zip
 }
