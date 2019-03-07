@@ -32,7 +32,8 @@ justBuild() {
   echo Building the test app
   cd Example
   pod install
-  xcodebuild build -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO | xcpretty
+  xcodebuild test  -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,OS=12.1,name=iPhone X' | tee xcodebuild.log | xcpretty
+  # xcodebuild build -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO | xcpretty
 }
 
 libLint() {
@@ -42,12 +43,13 @@ libLint() {
 
 
 FLAG=$(mktemp)
-keepAlive $FLAG &
 
 if [[ $TRAVIS_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  keepAlive $FLAG &
   # If we're building a release tag (v1.2.3) push to cocoapods
   trunkPush
 elif [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
+  keepAlive $FLAG &
   # A cron build should do a full build (daily)
   libLint
 else

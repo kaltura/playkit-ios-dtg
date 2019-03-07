@@ -197,7 +197,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         playItem(audioLangs: ["en", "es"], textLangs: ["en", "ru", "nl"])
 
         removeItem()
-}
+    }
     
     func testBasicDownload_3() {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")

@@ -83,6 +83,7 @@ class HLSLocalizerTest: XCTestCase {
         try! hlsLoc.loadMetadata()
         
         func print_properties(mirror: Mirror) {
+            print("print_properties (hlsLoc)")
             for c in mirror.children {
                 print("\(c.label ?? "??") = \(c.value)")
             }
