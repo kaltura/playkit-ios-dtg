@@ -16,6 +16,9 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     var downloadedExp: XCTestExpectation?
     var id: String?
     
+    // It's not possible to play on travis because of the microphone permission issue (https://forums.developer.apple.com/thread/110423)
+    static let dontPlay = ProcessInfo.processInfo.environment["TRAVIS"] == "true"
+    
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         print(id, "\(Double(totalBytesDownloaded)/1024/1024) / \(Double(totalBytesEstimated ?? -1)/1024/1024)")
     }
@@ -127,6 +130,9 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     func playItem(audioLangs: [String] = [], textLangs: [String] = []) {
+        
+        if DownloadTest.dontPlay {return}
+        
         let player = PlayKitManager.shared.loadPlayer(pluginConfig: nil)
         
         let canPlay = XCTestExpectation(description: "canPlay \(id!)")
