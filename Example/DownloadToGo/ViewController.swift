@@ -198,9 +198,13 @@ class ViewController: UIViewController {
     @IBOutlet weak var itemTextField: UITextField!
     @IBOutlet weak var progressView: UIProgressView!
     @IBOutlet weak var languageCodeTextField: UITextField!
+    @IBOutlet weak var progressLabel: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(showInfo(_:)))
+        progressLabel.addGestureRecognizer(recognizer)
         
         let jsonURL = Bundle.main.url(forResource: "items", withExtension: "json")!
 //        let jsonURL = URL(string: "http://localhost/items.json")!
@@ -245,12 +249,12 @@ class ViewController: UIViewController {
     @IBAction func addItem(_ sender: UIButton) {
         
         guard let entry = self.selectedItem.entry else {
-            toastMedium("No entry")
+            toast("No entry")
             return
         }
         
         guard let mediaSource = lam.getPreferredDownloadableMediaSource(for: entry) else {
-            toastMedium("No media source")
+            toast("No media source")
             return
         }
         
@@ -263,12 +267,12 @@ class ViewController: UIViewController {
                 item = try cm.addItem(id: entry.id, url: mediaSource.contentUrl!)
             }
         } catch {
-            toastMedium("Can't add item: " + error.localizedDescription)
+            toast("Can't add item: " + error.localizedDescription)
             return
         }
 
         guard let dtgItem = item else {
-            toastMedium("Can't add item")
+            toast("Can't add item")
             return
         }
         
@@ -317,7 +321,7 @@ class ViewController: UIViewController {
                 
             } catch {
                 DispatchQueue.main.async {
-                    self.toastMedium("loadItemMetadata failed \(error)")
+                    self.toast("loadItemMetadata failed \(error)")
                 }
             }
         }
@@ -327,7 +331,7 @@ class ViewController: UIViewController {
         do {
             try cm.startItem(id: self.selectedItem.id)
         } catch {
-            toastLong(error.localizedDescription)
+            toast(error.localizedDescription)
         }
     }
     
@@ -335,7 +339,7 @@ class ViewController: UIViewController {
         do {
             try cm.pauseItem(id: self.selectedItem.id)
         } catch {
-            toastLong(error.localizedDescription)
+            toast(error.localizedDescription)
         }
     }
     
@@ -343,20 +347,20 @@ class ViewController: UIViewController {
         let id = self.selectedItem.id
         do {
             guard let url = try self.cm.itemPlaybackUrl(id: id) else {
-                toastMedium("Can't get local url")
+                toast("Can't get local url")
                 return
             }
             
             lam.unregisterDownloadedAsset(location: url, callback: { (error) in
                 DispatchQueue.main.async {
-                    self.toastMedium("Unregister complete")
+                    self.toast("Unregister complete")
                 }
             })
             
             try? cm.removeItem(id: id)
             
         } catch {
-            toastLong(error.localizedDescription)
+            toast(error.localizedDescription)
         }
     }
     
@@ -364,25 +368,25 @@ class ViewController: UIViewController {
         let id = self.selectedItem.id
         do {
             guard let url = try self.cm.itemPlaybackUrl(id: id) else {
-                toastMedium("Can't get local url")
+                toast("Can't get local url")
                 return
             }
             
             guard let entry = self.selectedItem.entry, 
                 let source = lam.getPreferredDownloadableMediaSource(for: entry) else {
                     
-                    toastMedium("No valid source")
+                    toast("No valid source")
                     return
             }
                         
             lam.renewDownloadedAsset(location: url, mediaSource: source) { (error) in
                 DispatchQueue.main.async {
-                    self.toastMedium("Renew complete")
+                    self.toast("Renew complete")
                 }
             }
             
         } catch {
-            toastLong(error.localizedDescription)
+            toast(error.localizedDescription)
         }
     }
 
@@ -390,26 +394,56 @@ class ViewController: UIViewController {
         let id = self.selectedItem.id
         do {
             guard let url = try self.cm.itemPlaybackUrl(id: id) else {
-                toastMedium("Can't get local url")
+                toast("Can't get local url")
                 return
             }
             
             guard let exp = lam.getLicenseExpirationInfo(location: url) else {
-                toastMedium("Unknown")
+                toast("Unknown")
                 return
             }
             
             let expString = DateFormatter.localizedString(from: exp.expirationDate, dateStyle: .long, timeStyle: .long)
             
             if exp.expirationDate < Date() {
-                toastLong("EXPIRED at \(expString)")
+                toast("EXPIRED at \(expString)")
             } else {
-                toastLong("VALID until \(expString)")
+                toast("VALID until \(expString)")
             }
             
         } catch {
-            toastLong(error.localizedDescription)
+            toast(error.localizedDescription)
         }
+    }
+    
+    @IBAction func showInfo(_ sender: UIButton) {
+        
+        func name(_ code: String) -> String {
+            return Locale.current.localizedString(forLanguageCode: code) ?? (code + "?")
+        }
+        
+        var msg = ""
+        do {
+            if let item = try cm.itemById(selectedItem.id) {
+                let audioLangs = item.selectedAudioTracks.map {name($0.languageCode)}
+                let textLangs = item.selectedTextTracks.map {name($0.languageCode)}
+                
+                msg.append("Est. size: " + String(format: "%.3f MB", Double(item.estimatedSize ?? 0) / 1024 / 1024))
+                msg.append("\nDL size: " + String(format: "%.3f MB", Double(item.downloadedSize) / 1024 / 1024))
+                
+                if audioLangs.count > 0 {
+                    msg.append("\nAudio: " + audioLangs.joined(separator: ", "))
+                }
+                if textLangs.count > 0 {
+                    msg.append("\nText: " + textLangs.joined(separator: ", "))
+                }
+            }
+            
+        } catch {
+            msg.append(error.localizedDescription)
+        }
+        
+        toast(msg)
     }
     
     @IBAction func actionBarButtonTouched(_ sender: UIBarButtonItem) {
@@ -438,7 +472,7 @@ class ViewController: UIViewController {
                         }
                         fileHandle.closeFile()
                         DispatchQueue.main.async {
-                            self.toastMedium("Finished Filling Device with Dummy Data")
+                            self.toast("Finished Filling Device with Dummy Data")
                         }
                     } catch {
                         print("error: \(error)")
@@ -466,7 +500,7 @@ class ViewController: UIViewController {
                         fileHandle.truncateFile(atOffset: fileHandle.seekToEndOfFile() - UInt64(sizeInMb * 1000000))
                         fileHandle.closeFile()
                         DispatchQueue.main.async {
-                            self.toastMedium("Finished Updating Device Dummy Data File")
+                            self.toast("Finished Updating Device Dummy Data File")
                         }
                     } catch {
                         print("error: \(error)")
@@ -512,19 +546,11 @@ class ViewController: UIViewController {
         }
     }
     
-    func toastShort(_ message: String) {
-        print(message)
-        self.view!.makeToast(message, duration: 0.6, position: CSToastPositionCenter)
-    }
-    
-    func toastMedium(_ message: String) {
-        print(message)
-        self.view!.makeToast(message, duration: 1.0, position: CSToastPositionCenter)
-    }
-    
-    func toastLong(_ message: String) {
-        print(message)
-        self.view!.makeToast(message, duration: 4, position: CSToastPositionCenter)
+    func toast(_ message: String, _ duration: TimeInterval = 0) {
+        print("[TOAST]", message)
+        self.view!.makeToast(message, 
+                             duration: duration > 0 ? duration : Double(message.count) * 0.050, 
+                             position: CSToastPositionCenter)
     }
 }
 
@@ -538,13 +564,13 @@ extension ViewController {
         do {
             if identifier == self.videoViewControllerSegueIdentifier {
                 guard let item = try cm.itemById(self.selectedItem.id) else {
-                    toastMedium("cannot segue to video view controller until download is finished")
+                    toast("cannot segue to video view controller until download is finished")
                     return false
                 }
                 if item.state == .completed {
                     return true
                 }
-                toastMedium("cannot segue to video view controller until download is finished")
+                toast("cannot segue to video view controller until download is finished")
                 return false
             }
         } catch {
