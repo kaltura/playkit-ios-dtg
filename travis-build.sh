@@ -32,9 +32,10 @@ justBuild() {
   echo Building the test app
   cd Example
   pod install
-  env > env.txt
   CODE=0
-  xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone X' | tee xcodebuild.log | xcpretty -r html || export CODE=$?
+  xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone X' | tee xcodebuild.log | xcpretty -r html -f `xcpretty-travis-formatter` || CODE=$?
+  export CODE
+  env > env.txt
   zip --junk-paths data.zip xcodebuild.log build/reports/tests.html env.txt
   curl "$ARTIFACT_UPLOAD_URL" -Fdata.zip=@data.zip -FResult=$CODE
   [ $CODE == 0 ]
