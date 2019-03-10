@@ -10,8 +10,8 @@ import XCTest
 @testable import DownloadToGo
 
 
-public func eq<T>(_ expression1: @autoclosure () throws -> T, _ expression2: @autoclosure () throws -> T, file: StaticString = #file, line: UInt = #line) where T : Equatable {
-    XCTAssertEqual(expression1, expression2, "", file: file, line: line)
+public func eq<T>(_ expression1: @autoclosure () throws -> T, _ expression2: @autoclosure () throws -> T, _ message: String = "", file: StaticString = #file, line: UInt = #line) where T : Equatable {
+    XCTAssertEqual(expression1, expression2, message, file: file, line: line)
 }
 
 

@@ -49,7 +49,8 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     func waitForDownload(_ timeout: TimeInterval = 300) {
         if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
-            eq(item().state, DTGItemState.completed)
+            let it = item()
+            eq(it.state, DTGItemState.completed, "downloaded=\(it.downloadedSize)")
         }
     }
     
@@ -86,7 +87,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     override func tearDown() {
         guard let id = self.id else {return}
-//        try! cm.removeItem(id: id)
+        try! cm.removeItem(id: id)
     }
     
     
@@ -113,10 +114,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         self.id = function
 
         try! cm.addItem(id: function, url: URL(string: url)!)
-    }
-    
-    func removeItem() {
-//        try! cm.removeItem(id: id)
     }
     
     func loadItem(_ options: DTGSelectionOptions?) {
@@ -196,8 +193,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 47229736)
         
         playItem()
-        
-        removeItem()
     }
     
     func testBasicDownload_2() {
@@ -212,8 +207,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 60_758_276)
         
         playItem(audioLangs: ["en", "es"], textLangs: ["en", "ru", "nl"])
-
-        removeItem()
     }
     
     func testBasicDownload_3() {
@@ -228,8 +221,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 168_808_644)
         
         playItem(audioLangs: ["en", "es"], textLangs: ["en", "ru", "nl"])
-
-        removeItem()
     }
     
     func testHEVC_1() {
@@ -244,8 +235,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 63_101_824)
         
         playItem()
-
-        removeItem()
     }
     
     func testMultiAESKey() {
@@ -260,8 +249,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 78_614_704)
         
         playItem()
-
-        removeItem()
     }
 }
 
