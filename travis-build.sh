@@ -30,7 +30,6 @@ trunkPush() {
 
 justBuild() {
   echo Building the test app
-  touch /tmp/TravisCI
   cd Example
   pod install
   xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone X' | tee xcodebuild.log | xcpretty -r html

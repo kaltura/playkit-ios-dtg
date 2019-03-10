@@ -18,7 +18,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
 
     // It's not possible to play on travis because of the microphone permission issue (https://forums.developer.apple.com/thread/110423)
     #if targetEnvironment(simulator)
-    static let dontPlay = FileManager.default.fileExists(atPath: "/tmp/TravisCI")
+    static let dontPlay = FileManager.default.fileExists(atPath: "/tmp/DontPlay")
     #else
     static let dontPlay = false
     #endif    
