@@ -203,6 +203,50 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         playItem()
     }
     
+    func check(_ id: String = #function) {
+        newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8", id)
+        loadItem(basic())
+        
+        eq(item().estimatedSize, 47_197_225)
+        
+        startItem()
+        waitForDownload()
+        
+        eq(item().downloadedSize, 47_229_736)
+    }
+    
+    func test1() {
+        check()
+    }
+    
+    func test2() {
+        check()
+    }
+    
+    func test3() {
+        check()
+    }
+    
+    func test4() {
+        check()
+    }
+    
+    func test5() {
+        check()
+    }
+    
+    func test6() {
+        check()
+    }
+    
+    func test7() {
+        check()
+    }
+    
+    func test8() {
+        check()
+    }
+    
     func testBasicDownload_2() {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")
         loadItem(allLangs())
