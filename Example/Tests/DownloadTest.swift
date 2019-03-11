@@ -36,14 +36,13 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
                 assert(id == selfId, "Id doesn't match")
                 print("QQQ item \(id) completed")
                 
-                
                 // Check if it's in completed state
-                eq(item().state, DTGItemState.completed)
+                eq(item().state, DTGItemState.completed, "before wait #1")
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     let it = self.item()
                     // Check if it's in completed state, after delay
-                    eq(it.state, DTGItemState.completed, "downloaded=\(it.downloadedSize)")
+                    eq(it.state, DTGItemState.completed, "after wait #2")
                     self.downloadedExp?.fulfill()
                 }
             }
