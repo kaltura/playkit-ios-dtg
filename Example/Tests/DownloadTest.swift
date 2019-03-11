@@ -15,7 +15,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     var downloadedExp: XCTestExpectation?
     var id: String?
-
+    
     // It's not possible to play on travis because of the microphone permission issue (https://forums.developer.apple.com/thread/110423)
     #if targetEnvironment(simulator)
     static let dontPlay = FileManager.default.fileExists(atPath: "/tmp/DontPlay")
@@ -30,12 +30,22 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
         
         print("QQQ item \(id) moved to state \(newState)")
-
+        
         if let selfId = self.id {
             if newState == .completed {
                 assert(id == selfId, "Id doesn't match")
                 print("QQQ item \(id) completed")
-                downloadedExp?.fulfill()
+                
+                
+                // Check if it's in completed state
+                eq(item().state, DTGItemState.completed)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    let it = self.item()
+                    // Check if it's in completed state, after delay
+                    eq(it.state, DTGItemState.completed, "downloaded=\(it.downloadedSize)")
+                    self.downloadedExp?.fulfill()
+                }
             }
         } else {
             // setUp
@@ -49,8 +59,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     func waitForDownload(_ timeout: TimeInterval = 300) {
         if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
-            let it = item()
-            eq(it.state, DTGItemState.completed, "downloaded=\(it.downloadedSize)")
+            print("QQQ download fulfilled")
         }
     }
     
@@ -65,7 +74,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         try! cm.start { 
             print("QQQ started dtg")
         }
-
+        
         for s in DTGItemState.allCases {
             for i in try! cm.itemsByState(s) {
                 try! cm.removeItem(id: i.id)
@@ -112,7 +121,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     func newItem(_ url: String, _ function: String = #function) {        
         self.id = function
-
+        
         try! cm.addItem(id: function, url: URL(string: url)!)
     }
     
@@ -151,12 +160,12 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         }
         
         player.addObserver(self, event: PlayerEvent.tracksAvailable) { (e) in
-        
+            
             if let tracks = e.tracks {
                 let textTracks = tracks.textTracks?.map{ $0.language ?? "??" } ?? []
                 let audioTracks = tracks.audioTracks?.map{ $0.language ?? "??" } ?? []
                 print("QQQ tracks for \(self.id!):", audioTracks, textTracks)
-
+                
                 for lang in audioLangs {
                     XCTAssert(audioTracks.contains(lang), "\(self.id!): \(audioTracks) does not contain \(lang)")
                 }
@@ -185,12 +194,12 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")
         loadItem(basic())
         
-        eq(item().estimatedSize, 47197225)
+        eq(item().estimatedSize, 47_197_225)
         
         startItem()
         waitForDownload()
         
-        eq(item().downloadedSize, 47229736)
+        eq(item().downloadedSize, 47_229_736)
         
         playItem()
     }
