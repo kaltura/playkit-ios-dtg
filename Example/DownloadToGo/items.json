@@ -87,5 +87,28 @@
             "videoBitrates": {"hevc": 600000, "avc1": 800000},
             "allowInefficientCodecs": true
         }
-    }
+    },
+    {
+        "title": "hevc+ but no hevc",
+        "id": "1_w9zx2eti+-",
+        "url": "https://cdnapisec.kaltura.com/p/0/playManifest/entryId/0_axrfacp3/format/applehttp/protocol/https/flavorParamIds/2390161,2390171,2390181,2390201,487091,487081,487071,487061/a.m3u8",
+        "options": {
+            "allowInefficientCodecs": true,
+            "videoCodecs": ["avc1"],
+        }
+    },
+    {
+        "title": "Kaltura 360p", "id": "k-360p",
+        "url": "https://cdnapisec.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/format/applehttp/protocol/https/name/a.m3u8",
+        "options": {
+            "videoHeight": 360,
+        }        
+    },
+    {
+        "title": "Kaltura 720p", "id": "k-720p",
+        "url": "https://cdnapisec.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/format/applehttp/protocol/https/name/a.m3u8",
+        "options": {
+            "videoHeight": 720,
+        }        
+    },
 ]

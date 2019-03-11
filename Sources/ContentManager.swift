@@ -671,12 +671,9 @@ private extension ContentManager {
     
     func notifyItemState(_ id: String, newState: DTGItemState, error: Error? = nil) {
         log.info("item: \(id), state updated, new state: \(newState.asString())")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { 
+        DispatchQueue.main.async {
             self.delegate?.item(id: id, didChangeToState: newState, error: error)
         }
-//        DispatchQueue.main.async {
-//            self.delegate?.item(id: id, didChangeToState: newState, error: error)
-//        }
     }
     
     func removeDownloader(withId itemId: String) {

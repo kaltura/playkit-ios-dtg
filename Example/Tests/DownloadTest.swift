@@ -37,12 +37,9 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
                 print("QQQ item \(id) completed")
                 
                 // Check if it's in completed state
-                eq(item().state, DTGItemState.completed, "before wait #1")
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    let it = self.item()
-                    // Check if it's in completed state, after delay
-                    eq(it.state, DTGItemState.completed, "after wait #2")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    // Only in travis, sometimes it takes a while until the state is reflected in db.
+                    eq(self.item().state, DTGItemState.completed)
                     self.downloadedExp?.fulfill()
                 }
             }
