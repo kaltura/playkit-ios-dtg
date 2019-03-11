@@ -35,17 +35,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             if newState == .completed {
                 assert(id == selfId, "Id doesn't match")
                 print("QQQ item \(id) completed")
-                
-
-                // Check if it's in completed state
-                eq(item().state, DTGItemState.completed)
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    let it = self.item()
-                    // Check if it's in completed state, after delay
-                    eq(it.state, DTGItemState.completed, "downloaded=\(it.downloadedSize)")
-                    self.downloadedExp?.fulfill()
-                }
+                downloadedExp?.fulfill()
             }
         } else {
             // setUp
@@ -59,7 +49,8 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     func waitForDownload(_ timeout: TimeInterval = 300) {
         if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
-            print("QQQ download fulfilled")
+            let it = item()
+            eq(it.state, DTGItemState.completed, "downloaded=\(it.downloadedSize)")
         }
     }
     
@@ -194,14 +185,14 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")
         loadItem(basic())
         
-        eq(item().estimatedSize, 47_197_225)
+        eq(item().estimatedSize, 47197225)
         
         startItem()
         waitForDownload()
         
-        eq(item().downloadedSize, 47_229_736)
+        eq(item().downloadedSize, 47229736)
         
-//        playItem()
+        playItem()
     }
     
     func testBasicDownload_2() {
@@ -256,21 +247,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         waitForDownload()
         
         eq(item().downloadedSize, 78_614_704)
-        
-        playItem()
-    }
-    
-    func _testLMI() {
-        cm.setDefaultAudioBitrateEstimation(bitrate: 192_000)
-        newItem("https://cdnapisec.kaltura.com/p/2265051/sp/2265051/playManifest/entryId/0_5ung41ui/flavorIds/0_0coldaow/deliveryProfileId/5382/protocol/https/format/applehttp/a.m3u8?ks=djJ8MjI2NTA1MXwKRQMI3sch_SBGkFrVrN7bNy4u4wVDmVCU5_w_zPb5ma-AP2rfwkIhtoECphC1jUZjD1R9bwFEgCOnLDcn_SsXwul30vo_NwL5QesydlEs_ulTNHS_d8_wk_hj56m-EZA=")
-        loadItem(basic().setAudioLanguages(["en", "cmn", "fr"]))
-        
-        eq(item().estimatedSize, 543_406_561)
-        
-        startItem()
-        waitForDownload()
-        
-        eq(item().downloadedSize, 625_278_976)
         
         playItem()
     }
