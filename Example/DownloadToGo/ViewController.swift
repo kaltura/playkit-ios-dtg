@@ -93,12 +93,15 @@ struct OptionsJSON: Codable {
         opts.videoHeight = videoHeight
         
         if let bitrates = videoBitrates {
-            opts.videoBitrates = bitrates.compactMap { (k ,v) -> DTGSelectionOptions.VideoBitrate? in
-                switch k {
-                case "avc1": return .avc1(v)
-                case "hevc", "hvc1": return .hevc(v)
-                default: return nil
+            for (codecId, bitrate) in bitrates {
+                let codec: DTGSelectionOptions.VideoCodec
+                switch codecId {
+                case "avc1": codec = .avc1
+                case "hevc", "hvc1": codec = .hevc
+                default: continue
                 }
+
+                opts.setMinVideoBitrate(codec, bitrate)
             }
         }
         
@@ -284,10 +287,10 @@ class ViewController: UIViewController {
                 var options: DTGSelectionOptions
                 
                 options = DTGSelectionOptions()
-                    .setPreferredVideoHeight(300)
-//                    .setPreferredVideoWidth(1000)
-//                    .setPreferredVideoBitrates([.hevc(3_000_000), .avc1(5_000_000)])
-//                    .setPreferredVideoBitrates([.hevc(300_000), .avc1(5_000_000)])
+                    .setMinVideoHeight(300)
+//                    .setMinVideoWidth(1000)
+                    .setMinVideoBitrate(.avc1, 3_000_000)
+                    .setMinVideoBitrate(.hevc, 5_000_000)
                     .setPreferredVideoCodecs([.hevc, .avc1])
                     .setPreferredAudioCodecs([.ac3, .mp4a])
                     .setAllTextLanguages()
@@ -300,15 +303,14 @@ class ViewController: UIViewController {
 //                options = DTGSelectionOptions()
 //                    .setTextLanguages(["he", "eng"])
 //                    .setAudioLanguages(["fr", "de"])
-//                    .setPreferredVideoHeight(600)
-//                    .setPreferredVideoWidth(800)
+//                    .setMinVideoHeight(600)
+//                    .setMinVideoWidth(800)
 //                
 //                options = DTGSelectionOptions()
 //                    .setPreferredVideoCodecs([.hevc])
 //                    .setPreferredAudioCodecs([.ac3])
 //                
 //                options = DTGSelectionOptions()
-//                    .setPreferredVideoBitrates([.hevc(10000000), .avc1(2000000)])
                 
                 
                 

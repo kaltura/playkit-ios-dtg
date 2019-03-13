@@ -124,8 +124,8 @@ class HLSLocalizerTest: XCTestCase {
     func testLocalAsset3() {
         let options = DTGSelectionOptions()
             .setAudioLanguages(["bul", "eng"])
-            .setPreferredVideoWidth(900)
-            .setPreferredVideoBitrates([.avc1(900_000)])
+            .setMinVideoWidth(900)
+            .setMinVideoBitrate(.avc1, 900_000)
         let hlsLoc = load("t1", options)
         verify(hlsLoc, 
                duration: 25.12,
@@ -140,8 +140,8 @@ class HLSLocalizerTest: XCTestCase {
     func testLocalAsset4() {
         let options = DTGSelectionOptions()
             .setAudioLanguages(["bul", "eng"])
-            .setPreferredVideoWidth(900)
-            .setPreferredVideoHeight(700)
+            .setMinVideoWidth(900)
+            .setMinVideoHeight(700)
         let hlsLoc = load("t1", options)
         verify(hlsLoc, 
                duration: 25.12,
@@ -156,7 +156,7 @@ class HLSLocalizerTest: XCTestCase {
     
     func testLocalAssetHEVC_1() {
         let options = DTGSelectionOptions()
-        options.setPreferredVideoWidth(1280)
+        options.setMinVideoWidth(1280)
         let hls = load("t2", options)
         verify(hls, duration: 883.148, taskCount: 93, videoBitrate: 1400032, estimatedSize: 883.148*1400032/8, resolution: "1280x544")
     }
@@ -164,7 +164,7 @@ class HLSLocalizerTest: XCTestCase {
     func testLocalAssetHEVC_2() {
         let options = DTGSelectionOptions()
         options.allowInefficientCodecs = true
-        options.setPreferredVideoWidth(1280)
+        options.setMinVideoWidth(1280)
         let hls = load("t2", options)
         verify(hls, duration: 883.148, taskCount: 93, videoBitrate: 781707, estimatedSize: 883.148*781707/8, resolution: "1280x544")
     }
@@ -180,7 +180,7 @@ class HLSLocalizerTest: XCTestCase {
     
     func testMultiMulti_2() {
         let options = DTGSelectionOptions()
-            .setPreferredVideoWidth(700)
+            .setMinVideoWidth(700)
         let hls = load(url_2, options)
         
         verify(hls, duration: 741.081, taskCount: 187, videoBitrate: 1722112, estimatedSize: 159528060, resolution: "1280x720")
@@ -188,7 +188,7 @@ class HLSLocalizerTest: XCTestCase {
     
     func testMultiMulti_3() {
         let options = DTGSelectionOptions()
-            .setPreferredVideoBitrates([.avc1(1_000_000)])
+            .setMinVideoBitrate(.avc1, 1_000_000)
             .setAllAudioLanguages(true)
             .setTextLanguages(["nl", "en"])
         let hls = load(url_2, options)

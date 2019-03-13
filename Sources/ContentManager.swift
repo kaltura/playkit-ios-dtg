@@ -374,7 +374,7 @@ public class ContentManager: NSObject, DTGContentManager {
         let options = DTGSelectionOptions()
         
         if let pvb = preferredVideoBitrate {
-            options.videoBitrates = [.avc1(pvb)]
+            options.setMinVideoBitrate(.avc1, pvb)
         }
         try loadItemMetadata(id: id, options: options)
     }

@@ -260,7 +260,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     func testBasicDownload_3() {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")
-        loadItem(allLangs().setPreferredVideoWidth(2000))
+        loadItem(allLangs().setMinVideoWidth(2000))
         
         eq(item().estimatedSize, 171_385_356)
         

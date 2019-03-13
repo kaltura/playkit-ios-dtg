@@ -1,5 +1,5 @@
 // ===================================================================================================
-// Copyright (C) 2017 Kaltura Inc.
+// Copyright (C) 2019 Kaltura Inc.
 //
 // Licensed under the AGPLv3 license, unless a different license for a 
 // particular library is specified in the applicable library path.
@@ -99,30 +99,18 @@ public class DTGSelectionOptions {
     
     /// Preferred video bitrates, **per codec**.
     ///
-    /// By default, the best bitrate for the device is selected. If specified, this list
-    /// overrides `videoCodecs`.
-    ///
-    /// Example: `[.hevc(2700000), .avc1(3200000)]`
+    /// By default, the best bitrate for the device is selected.
     ///
     /// - Attention:
     /// When setting this property, it is advised to include the max bitrate for every codec.
     /// Otherwise, if a codec not on this list is selected for download, the selected
     /// bitrate is not defined.
-    public var videoBitrates: [VideoBitrate]? = nil {
-        didSet {
-            videoCodecs = nil
-        }
-    }
+    public var videoBitrates: [VideoCodec: Int] = [:]
     
     /// Allow or disallow codecs that are not implemented in hardware.
     /// iOS 11 and up support HEVC, but hardware support is only available in iPhone 7 and later.
     /// Using a software decoder causes higher energy consumption, affecting battery life.
     public var allowInefficientCodecs: Bool = false
-    
-    public enum VideoBitrate {
-        case avc1(_ preferredBitrate: Int)
-        case hevc(_ preferredBitrate: Int)
-    }
     
     public enum VideoCodec: CaseIterable {
         
@@ -147,20 +135,20 @@ public class DTGSelectionOptions {
     // Convenience methods for setting the properties.
     
     @discardableResult
-    public func setPreferredVideoWidth(_ width: Int) -> Self {
+    public func setMinVideoWidth(_ width: Int) -> Self {
         self.videoWidth = width
         return self
     }
     
     @discardableResult
-    public func setPreferredVideoHeight(_ height: Int) -> Self {
+    public func setMinVideoHeight(_ height: Int) -> Self {
         self.videoHeight = height
         return self
     }
     
     @discardableResult
-    public func setPreferredVideoBitrates(_ prefs: [VideoBitrate]) -> Self {
-        self.videoBitrates = prefs
+    public func setMinVideoBitrate(_ codec: VideoCodec, _ bitrate: Int) -> Self {
+        self.videoBitrates[codec] = bitrate
         return self
     }
     

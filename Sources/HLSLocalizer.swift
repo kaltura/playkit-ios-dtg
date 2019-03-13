@@ -535,22 +535,19 @@ class HLSLocalizer {
         }
         
         // Filter by bitrate
-
-        for br in options.videoBitrates ?? [] {
-            let bitrate: Int
-            let codec: Codec
-            switch br {
-            case .avc1(let value):
-                bitrate = value
-                codec = avc1
-            case .hevc(let value):
-                bitrate = value
-                codec = hevc
-            }
-
+        var videoBitrates = options.videoBitrates
+        if videoBitrates[.avc1] == nil {
+            videoBitrates[.avc1] = 180_000
+        }
+        if videoBitrates[.hevc] == nil {
+            videoBitrates[.hevc] = 120_000
+        }
+        
+        for (codec, bitrate) in videoBitrates {
             guard let codecStreams = streams[codec] else { continue }
             streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
         }
+
         
         #if DEBUG
         print("Filtered video streams:", streams)
@@ -896,7 +893,7 @@ extension String {
 extension DTGSelectionOptions: CustomStringConvertible {
     public var description: String {
         return """
-        Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1) codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates ?? [])
+        Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1) codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates)
         Audio: all=\(allAudioLanguages) list=\(audioLanguages ?? []) codecs=\(audioCodecs ?? [])
         Text: all=\(allTextLanguages) list=\(textLanguages ?? [])
         """
