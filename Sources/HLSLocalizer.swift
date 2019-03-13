@@ -481,7 +481,7 @@ class HLSLocalizer {
         
         // Check if HEVC should be used. If not, we'll throw away all HEVC streams.
         
-        let allowHEVC = CodecSupport.hevc || (CodecSupport.softwareHEVC && options.allowInefficientCodecs)
+        let allowHEVC = CodecSupport.hardwareHEVC || (CodecSupport.softwareHEVC && options.allowInefficientCodecs)
         
         let allowAC3 = CodecSupport.ac3
         let allowEC3 = CodecSupport.ec3

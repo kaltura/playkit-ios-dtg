@@ -28,6 +28,7 @@ public class DTGSelectionOptions {
     /// ```
     /// ["fr", "de"]
     /// ```
+    /// An empty array means not downloading extra audio tracks at all.
     public var audioLanguages: [String]? = nil {
         didSet {
             if audioLanguages != nil {
@@ -44,6 +45,7 @@ public class DTGSelectionOptions {
     /// ```
     /// ["en"]
     /// ```
+    /// An empty array means not downloading text tracks at all.
     public var textLanguages: [String]? = nil {
         didSet {
             if textLanguages != nil {

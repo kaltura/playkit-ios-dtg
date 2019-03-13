@@ -51,10 +51,19 @@ public protocol DTGContentManager: class {
     /// the **best practice is to call this method from a background queue**.
     /// - Parameters:
     ///     - id: the item's unique id.
-    ///     - callback: block that takes the updated item.
+    ///     - preferredVideoBitrate: video bitrate to download
     /// - Throws: DTGError.itemNotFound
+    /// - Note: use `loadItemMetadata(id:options:)` for more control on downloaded tracks.
     func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws
     
+    /// Load metadata for the given item id with media selection options.
+    /// - Attention:
+    /// This method executes on the thread it is called and takes time to finish,
+    /// the **best practice is to call this method from a background queue**.
+    /// - Parameters:
+    ///     - id: the item's unique id.
+    ///     - options: track selection options
+    /// - Throws: DTGError.itemNotFound
     func loadItemMetadata(id: String, options: DTGSelectionOptions?) throws
     
     /// Start or resume item download.

@@ -45,7 +45,7 @@ struct CodecSupport {
     }()
     
     // HEVC is supported from iOS11, but by default we don't want to use it without hardware support
-    static let hevc: Bool = {
+    static let hardwareHEVC: Bool = {
         if #available(iOS 11.0, *) {
             return VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
         } else {
@@ -55,7 +55,7 @@ struct CodecSupport {
     
     static let softwareHEVC: Bool = {
         if #available(iOS 11.0, *) {
-            return !VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
+            return !hardwareHEVC
         } else {
             return false
         }
@@ -371,11 +371,20 @@ public class ContentManager: NSObject, DTGContentManager {
     
     public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
         
+        // Legacy method
+        
         let options = DTGSelectionOptions()
         
+        // Download all text and audio
+        options.setAllTextLanguages()
+        options.setAllAudioLanguages()
+        
+        // Set video bitrate, assuming the given value refers to AVC1
         if let pvb = preferredVideoBitrate {
             options.setMinVideoBitrate(.avc1, pvb)
+            options.setMinVideoBitrate(.hevc, Int(Double(pvb) * 0.70))   // Careful conversion ratio - 70/30%
         }
+        
         try loadItemMetadata(id: id, options: options)
     }
     
