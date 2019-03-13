@@ -306,6 +306,9 @@ class HLSLocalizer {
         guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
                 
         var localMaster = [M3U8_EXTM3U]
+        
+        localMaster.append(contentsOf: extraMasterTags(text: masterText))
+        
         localMaster.append(videoStream.localMasterLine(hasAudio: selectedAudioStreams.count > 0, hasText: selectedTextStreams.count > 0))
         
         for stream in selectedAudioStreams {
@@ -328,10 +331,27 @@ class HLSLocalizer {
         for stream in selectedTextStreams {
             try saveMediaPlaylist(stream)
         }
-}
+    }
+    
+    private func extraMasterTags(text: String) -> [String] {
+        let reader = M3U8LineReader(text: text)
+        var lines = [String]()
+        while true {
+            guard let line = reader?.next() else {break}
+            
+            if isFairPlaySessionKey(line: line) {
+                lines.append(line)
+            }
+        }
+        return lines
+    }
     
     private func isHLSAESKey(line: String) -> Bool {
         return line.hasPrefix(M3U8_EXT_X_KEY) && !line.contains(KEYFORMAT_FAIRPLAY)
+    }
+    
+    private func isFairPlaySessionKey(line: String) -> Bool {
+        return line.hasPrefix("#EXT-X-SESSION-KEY:") && line.contains(KEYFORMAT_FAIRPLAY)
     }
     
     private func saveMediaPlaylist<T>(_ stream: Stream<T>) throws {
