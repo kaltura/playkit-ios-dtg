@@ -14,8 +14,53 @@ import GCDWebServer
 import XCGLogger
 import PlayKitUtils
 import RealmSwift
+import AVFoundation
+import VideoToolbox
 
-let log = XCGLogger.default
+public let log: XCGLogger = {
+    #if DEBUG
+    let logLevel: XCGLogger.Level = .debug
+    #else
+    let logLevel: XCGLogger.Level = .info
+    #endif
+    
+    let logger = XCGLogger(identifier: "DTG")
+    logger.setup(level: logLevel, showLogIdentifier: true, showLevel: false, showFileNames: true, showLineNumbers: true, showDate: false)
+    return logger
+}()
+
+
+
+struct CodecSupport {
+    // AC-3 (Dolby Atmos)
+    static let ac3: Bool = AVURLAsset.audiovisualTypes().contains(AVFileType.ac3)
+    
+    // Enhanced AC-3 is supported only since iOS 9 (but not on all devices)
+    static let ec3: Bool = {
+        if #available(iOS 9.0, *) {
+            return AVURLAsset.audiovisualTypes().contains(AVFileType.eac3)
+        } else {
+            return false
+        }
+    }()
+    
+    // HEVC is supported from iOS11, but by default we don't want to use it without hardware support
+    static let hardwareHEVC: Bool = {
+        if #available(iOS 11.0, *) {
+            return VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
+        } else {
+            return false
+        }
+    }()
+    
+    static let softwareHEVC: Bool = {
+        if #available(iOS 11.0, *) {
+            return !hardwareHEVC
+        } else {
+            return false
+        }
+    }()
+}
 
 /************************************************************/
 // MARK: - DownloadItemTaskType
@@ -57,7 +102,7 @@ enum DownloadItemTaskType {
 
 public enum DTGError: LocalizedError {
     case itemNotFound(itemId: String)
-    /// Thrown when item cannot be started (casued when item state is other than metadata loaded)
+    /// Thrown when item cannot be started (caused when item state is other than metadata loaded)
     case invalidState(itemId: String)
     /// Thrown when item is already in the process of loading metadata
     case metadataLoading(itemId: String)
@@ -202,13 +247,6 @@ public class ContentManager: NSObject, DTGContentManager {
         // initialize db
         self.db = RealmDB()
         super.init()
-        // setup log default log level
-        #if DEBUG
-            let logLevel: XCGLogger.Level = .debug
-        #else
-            let logLevel: XCGLogger.Level = .info
-        #endif
-        log.setup(level: logLevel, showLevel: true, showFileNames: true, showLineNumbers: true, showDate: true)
         log.debug("*** ContentManager ***")
     }
     
@@ -292,7 +330,7 @@ public class ContentManager: NSObject, DTGContentManager {
         return item
     }
 
-    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
+    public func loadItemMetadata(id: String, options: DTGSelectionOptions?) throws {
         
         var item = try findItemOrThrow(id)
         
@@ -310,7 +348,7 @@ public class ContentManager: NSObject, DTGContentManager {
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
         let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), 
                                      downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), 
-                                     preferredVideoBitrate: preferredVideoBitrate, 
+                                     options: options, 
                                      audioBitrateEstimation: defaultAudioBitrateEstimation)
         
         
@@ -328,6 +366,26 @@ public class ContentManager: NSObject, DTGContentManager {
         item.selectedAudioTracks = localizer.selectedAudioTracksInfo
         try self.db.updateAfterMetadataLoaded(item: item)
         notifyItemState(item.id, newState: .metadataLoaded, error: nil)
+        
+    }
+    
+    public func loadItemMetadata(id: String, preferredVideoBitrate: Int?) throws {
+        
+        // Legacy method
+        
+        let options = DTGSelectionOptions()
+        
+        // Download all text and audio
+        options.setAllTextLanguages()
+        options.setAllAudioLanguages()
+        
+        // Set video bitrate, assuming the given value refers to AVC1
+        if let pvb = preferredVideoBitrate {
+            options.setMinVideoBitrate(.avc1, pvb)
+            options.setMinVideoBitrate(.hevc, Int(Double(pvb) * 0.70))   // Careful conversion ratio - 70/30%
+        }
+        
+        try loadItemMetadata(id: id, options: options)
     }
     
     public func startItem(id: String) throws {
@@ -650,5 +708,3 @@ extension MutableCollection {
         }
     }
 }
-
-

@@ -13,8 +13,8 @@ Pod::Spec.new do |s|
   s.source_files = 'Sources/**/*'
 
   s.dependency 'M3U8Kit', '0.2.3'
-  s.dependency 'GCDWebServer', '~> 3.4.2'
-  s.dependency 'RealmSwift', '~> 3.7.6'
+  s.dependency 'GCDWebServer', '~> 3.5.2'
+  s.dependency 'RealmSwift', '~> 3.13.1'
   s.dependency 'XCGLogger', '~> 6.1.0'
   s.dependency 'PlayKitUtils', '~> 0.1.6'
 end

@@ -52,6 +52,11 @@ class VideoViewController: UIViewController {
             player.prepare(MediaConfig(mediaEntry: mediaEntry))
             player.play()
             
+            player.addObserver(self, event: PlayerEvent.canPlay) { [weak self] (e) in
+                guard let strongSelf = self else { return }
+                strongSelf.player?.play()
+            }
+            
             player.addObserver(self, event: PlayerEvent.tracksAvailable) { [weak self] (event) in
                 guard let strongSelf = self else { return }
                 strongSelf.tracks = event.tracks

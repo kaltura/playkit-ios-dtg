@@ -1,0 +1,114 @@
+[
+    {
+        "title": "Clear: Kaltura", "id": "1_sf5ovm7u", "partnerId": 243342,
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }        
+    },
+    {
+        "title": "AES-128 multi-key",
+        "id": "AES-128 multi-key",
+        "url": "https://noamtamim.com/random/hls/test-enc-aes/multi.m3u8",
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }
+    },
+    {
+        "title": "Eran multi audio",
+        "id": "0_7s8q41df",
+        "url": "https://cdnapisec.kaltura.com/p/2035982/sp/203598200/playManifest/entryId/0_7s8q41df/format/applehttp/protocol/https/name/a.m3u8?deliveryProfileId=4712",
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }
+    },
+    {
+        "title": "Trailer",
+        "id": "0_ksthpwh8",
+        "url": "http://cdnbakmi.kaltura.com/p/1758922/sp/175892200/playManifest/entryId/0_ksthpwh8/format/applehttp/tags/ipad/protocol/http/f/a.m3u8",
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }
+    },
+    {
+        "title": "bunny",
+        "id": "bunny",
+        "url": "https://noamtamim.com/hls-bunny/index.m3u8",
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }
+    },
+    {
+        "title": "FPS: QA 1",
+        "id": "0_4s6xvtx3",
+        "partnerId": 4171,
+        "env": "http://cdntesting.qa.mkaltura.com",
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }
+    },
+    {
+        "title": "FPS: QA 2",
+        "id": "0_7o8zceol",
+        "partnerId": 4171,
+        "env": "http://cdntesting.qa.mkaltura.com",
+        "options": {
+            "allAudioLangs": true,
+            "allTextLangs": true,
+        }
+    },
+    {
+        "title": "QA multi/multi",
+        "id": "0_mskmqcit",
+        "url": "http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/flavorIds/0_et3i1dux,0_pa4k1rn9/format/applehttp/protocol/http/a.m3u8",
+        "options": {
+            "audioLangs": ["en"],
+            "textLangs": ["en", "ru"]
+        }
+    },
+    {
+        "title": "hevc-",
+        "id": "1_w9zx2eti",
+        "url": "https://cdnapisec.kaltura.com/p/0/playManifest/entryId/0_axrfacp3/format/applehttp/protocol/https/flavorParamIds/2390161,2390171,2390181,2390201,487091,487081,487071,487061/a.m3u8",
+        "options": {
+            "videoBitrates": {"hevc": 600000, "avc1": 800000}
+        }
+    },
+    {
+        "title": "hevc+",
+        "id": "1_w9zx2eti+",
+        "url": "https://cdnapisec.kaltura.com/p/0/playManifest/entryId/0_axrfacp3/format/applehttp/protocol/https/flavorParamIds/2390161,2390171,2390181,2390201,487091,487081,487071,487061/a.m3u8",
+        "options": {
+            "videoBitrates": {"hevc": 600000, "avc1": 800000},
+            "allowInefficientCodecs": true
+        }
+    },
+    {
+        "title": "hevc+ but no hevc",
+        "id": "1_w9zx2eti+-",
+        "url": "https://cdnapisec.kaltura.com/p/0/playManifest/entryId/0_axrfacp3/format/applehttp/protocol/https/flavorParamIds/2390161,2390171,2390181,2390201,487091,487081,487071,487061/a.m3u8",
+        "options": {
+            "allowInefficientCodecs": true,
+            "videoCodecs": ["avc1"],
+        }
+    },
+    {
+        "title": "Kaltura 360p", "id": "k-360p",
+        "url": "https://cdnapisec.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/format/applehttp/protocol/https/name/a.m3u8",
+        "options": {
+            "videoHeight": 360,
+        }        
+    },
+    {
+        "title": "Kaltura 720p", "id": "k-720p",
+        "url": "https://cdnapisec.kaltura.com/p/243342/sp/24334200/playManifest/entryId/1_sf5ovm7u/format/applehttp/protocol/https/name/a.m3u8",
+        "options": {
+            "videoHeight": 720,
+        }        
+    },
+]

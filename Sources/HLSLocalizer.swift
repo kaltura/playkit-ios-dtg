@@ -12,13 +12,29 @@
 import Foundation
 import M3U8Kit
 
+fileprivate let YES = "YES"
+fileprivate let NO = "NO"
 
 struct MockVideoTrack: DTGVideoTrack {
-    var width: Int?
+    let width: Int?
     
-    var height: Int?
+    let height: Int?
     
-    var bitrate: Int
+    let bitrate: Int
+    
+    let audioGroup: String?
+    
+    let textGroup: String?
+}
+
+extension MockVideoTrack {
+    func groupId(for type: M3U8MediaPlaylistType) -> String? {
+        switch type {
+        case M3U8MediaPlaylistTypeAudio: return self.audioGroup
+        case M3U8MediaPlaylistTypeSubtitle: return self.textGroup
+        default: return nil
+        }
+    }
 }
 
 public enum HLSLocalizerError: Error {
@@ -56,6 +72,7 @@ class Stream<T> {
     let mediaUrl: URL
     let mediaPlaylist: M3U8MediaPlaylist
     let type: M3U8MediaPlaylistType
+    let mapUrl: URL?
     
     init(streamInfo: T, mediaUrl: URL, type: M3U8MediaPlaylistType) throws {
         
@@ -65,30 +82,134 @@ class Stream<T> {
         self.mediaPlaylist = playlist
         self.mediaUrl = mediaUrl
         self.type = type
+        
+        if type != M3U8MediaPlaylistTypeSubtitle {
+            self.mapUrl = Stream.findMap(text: playlist.originalText)
+        } else {
+            self.mapUrl = nil
+        }
+    }
+    
+    static func findMap(text: String) -> URL? {
+        let reader = M3U8LineReader(text: text)
+        while true {
+            guard let line = reader?.next() else {return nil}
+            guard line.starts(with: M3U8_EXT_X_MAP) else {continue}
+            
+            guard let attr = line.m3u8Attribs(prefix: M3U8_EXT_X_MAP) else {continue}
+            
+            if let uri = attr[M3U8_EXT_X_MAP_URI] {
+                return URL(string: uri)
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    var trackType: DownloadItemTaskType {
+        switch type {
+        case M3U8MediaPlaylistTypeAudio:
+            return .audio
+        case M3U8MediaPlaylistTypeVideo: 
+            fallthrough
+        case M3U8MediaPlaylistTypeMedia:
+            return .video
+        case M3U8MediaPlaylistTypeSubtitle:
+            return .text
+        default:
+            return .video
+        }
     }
 }
 
-typealias VideoStream = Stream<M3U8ExtXStreamInf>
-typealias MediaStream = Stream<M3U8ExtXMedia>
+fileprivate func qs(_ s: String) -> String {
+    return "\"\(s)\""
+}
+
+class VideoStream: Stream<M3U8ExtXStreamInf>, CustomStringConvertible {
+    
+    var description: String {
+        return localMasterLine(hasAudio: true, hasText: true).replacingOccurrences(of: "\n", with: "\t")
+    }
+    
+    func localMasterLine(hasAudio: Bool, hasText: Bool) -> String {
+        let stream = streamInfo;
+        
+        var attribs = [(String, String)]()
+        
+        attribs.append((M3U8_EXT_X_STREAM_INF_BANDWIDTH, String(stream.bandwidth)))
+
+        attribs.append((M3U8_EXT_X_STREAM_INF_RESOLUTION, "\(Int(stream.resolution.width))x\(Int(stream.resolution.height))"))
+
+        if let audio = stream.audio, audio.count > 0, hasAudio {
+            attribs.append((M3U8_EXT_X_STREAM_INF_AUDIO, qs(audio)))
+        }
+        
+        if let subtitles = stream.subtitles, subtitles.count > 0, hasText {
+            attribs.append((M3U8_EXT_X_STREAM_INF_SUBTITLES, qs(subtitles)))
+        }
+        
+        if let codecsArray = stream.codecs as NSArray?, codecsArray.count > 0 {
+            let codecs = codecsArray.componentsJoined(by: ",")
+            attribs.append((M3U8_EXT_X_STREAM_INF_CODECS, qs(codecs)))
+        }
+        
+        return M3U8_EXT_X_STREAM_INF +
+            attribs.map { $0 + "=" + $1 }.joined(separator: ",") +
+            "\n" +
+            self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType)
+    }
+}
+
+class MediaStream: Stream<M3U8ExtXMedia>, CustomStringConvertible {
+
+    var description: String {
+        return localMasterLine().replacingOccurrences(of: "\n", with: "\t")
+    }
+    
+    func localMasterLine() -> String {
+        
+        let stream = streamInfo;
+        
+        var attribs = [(String, String)]()
+        
+        attribs.append((M3U8_EXT_X_MEDIA_TYPE, stream.type()))
+        attribs.append((M3U8_EXT_X_MEDIA_AUTOSELECT, stream.autoSelect() ? YES : NO))
+        attribs.append((M3U8_EXT_X_MEDIA_DEFAULT, stream.isDefault() ? YES : NO))
+        
+        attribs.append((M3U8_EXT_X_MEDIA_LANGUAGE, qs(stream.language())))
+        attribs.append((M3U8_EXT_X_MEDIA_GROUP_ID, qs(stream.groupId())))
+        attribs.append((M3U8_EXT_X_MEDIA_NAME, qs(stream.name())))
+        
+        attribs.append((M3U8_EXT_X_MEDIA_FORCED, stream.forced() ? YES : NO))
+        
+        if stream.bandwidth() > 0 {
+            attribs.append((M3U8_EXT_X_MEDIA_BANDWIDTH, String(stream.bandwidth())))
+        }
+        
+        attribs.append((M3U8_EXT_X_MEDIA_URI, qs(self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType))))
+        
+        return M3U8_EXT_X_MEDIA + attribs.map { $0 + "=" + $1 }.joined(separator: ",")
+    }
+    
+}
+
+fileprivate let KEYFORMAT_FAIRPLAY =    M3U8_EXT_X_KEY_KEYFORMAT + "=\"com.apple.streamingkeydelivery\""
+fileprivate let MASTER_PLAYLIST_NAME =  "master.m3u8"
 
 class HLSLocalizer {
     
-    enum Constants {
-        static let EXT_X_KEY = "#EXT-X-KEY:"
-        static let EXT_X_KEY_URI = "URI"
-        static let KEYFORMAT_FAIRPLAY = "KEYFORMAT=\"com.apple.streamingkeydelivery\""
-    }
     
     let itemId: String
     let masterUrl: URL
-    let preferredVideoBitrate: Int?
     let downloadPath: URL
+    let options: DTGSelectionOptions
     
     var tasks = [DownloadItemTask]()
     var duration: Double = Double.nan
     var estimatedSize: Int64?
     
-    var videoTrack: DTGVideoTrack?
+    var videoTrack: MockVideoTrack?
     
     var masterPlaylist: MasterPlaylist?
     var selectedVideoStream: VideoStream?
@@ -97,18 +218,20 @@ class HLSLocalizer {
     
     let audioBitrateEstimation: Int
 
-    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?, audioBitrateEstimation: Int) {
+    init(id: String, url: URL, downloadPath: URL, options: DTGSelectionOptions?, audioBitrateEstimation: Int) {
         self.itemId = id
         self.masterUrl = url
-        self.preferredVideoBitrate = preferredVideoBitrate
+        self.options = options ?? DTGSelectionOptions()
         self.downloadPath = downloadPath
         self.audioBitrateEstimation = audioBitrateEstimation
     }
     
-    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
+    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> MockVideoTrack {
         return MockVideoTrack(width: Int(videoStream.resolution.width), 
                               height: Int(videoStream.resolution.height), 
-                              bitrate: videoStream.bandwidth)
+                              bitrate: videoStream.bandwidth, 
+                              audioGroup: videoStream.audio, 
+                              textGroup: videoStream.subtitles)
     }
     
     func loadMetadata() throws {
@@ -117,6 +240,11 @@ class HLSLocalizer {
         
         // Only one video stream
         let videoStream = try selectVideoStream(master: master)
+        
+        
+        if let mapUrl = videoStream.mapUrl {
+            self.tasks.append(downloadItemTask(url: mapUrl, type: .video, order: 0))
+        }
         
         try addAllSegments(segmentList: videoStream.mediaPlaylist.segmentList, type: M3U8MediaPlaylistTypeVideo, setDuration: true)
         
@@ -128,6 +256,12 @@ class HLSLocalizer {
         try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
         self.selectedTextStreams.removeAll()
         try addAll(streams: master.textStreams(), type: M3U8MediaPlaylistTypeSubtitle)
+
+        log.debug("options: \(options)")
+        log.debug("videoStream: \(videoStream)")
+        log.debug("selectedAudioStreams: \(selectedAudioStreams)")
+        log.debug("selectedTextStreams: \(selectedTextStreams)")
+
         
         // Add encryption keys download tasks for all streams
         self.addKeyDownloadTasks(from: videoStream)
@@ -141,33 +275,6 @@ class HLSLocalizer {
     }
     
 
-    private func reduceMasterPlaylist(_ localText: String, _ selectedBitrate: Int) -> String {
-        let lines = localText.components(separatedBy: CharacterSet.newlines)
-        var reducedLines = [String]()
-        var removeStream = false
-        for line in lines {
-            if line.trimmingCharacters(in: .whitespaces).isEmpty {
-                continue
-            }
-            if line.hasPrefix("#EXT-X-STREAM-INF") {
-                if line.range(of: "BANDWIDTH=\(selectedBitrate),") == nil {
-                    removeStream = true
-                } else {
-                    reducedLines.append(line)
-                }
-            } else {
-                if removeStream {
-                    // just don't add it.
-                    removeStream = false    // don't remove next line
-                } else {
-                    reducedLines.append(line)
-                }
-            }
-        }
-        
-        return reducedLines.joined(separator: "\n")
-    }
-    
     private func createDirectories() throws {
         for type in DownloadItemTaskType.allTypes {
             try FileManager.default.createDirectory(at: downloadPath.appendingPathComponent(type.asString()), withIntermediateDirectories: true, attributes: nil)
@@ -190,65 +297,69 @@ class HLSLocalizer {
         
         // Localize the master
         guard let masterText = masterPlaylist?.originalText else { throw HLSLocalizerError.invalidState }
+
+
 #if DEBUG
-        try saveOriginal(text: masterText, url: masterUrl, as: "master.m3u8")
+        try saveOriginal(text: masterText, url: masterUrl, as: MASTER_PLAYLIST_NAME )
 #endif
-        let localText = NSMutableString(string: masterText)
 
         guard let videoStream = self.selectedVideoStream else { throw HLSLocalizerError.invalidState }
+                
+        var localMaster = [M3U8_EXTM3U]
         
-        localText.replace(playlistUrl: videoStream.mediaUrl, type: .video)
+        localMaster.append(contentsOf: extraMasterTags(text: masterText))
+        
+        localMaster.append(videoStream.localMasterLine(hasAudio: selectedAudioStreams.count > 0, hasText: selectedTextStreams.count > 0))
         
         for stream in selectedAudioStreams {
-            localText.replace(playlistUrl: stream.mediaUrl, type: .audio)
+            localMaster.append(stream.localMasterLine())
         }
-        
         for stream in selectedTextStreams {
-            localText.replace(playlistUrl: stream.mediaUrl, type: .text)
+            localMaster.append(stream.localMasterLine())
         }
         
-        let selectedVideoBitrate = videoStream.streamInfo.bandwidth
+        try save(text: localMaster.joined(separator: "\n") + "\n", as: MASTER_PLAYLIST_NAME)
         
-        let reducedMasterPlaylist = reduceMasterPlaylist(localText as String, selectedVideoBitrate)
-
-        try save(text: reducedMasterPlaylist, as: "master.m3u8")        
-
         // Localize the selected video stream
-        try saveMediaPlaylist(videoStream.mediaPlaylist, originalUrl: videoStream.mediaUrl, type: .video)
+        try saveMediaPlaylist(videoStream)
         
         // Localize the selected audio and text streams
         for stream in selectedAudioStreams {
-            try saveMediaPlaylist(stream.mediaPlaylist, originalUrl: stream.mediaUrl, type: .audio)
+            try saveMediaPlaylist(stream)
         }
 
         for stream in selectedTextStreams {
-            try saveMediaPlaylist(stream.mediaPlaylist, originalUrl: stream.mediaUrl, type: .text)
+            try saveMediaPlaylist(stream)
         }
-}
+    }
     
-    private func _saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
-        
-        guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
-        #if DEBUG
-            try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
-        #endif
-
-        let localText = NSMutableString(string: originalText)
-        
-        guard let segments = mediaPlaylist.segmentList else {throw HLSLocalizerError.invalidState}
-        for i in 0 ..< segments.countInt {
-            try localText.replace(segmentUrl: segments[i].uri.absoluteString, relativeTo: originalUrl.deletingLastPathComponent())
+    private func extraMasterTags(text: String) -> [String] {
+        let reader = M3U8LineReader(text: text)
+        var lines = [String]()
+        while true {
+            guard let line = reader?.next() else {break}
+            
+            if isFairPlaySessionKey(line: line) {
+                lines.append(line)
+            }
         }
-        
-        let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
-        try save(text: localText as String, as: target)
+        return lines
     }
     
     private func isHLSAESKey(line: String) -> Bool {
-        return line.hasPrefix(Constants.EXT_X_KEY) && !line.contains(Constants.KEYFORMAT_FAIRPLAY)
+        return line.hasPrefix(M3U8_EXT_X_KEY) && !line.contains(KEYFORMAT_FAIRPLAY)
     }
     
-    private func saveMediaPlaylist(_ mediaPlaylist: MediaPlaylist, originalUrl: URL, type: DownloadItemTaskType) throws {
+    private func isFairPlaySessionKey(line: String) -> Bool {
+        return line.hasPrefix("#EXT-X-SESSION-KEY:") && line.contains(KEYFORMAT_FAIRPLAY)
+    }
+    
+    private func saveMediaPlaylist<T>(_ stream: Stream<T>) throws {
+        let mediaPlaylist = stream.mediaPlaylist
+        let originalUrl = stream.mediaUrl
+        let mapUrl = stream.mapUrl
+        let type = stream.trackType
+        
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
             try saveOriginal(text: originalText, url: originalUrl, as: originalUrl.mediaPlaylistRelativeLocalPath(as: type))
@@ -261,66 +372,209 @@ class HLSLocalizer {
             if line.isEmpty {
                 continue
             }
-            if !line.hasPrefix("#") && i < segments.countInt && line == segments[i].uri.absoluteString {
-                localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
-                i += 1
-            } else if isHLSAESKey(line: line) { 
-                // has AES-128 key replace uri with local path
-                let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: Constants.EXT_X_KEY, seperatedBy: ",")
-                var updatedLine = Constants.EXT_X_KEY
-                for (index, attribute) in keyAttributes.enumerated() {
-                    var updatedAttribute = attribute
-                    if attribute.hasPrefix(Constants.EXT_X_KEY_URI) {
-                        var mutableAttribute = attribute
-                        // remove the url attribute tag
-                        mutableAttribute = mutableAttribute.replacingOccurrences(of: Constants.EXT_X_KEY_URI + "=", with: "")
-                        // remove quotation marks
-                        let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
-                        // create the content url
-                        let mediaUrl: URL = segments[i].mediaURL()
-                        guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
-                        updatedAttribute = "\(Constants.EXT_X_KEY_URI)=\"../key/\(url.segmentRelativeLocalPath())\""
-                    }
-                    if index != keyAttributes.count - 1 {
-                        updatedLine.append("\(updatedAttribute),")
-                    } else {
-                        updatedLine.append(updatedAttribute)
-                    }
+            
+            if line.hasPrefix("#") {
+                // Tag
+                
+                if isHLSAESKey(line: line) {
+                    let mediaUrl: URL = segments[i].mediaURL()
+
+                    let updatedLine = rewriteKeyTag(line: line, mediaUrl: mediaUrl)
+                    localLines.append(updatedLine)
+                    
+                } else if line.hasPrefix(M3U8_EXT_X_MAP) {
+                    guard let mapUrl = mapUrl else {continue}
+                    let localPath = mapUrl.segmentRelativeLocalPath()
+                    let localLine = line.replacingOccurrences(of: "URI=\"\(mapUrl)\"", with: "URI=\"\(localPath)\"")
+                    localLines.append(localLine)
+
+                } else {
+                    // Other tags
+                    localLines.append(line)
                 }
-                localLines.append(updatedLine)
+                
+                
             } else {
-                localLines.append(line)
+                // Not a tag
+                if i < segments.countInt && line == segments[i].uri.absoluteString {
+                    localLines.append(segments[i].mediaURL().segmentRelativeLocalPath())
+                    i += 1
+                } else {
+                    localLines.append(line)
+                }
             }
         }
         
         let target = originalUrl.mediaPlaylistRelativeLocalPath(as: type)
         try save(text: localLines.joined(separator: "\n") as String, as: target)
     }
-    
+
+    private func rewriteKeyTag(line: String, mediaUrl: URL) -> String { // has AES-128 key replace uri with local path
+        let keyAttributes = getSegmentAttributes(fromSegment: line, segmentPrefix: M3U8_EXT_X_KEY, seperatedBy: ",")
+        var updatedLine = M3U8_EXT_X_KEY
+        for (index, attribute) in keyAttributes.enumerated() {
+            var updatedAttribute = attribute
+            if attribute.hasPrefix(M3U8_EXT_X_KEY_URI) {
+                var mutableAttribute = attribute
+                // remove the url attribute tag
+                mutableAttribute = mutableAttribute.replacingOccurrences(of: M3U8_EXT_X_KEY_URI + "=", with: "")
+                // remove quotation marks
+                let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
+                // create the content url
+                guard let url = createContentUrl(from: uri, originalContentUrl: mediaUrl) else { break }
+                updatedAttribute = "\(M3U8_EXT_X_KEY_URI)=\"../key/\(url.segmentRelativeLocalPath())\""
+            }
+            if index != keyAttributes.count - 1 {
+                updatedLine.append("\(updatedAttribute),")
+            } else {
+                updatedLine.append(updatedAttribute)
+            }
+        }
+        return updatedLine
+    }
+
     private func selectVideoStream(master: MasterPlaylist) throws -> VideoStream {
-        let streams = master.videoStreams()
+        // The following options affect video stream selection:
+        //options?.allowInefficientCodecs (select HEVC even if device does not support it in hardware)
+        //options?.videoWidth|videoHeight
+        //options?.videoBitrates
+        //options?.videoCodecs
         
-        // Algorithm: sort ascending. Then find the first stream with bandwidth >= preferredVideoBitrate.
+        // Aliases
         
-        streams.sortByBandwidth(inOrder: .orderedAscending)
+        typealias Codec = DTGSelectionOptions.VideoCodec
+        typealias M3U8Stream = M3U8ExtXStreamInf
+        let avc1 = Codec.avc1
+        let hevc = Codec.hevc
+        let allCodecs = Codec.allCases
+        let mp4a = DTGSelectionOptions.AudioCodec.mp4a
+        let ac3 = DTGSelectionOptions.AudioCodec.ac3
+        let eac3 = DTGSelectionOptions.AudioCodec.eac3
+
+        // Utils
         
-        var selectedStreamInfo: M3U8ExtXStreamInf?
-        if let bitrate = preferredVideoBitrate {
-            for i in 0 ..< streams.countInt {
-                if streams[i].bandwidth >= bitrate {
-                    selectedStreamInfo = streams[i]
-                    break
+        func hasCodec(_ s: M3U8Stream, _ codec: String) -> Bool {
+            return s.codecs?.contains{($0 as? String)?.hasPrefix(codec) ?? false} ?? false
+        }
+        
+        func filter(streams: [M3U8Stream], 
+                    sortOrder: (M3U8Stream, M3U8Stream) -> Bool?, 
+                    filter: (M3U8Stream) -> Bool) -> [M3U8Stream] {
+            
+            if streams.count < 2 {
+                return streams
+            }
+            
+            let sorted = streams.stableSorted(by: sortOrder)
+            
+            let filtered = sorted.filter( filter )
+            
+            if filtered.isEmpty {
+                if let s = sorted.last {
+                    return [s]
+                } else {
+                    return []
                 }
+            }
+            return filtered
+        }
+        
+        // Check if HEVC should be used. If not, we'll throw away all HEVC streams.
+        
+        let allowHEVC = CodecSupport.hardwareHEVC || (CodecSupport.softwareHEVC && options.allowInefficientCodecs)
+        
+        let allowAC3 = CodecSupport.ac3
+        let allowEC3 = CodecSupport.ec3
+        
+        // Create a dictionary of streams by codec
+        var streams = [Codec: [M3U8Stream]]()
+        for c in allCodecs {
+            streams[c] = []
+        }
+        
+        // Copy streams from M3U8Kit's structure
+        let m3u8Streams = master.videoStreams()
+        m3u8Streams.sortByBandwidth(inOrder: .orderedAscending)
+        for i in 0 ..< m3u8Streams.countInt {
+            let s = m3u8Streams[i]
+
+            // if the stream uses an audio codec we can't play, skip it.
+            if hasCodec(s, ac3.tag) && !allowAC3 {
+                continue
+            } else if hasCodec(s, eac3.tag) && !allowEC3{
+                continue
+            }
+            
+            // add the stream to the correct array
+            if s.codecs == nil || hasCodec(s, avc1.tag) {
+                streams[avc1]?.append(s)
+            } else if allowHEVC && hasCodec(s, hevc.tag) {
+                streams[hevc]?.append(s)
+            }
+        }
+                
+        
+        #if DEBUG
+        print("Playable video streams:", streams)
+        #endif
+
+        
+        // Filter streams by video HEIGHT and WIDTH
+        
+        for c in allCodecs {
+            if let height = options.videoHeight {
+                streams[c] = filter(streams: streams[c]!, 
+                                    sortOrder: {$0.resolution.height < $1.resolution.height}, 
+                                    filter: { $0.resolution.height >= Float(height) })
+            }
+            if let width = options.videoWidth {
+                streams[c] = filter(streams: streams[c]!, 
+                                    sortOrder: {$0.resolution.width < $1.resolution.width}, 
+                                    filter: { $0.resolution.width >= Float(width) })
             }
         }
         
-        if selectedStreamInfo == nil {
-            selectedStreamInfo = streams.lastXStreamInf() // highest bitrate
+        // Filter by bitrate
+        var videoBitrates = options.videoBitrates
+        if videoBitrates[.avc1] == nil {
+            videoBitrates[.avc1] = 180_000
+        }
+        if videoBitrates[.hevc] == nil {
+            videoBitrates[.hevc] = 120_000
         }
         
-        guard let streamInfo = selectedStreamInfo else {throw NSError()}
+        for (codec, bitrate) in videoBitrates {
+            guard let codecStreams = streams[codec] else { continue }
+            streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
+        }
+
         
-        return try VideoStream(streamInfo: streamInfo, mediaUrl: streamInfo.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+        #if DEBUG
+        print("Filtered video streams:", streams)
+        #endif
+
+        // Now we have two lists -- hevc and avc1. Look at codec prefs.
+        
+        func videoStreamWithFirst(of codec: Codec) throws -> VideoStream {
+            guard let selected = streams[codec]?.first else {throw HLSLocalizerError.malformedPlaylist}
+            return try VideoStream(streamInfo: selected, mediaUrl: selected.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+        }
+        
+        // The easy case: only one codec has valid streams. Select the first stream from that codec.
+        if streams[avc1]?.isEmpty ?? true {
+            return try videoStreamWithFirst(of: hevc)
+        } else if streams[hevc]?.isEmpty ?? true {
+            return try videoStreamWithFirst(of: avc1)
+        }
+        
+        // Ok, both codecs have valid streams. What does the app prefer?
+        if let firstPrefCodec = options.videoCodecs?.first {
+            return try videoStreamWithFirst(of: firstPrefCodec)
+            
+        } else {
+            // app did not select -- we'll go with hevc (remember it's not empty)
+            return try videoStreamWithFirst(of: hevc)
+        }
     }
     
     private func addAllSegments(segmentList: M3U8SegmentInfoList, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
@@ -354,8 +608,6 @@ class HLSLocalizer {
     
     /// Adds download tasks for all encrpytion keys from the provided playlist.
     private func addKeyDownloadTasks<T>(from stream: Stream<T>) {
-        let keySegmentTagPrefix = Constants.EXT_X_KEY
-        let uriAttributePrefix = Constants.EXT_X_KEY_URI + "="
         let lines = stream.mediaPlaylist.originalText.components(separatedBy: .newlines)
         
         var downloadItemTasks = [DownloadItemTask]()
@@ -364,24 +616,14 @@ class HLSLocalizer {
         for line in lines {
             if isHLSAESKey(line: line) {
                 order += 1
-                // the attributes of the key are seperated by commas, need to seperate and get the URI to create the download task.
-                let keyAttributes = self.getSegmentAttributes(fromSegment: line, segmentPrefix: keySegmentTagPrefix, seperatedBy: ",")
-                for attribute in keyAttributes {
-                    if attribute.hasPrefix(uriAttributePrefix) { // extract the uri
-                        var mutableAttribute = attribute
-                        // can force unwrap because we check the prefix on the start.
-                        let urlAttributeRange = mutableAttribute.range(of: uriAttributePrefix)!
-                        // remove the url attribute tag
-                        mutableAttribute = mutableAttribute.replacingCharacters(in: urlAttributeRange, with: "")
-                        // remove quotation marks
-                        let uri = mutableAttribute.replacingOccurrences(of: "\"", with: "")
-                        // create the content url
-                        guard let url = createContentUrl(from: uri, originalContentUrl: stream.mediaUrl) else { break }
-                        // create and add download task
-                        let downloadTask = downloadItemTask(url: url, type: .key, order: order)
-                        downloadItemTasks.append(downloadTask)
-                    }
-                }
+                
+                guard let attr = line.m3u8Attribs(prefix: M3U8_EXT_X_KEY) else {continue}
+                
+                guard let uri = attr[M3U8_EXT_X_KEY_URI] else {continue}
+                guard let url = createContentUrl(from: uri, originalContentUrl: stream.mediaUrl) else {continue}
+                
+                let task = downloadItemTask(url: url, type: .key, order: order)
+                downloadItemTasks.append(task)
             }
         }
         
@@ -411,24 +653,51 @@ class HLSLocalizer {
     }
     
     private func addAll(streams: M3U8ExtXMediaList?, type: M3U8MediaPlaylistType) throws {
+        // TODO: what about options.audioCodecs?
+        
+        func canonicalLangList(_ list: [String]?) -> [String] {
+            return (list ?? []).map {Locale.canonicalLanguageIdentifier(from: $0)}
+        }
+        
         guard let streams = streams else { return }
+        
+        guard type == M3U8MediaPlaylistTypeAudio || type == M3U8MediaPlaylistTypeSubtitle else {
+            throw HLSLocalizerError.unknownPlaylistType
+        }         
+        
+        let langList = canonicalLangList(type.isAudio() ? options.audioLanguages : options.textLanguages)
+        let allLangs = type.isAudio() ? options.allAudioLanguages : options.allTextLanguages
         
         for i in 0 ..< streams.countInt {
             
-            let url: URL! = streams[i].m3u8URL()
+            let stream = streams[i]
+            
+            if let gid = videoTrack?.groupId(for: type) {
+                if gid != stream.groupId() { continue }
+            }
+
+            // if the stream has a declared language, check if it matches.
+            if let lang = stream.language() {
+                if !allLangs && !langList.contains(Locale.canonicalLanguageIdentifier(from: lang)) {
+                    continue
+                }
+            }
+
+            let url: URL = stream.m3u8URL()
             do {
-                let stream = try MediaStream(streamInfo: streams[i], mediaUrl: url, type: type)
-                try addAllSegments(segmentList: stream.mediaPlaylist.segmentList, type: type)
+                let mediaStream = try MediaStream(streamInfo: stream, mediaUrl: url, type: type)
+                if let mapUrl = mediaStream.mapUrl {
+                    self.tasks.append(downloadItemTask(url: mapUrl, type: mediaStream.trackType, order: 0))
+                }
                 
-                switch type {
-                case M3U8MediaPlaylistTypeAudio:
-                    let bitrate = streams[i].bandwidth()
+                try addAllSegments(segmentList: mediaStream.mediaPlaylist.segmentList, type: type)
+                
+                if type.isAudio() {
+                    let bitrate = stream.bandwidth()
                     aggregateTrackSize(bitrate: bitrate > 0 ? bitrate : audioBitrateEstimation)
-                    selectedAudioStreams.append(stream)
-                case M3U8MediaPlaylistTypeSubtitle:
-                    selectedTextStreams.append(stream)
-                default:
-                    throw HLSLocalizerError.unknownPlaylistType
+                    selectedAudioStreams.append(mediaStream)
+                } else {
+                    selectedTextStreams.append(mediaStream)
                 }
             } catch {
                 log.warning("Skipping malformed playlist")
@@ -517,6 +786,14 @@ private extension M3U8MediaPlaylistType {
             return nil
         }
     }
+    
+    func isAudio() -> Bool {
+        return self == M3U8MediaPlaylistTypeAudio
+    }
+    
+    func isText() -> Bool {
+        return self == M3U8MediaPlaylistTypeSubtitle
+    }
 }
 
 private extension M3U8MasterPlaylist {
@@ -568,11 +845,15 @@ private extension M3U8SegmentInfoList {
 
 extension String {
     func md5() -> String {
-        return CCBridge.md5(with: self)
+        return md5WithString(self)
     }
     
     func safeItemPathName() -> String {
         return self.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlHostAllowed) ?? self.md5()
+    }
+    
+    func m3u8Attribs(prefix: String) -> [String:String]? {
+        return parseM3U8Attributes(self, prefix)
     }
 }
 
@@ -598,3 +879,51 @@ extension NSMutableString {
         self.replaceOccurrences(of: segmentUrl, with: relativeLocalPath, options: [], range: NSMakeRange(0, self.length))
     }
 }
+
+extension String {
+    func replacing(playlistUrl: URL?, type: DownloadItemTaskType) -> String {
+        if let url = playlistUrl {
+            return self.replacingOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type))
+        } else {
+            return self
+        }
+    }
+}
+
+extension DTGSelectionOptions: CustomStringConvertible {
+    public var description: String {
+        return """
+        Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1) codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates)
+        Audio: all=\(allAudioLanguages) list=\(audioLanguages ?? []) codecs=\(audioCodecs ?? [])
+        Text: all=\(allTextLanguages) list=\(textLanguages ?? [])
+        """
+    }
+}
+
+extension DTGSelectionOptions.VideoCodec: CustomStringConvertible {
+    public var description: String {
+        return tag
+    }
+    
+    var tag: String {
+        switch self {
+        case .avc1: return "avc1"
+        case .hevc: return "hvc1"
+        }
+    }
+}
+
+extension DTGSelectionOptions.AudioCodec: CustomStringConvertible {
+    public var description: String {
+        return tag
+    }
+    
+    var tag: String {
+        switch self {
+        case .mp4a: return "mp4a"
+        case .ac3: return "ac-3"
+        case .eac3: return "ec-3"
+        }
+    }
+}
+
