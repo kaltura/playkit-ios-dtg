@@ -87,6 +87,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     }
     
     override func setUp() {
+        
         cm.delegate = self
     }
     
@@ -172,6 +173,19 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             tracks.fulfill()
         }
         
+        let reached5sec = XCTestExpectation(description: "reached 5 seconds \(id!)")
+        let ended = XCTestExpectation(description: "ended \(id!)")
+
+        player.addObserver(self, event: PlayerEvent.playheadUpdate) { (e) in
+            if let time = e.currentTime, time.floatValue >= 5.0 {
+                reached5sec.fulfill()
+            }
+        }
+        
+        player.addObserver(self, event: PlayerEvent.ended) { (e) in
+            ended.fulfill()
+        }
+        
         player.addObserver(self, event: PlayerEvent.canPlay) { (e) in
             canPlay.fulfill()
         }
@@ -180,12 +194,32 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         print("QQQ prepare \(entry)")
         player.prepare(MediaConfig(mediaEntry: entry))
         
-        wait(for: [canPlay, tracks], timeout: 10)
+        wait(for: [canPlay, tracks], timeout: 2)
+
+        player.play()
+
+        wait(for: [reached5sec], timeout: 6)
         
+        player.seek(to: player.duration - 2)
+        
+        wait(for: [ended], timeout: 4)
+
         player.destroy()
-        
     }
     
+    func testSmallBunny() {
+        newItem("https://noamtamim.com/hls-bunny/index.m3u8")
+        loadItem(basic().setMinVideoBitrate(.avc1, 100))
+        eq(item().estimatedSize, 5066000)
+        
+        startItem()
+        waitForDownload()
+        
+        eq(item().downloadedSize, 5156458)
+        
+        playItem()
+    }
+   
     func testBasicDownload_1() {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")
         loadItem(basic())
@@ -198,50 +232,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 47_229_736)
         
         playItem()
-    }
-    
-    func check(_ id: String = #function) {
-        newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8", id)
-        loadItem(basic())
-        
-        eq(item().estimatedSize, 47_197_225)
-        
-        startItem()
-        waitForDownload()
-        
-        eq(item().downloadedSize, 47_229_736)
-    }
-    
-    func test1() {
-        check()
-    }
-    
-    func test2() {
-        check()
-    }
-    
-    func test3() {
-        check()
-    }
-    
-    func test4() {
-        check()
-    }
-    
-    func test5() {
-        check()
-    }
-    
-    func test6() {
-        check()
-    }
-    
-    func test7() {
-        check()
-    }
-    
-    func test8() {
-        check()
     }
     
     func testBasicDownload_2() {
