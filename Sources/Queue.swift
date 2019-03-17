@@ -70,12 +70,4 @@ struct Queue<T> {
     mutating func purge() {
         self.array.removeAll()
     }
-    
-    var front: T? {
-        if self.isEmpty {
-            return nil
-        } else {
-            return self.array[self.head]
-        }
-    }
 }
