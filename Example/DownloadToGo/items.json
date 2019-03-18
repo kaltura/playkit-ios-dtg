@@ -4,7 +4,13 @@
         "options": {
             "allAudioLangs": true,
             "allTextLangs": true,
-        }        
+        },
+        "expected": {
+            "estimatedSize": 0,
+            "downloadedSize": 0,
+            "audioLangs": ["en"],
+            "textLangs": [],
+        }
     },
     {
         "title": "AES-128 multi-key",

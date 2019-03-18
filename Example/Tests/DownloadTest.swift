@@ -10,11 +10,15 @@ import XCTest
 @testable import DownloadToGo
 
 import PlayKit
+import PlayKitProviders
+
 
 class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     var downloadedExp: XCTestExpectation?
     var id: String?
+    
+    static var items: [ItemJSON]!
     
     // It's not possible to play on travis because of the microphone permission issue (https://forums.developer.apple.com/thread/110423)
     #if targetEnvironment(simulator)
@@ -22,6 +26,52 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     #else
     static let dontPlay = false
     #endif    
+    
+    
+    override class func setUp() {
+        
+        let jsonURL = Bundle.main.url(forResource: "items", withExtension: "json")!
+        //        let jsonURL = URL(string: "http://localhost/items.json")!
+        let json = try! Data(contentsOf: jsonURL)
+        items = try! JSONDecoder().decode([ItemJSON].self, from: json)
+        
+        
+        if dontPlay {
+            print("TRAVIS DETECTED, WILL NOT PLAY")
+        }
+        
+        let cm = ContentManager.shared
+        
+        try! cm.start { 
+            print("QQQ started dtg")
+        }
+        
+        for s in DTGItemState.allCases {
+            for i in try! cm.itemsByState(s) {
+                try! cm.removeItem(id: i.id)
+                print("QQQ removed leftover item \(i.id)")
+            }
+        }
+        
+    }
+    
+    override class func tearDown() {
+        let cm = ContentManager.shared
+        cm.delegate = nil
+        cm.stop()
+    }
+    
+    override func setUp() {
+        
+        cm.delegate = self
+    }
+    
+    override func tearDown() {
+        guard let id = self.id else {return}
+        try! cm.removeItem(id: id)
+    }
+    
+
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         print(id, "\(Double(totalBytesDownloaded)/1024/1024) / \(Double(totalBytesEstimated ?? -1)/1024/1024)")
@@ -57,42 +107,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             wait(for: [e], timeout: timeout)
             print("QQQ download fulfilled")
         }
-    }
-    
-    override class func setUp() {
-        
-        if dontPlay {
-            print("TRAVIS DETECTED, WILL NOT PLAY")
-        }
-        
-        let cm = ContentManager.shared
-        
-        try! cm.start { 
-            print("QQQ started dtg")
-        }
-        
-        for s in DTGItemState.allCases {
-            for i in try! cm.itemsByState(s) {
-                try! cm.removeItem(id: i.id)
-                print("QQQ removed leftover item \(i.id)")
-            }
-        }
-        
-    }
-    
-    override class func tearDown() {
-        let cm = ContentManager.shared
-        cm.delegate = nil
-        cm.stop()
-    }
-    
-    override func setUp() {
-        cm.delegate = self
-    }
-    
-    override func tearDown() {
-        guard let id = self.id else {return}
-        try! cm.removeItem(id: id)
     }
     
     
@@ -172,7 +186,23 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             tracks.fulfill()
         }
         
+        let reached5sec = XCTestExpectation(description: "reached 5 seconds \(id!)")
+        let ended = XCTestExpectation(description: "ended \(id!)")
+
+        player.addObserver(self, event: PlayerEvent.playheadUpdate) { (e) in
+            if let time = e.currentTime, time.floatValue >= 5.0 {
+                print("QQQ reached 5 sec!")
+                reached5sec.fulfill()
+            }
+        }
+        
+        player.addObserver(self, event: PlayerEvent.ended) { (e) in
+            print("QQQ ended!")
+            ended.fulfill()
+        }
+        
         player.addObserver(self, event: PlayerEvent.canPlay) { (e) in
+            print("QQQ can play!")
             canPlay.fulfill()
         }
         
@@ -180,12 +210,55 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         print("QQQ prepare \(entry)")
         player.prepare(MediaConfig(mediaEntry: entry))
         
-        wait(for: [canPlay, tracks], timeout: 10)
+        wait(for: [canPlay, tracks], timeout: 2)
+
+        player.play()
+
+        wait(for: [reached5sec], timeout: 6)
         
+        player.seek(to: player.duration - 2)
+        
+        wait(for: [ended], timeout: 4)
+
         player.destroy()
-        
     }
     
+    func _testFromJSON() {
+        for it in DownloadTest.items {
+            
+            guard let url = it.url else {continue}
+            
+            newItem(url, it.id)
+            loadItem(it.options?.toOptions())
+            
+            if let est = it.expected?.estimatedSize {
+                eq(item().estimatedSize, est)
+            }
+            
+            startItem()
+            waitForDownload()
+            
+            if let est = it.expected?.downloadedSize {
+                eq(item().downloadedSize, est)
+            }
+            
+            playItem()
+        }
+    }
+    
+    func testSmallBunny() {
+        newItem("https://noamtamim.com/hls-bunny/index.m3u8")
+        loadItem(basic().setMinVideoBitrate(.avc1, 100))
+        eq(item().estimatedSize, 5066000)
+        
+        startItem()
+        waitForDownload()
+        
+        eq(item().downloadedSize, 5156458)
+        
+        playItem()
+    }
+   
     func testBasicDownload_1() {
         newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8")
         loadItem(basic())
@@ -198,50 +271,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 47_229_736)
         
         playItem()
-    }
-    
-    func check(_ id: String = #function) {
-        newItem("http://cdntesting.qa.mkaltura.com/p/1091/sp/109100/playManifest/entryId/0_mskmqcit/format/applehttp/protocol/http/a.m3u8", id)
-        loadItem(basic())
-        
-        eq(item().estimatedSize, 47_197_225)
-        
-        startItem()
-        waitForDownload()
-        
-        eq(item().downloadedSize, 47_229_736)
-    }
-    
-    func test1() {
-        check()
-    }
-    
-    func test2() {
-        check()
-    }
-    
-    func test3() {
-        check()
-    }
-    
-    func test4() {
-        check()
-    }
-    
-    func test5() {
-        check()
-    }
-    
-    func test6() {
-        check()
-    }
-    
-    func test7() {
-        check()
-    }
-    
-    func test8() {
-        check()
     }
     
     func testBasicDownload_2() {

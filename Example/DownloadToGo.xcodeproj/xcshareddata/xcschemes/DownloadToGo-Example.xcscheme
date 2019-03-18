@@ -42,7 +42,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "AACDC3C8D5E284825E230D6F4339852F"
+               BlueprintIdentifier = "12239D17D4E719512B5D5E8C0390B6FC"
                BuildableName = "DownloadToGo.framework"
                BlueprintName = "DownloadToGo"
                ReferencedContainer = "container:Pods/Pods.xcodeproj">
@@ -54,6 +54,7 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      codeCoverageEnabled = "YES"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
          <TestableReference
