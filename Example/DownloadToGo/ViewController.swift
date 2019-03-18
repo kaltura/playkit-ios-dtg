@@ -12,102 +12,7 @@ import Toast
 import PlayKit
 import PlayKitProviders
 
-let setSmallerOfflineDRMExpirationMinutes: Int? = 5
-//let setSmallerOfflineDRMExpirationMinutes: Int? = nil
-
 let defaultAudioBitrateEstimation: Int = 64000
-
-
-struct ItemJSON: Codable {
-    let id: String
-    let title: String?
-    let partnerId: Int?
-    let ks: String?
-    let env: String?
-
-    let url: String?
-    
-    let options: OptionsJSON?
-    
-    func toItem() -> Item {
-        let item: Item
-        let title = self.title ?? self.id
-        if let partnerId = self.partnerId {
-            item = Item(title, id: self.id, partnerId: partnerId, ks: self.ks, env: self.env)
-        } else if let url = self.url {
-            item = Item(title, id: self.id, url: url)
-        } else {
-            fatalError("Invalid item, missing `partnerId` and `url`")
-        }
-        item.options = options?.toOptions()
-        
-        return item
-    }
-}
-
-struct OptionsJSON: Codable {
-    let audioLangs: [String]?
-    let allAudioLangs: Bool?
-    let textLangs: [String]?
-    let allTextLangs: Bool?
-    let videoCodecs: [String]?
-    let audioCodecs: [String]?
-    let videoWidth: Int?
-    let videoHeight: Int?
-    let videoBitrates: [String:Int]?
-    let allowInefficientCodecs: Bool?
-    
-    func toOptions() -> DTGSelectionOptions {
-        let opts = DTGSelectionOptions()
-        
-        opts.allAudioLanguages = allAudioLangs ?? false
-        opts.audioLanguages = audioLangs
-        
-        opts.allTextLanguages = allTextLangs ?? false
-        opts.textLanguages = textLangs
-        
-        opts.allowInefficientCodecs = allowInefficientCodecs ?? false
-        
-        if let codecs = audioCodecs {
-            opts.audioCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.AudioCodec? in
-                switch tag {
-                case "mp4a": return .mp4a
-                case "ac3": return .ac3
-                case "eac3", "ec3": return .eac3
-                default: return nil
-                }
-            })
-        }
-
-        if let codecs = videoCodecs {
-            opts.videoCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.VideoCodec? in
-                switch tag {
-                case "avc1": return .avc1
-                case "hevc", "hvc1": return .hevc
-                default: return nil
-                }
-            })
-        }
-
-        opts.videoWidth = videoWidth
-        opts.videoHeight = videoHeight
-        
-        if let bitrates = videoBitrates {
-            for (codecId, bitrate) in bitrates {
-                let codec: DTGSelectionOptions.VideoCodec
-                switch codecId {
-                case "avc1": codec = .avc1
-                case "hevc", "hvc1": codec = .hevc
-                default: continue
-                }
-
-                opts.setMinVideoBitrate(codec, bitrate)
-            }
-        }
-        
-        return opts
-    }
-}
 
 class Item {
     static let defaultEnv = "http://cdnapi.kaltura.com"
@@ -119,7 +24,21 @@ class Item {
     var entry: PKMediaEntry?
     
     var options: DTGSelectionOptions?
-
+    var expected: ExpectedValues?
+    
+    convenience init(json: ItemJSON) {
+        let title = json.title ?? json.id
+        
+        if let partnerId = json.partnerId {
+            self.init(title, id: json.id, partnerId: partnerId, ks: json.ks, env: json.env)
+        } else if let url = json.url {
+            self.init(title, id: json.id, url: url)
+        } else {
+            fatalError("Invalid item, missing `partnerId` and `url`")
+        }
+        self.options = json.options?.toOptions()
+    }
+    
     init(_ title: String, id: String, url: String) {
         self.id = id
         self.title = title
@@ -156,6 +75,7 @@ class Item {
         }
     }
 }
+
 
 class ViewController: UIViewController {
     let dummyFileName = "dummyfile"
@@ -214,7 +134,7 @@ class ViewController: UIViewController {
         let json = try! Data(contentsOf: jsonURL)
         let loadedItems = try! JSONDecoder().decode([ItemJSON].self, from: json)
         
-        items = loadedItems.map{$0.toItem()}
+        items = loadedItems.map{Item(json: $0)}
         
         let completedItems = try! self.cm.itemsByState(.completed)
         for (index, item) in completedItems.enumerated() {
