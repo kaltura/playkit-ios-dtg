@@ -53,19 +53,19 @@ class VideoViewController: UIViewController {
             player.play()
             
             player.addObserver(self, event: PlayerEvent.canPlay) { [weak self] (e) in
-                guard let strongSelf = self else { return }
-                strongSelf.player?.play()
+                guard let self = self else { return }
+                self.player?.play()
             }
             
             player.addObserver(self, event: PlayerEvent.tracksAvailable) { [weak self] (event) in
-                guard let strongSelf = self else { return }
-                strongSelf.tracks = event.tracks
-                strongSelf.player?.removeObserver(strongSelf, event: PlayerEvent.tracksAvailable)
+                guard let self = self else { return }
+                self.tracks = event.tracks
+                self.player?.removeObserver(self, event: PlayerEvent.tracksAvailable)
             }
             player.addObserver(self, event: PlayerEvent.playing) { [weak self] (event) in
-                guard let strongSelf = self else { return }
-                strongSelf.stopTimer()
-                strongSelf.timer = Timer.scheduledTimer(timeInterval: 0.5, target: strongSelf, selector: #selector(strongSelf.timerTick), userInfo: nil, repeats: true)
+                guard let self = self else { return }
+                self.stopTimer()
+                self.timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.timerTick), userInfo: nil, repeats: true)
             }
         } else {
             print("error: failed to create player")
