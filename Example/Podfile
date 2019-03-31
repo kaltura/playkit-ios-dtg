@@ -3,7 +3,7 @@ ENV['COCOAPODS_DISABLE_STATS'] = 'true' # It's a sample app
 use_frameworks!
 
 platform :ios, '9.0'
-swift_version = '4.0'
+swift_version = '4.2'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
