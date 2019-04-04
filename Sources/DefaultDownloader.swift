@@ -97,8 +97,8 @@ class DefaultDownloader: NSObject, Downloader {
         super.init()
         self.downloadItemTasksQueue.enqueue(tasks)
         self.state.onChange { [weak self] (state) in
-            guard let strongSelf = self else { return }
-            strongSelf.delegate?.downloader(strongSelf, didChangeToState: state)
+            guard let self = self else { return }
+            self.delegate?.downloader(self, didChangeToState: state)
         }
     }
     
