@@ -1,6 +1,9 @@
+suffix = '-dev'   # Dev mode
+# suffix = ''       # Release
+
 Pod::Spec.new do |s|
   s.name             = 'DownloadToGo'
-  s.version          = '3.6-dev'
+  s.version          = '3.6.1' + suffix
   s.summary          = 'DownloadToGo -- download manager for HLS'
   s.homepage         = 'https://github.com/kaltura/playkit-ios-dtg'
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
@@ -16,5 +19,5 @@ Pod::Spec.new do |s|
   s.dependency 'GCDWebServer', '~> 3.5.2'
   s.dependency 'RealmSwift', '~> 3.13.1'
   s.dependency 'XCGLogger', '~> 6.1.0'
-  s.dependency 'PlayKitUtils', '~> 0.1.6'
+  s.dependency 'PlayKitUtils', '~> 0.2.0' + suffix
 end

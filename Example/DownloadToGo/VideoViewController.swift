@@ -15,7 +15,7 @@ class VideoViewController: UIViewController {
     let trackViewControllerSegueIdentifier = "tracksViewController"
     
     var isControlsVisible = true
-    var player: Player?
+    var player: Player!
     var contentUrl: URL?
     var textLanguageCode: String?
     var audioLanguageCode: String?
@@ -35,46 +35,42 @@ class VideoViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        if let player = try? PlayKitManager.shared.loadPlayer(pluginConfig: nil) {
-            self.player = player
-            player.view = self.playerView
-            let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: contentUrl!)
-            // set text language code
-            if let textLanguageCode = self.textLanguageCode {
-                player.settings.trackSelection.textSelectionMode = .selection
-                player.settings.trackSelection.textSelectionLanguage = textLanguageCode
-            }
-            // set audio language code
-            if let audioLanguageCode = self.audioLanguageCode {
-                player.settings.trackSelection.audioSelectionMode = .selection
-                player.settings.trackSelection.audioSelectionLanguage = audioLanguageCode
-            }
-            player.prepare(MediaConfig(mediaEntry: mediaEntry))
-            player.play()
-            
-            player.addObserver(self, event: PlayerEvent.canPlay) { [weak self] (e) in
-                guard let self = self else { return }
-                self.player?.play()
-            }
-            
-            player.addObserver(self, event: PlayerEvent.tracksAvailable) { [weak self] (event) in
-                guard let self = self else { return }
-                self.tracks = event.tracks
-                self.player?.removeObserver(self, event: PlayerEvent.tracksAvailable)
-            }
-            player.addObserver(self, event: PlayerEvent.playing) { [weak self] (event) in
-                guard let self = self else { return }
-                self.stopTimer()
-                self.timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.timerTick), userInfo: nil, repeats: true)
-            }
-        } else {
-            print("error: failed to create player")
+        player = PlayKitManager.shared.loadPlayer(pluginConfig: nil)
+        player.view = self.playerView
+        let mediaEntry = localAssetsManager.createLocalMediaEntry(for: "myLocalId", localURL: contentUrl!)
+        // set text language code
+        if let textLanguageCode = self.textLanguageCode {
+            player.settings.trackSelection.textSelectionMode = .selection
+            player.settings.trackSelection.textSelectionLanguage = textLanguageCode
+        }
+        // set audio language code
+        if let audioLanguageCode = self.audioLanguageCode {
+            player.settings.trackSelection.audioSelectionMode = .selection
+            player.settings.trackSelection.audioSelectionLanguage = audioLanguageCode
+        }
+        player.prepare(MediaConfig(mediaEntry: mediaEntry))
+        player.play()
+        
+        player.addObserver(self, event: PlayerEvent.canPlay) { [weak self] (e) in
+            guard let self = self else { return }
+            self.player.play()
+        }
+        
+        player.addObserver(self, event: PlayerEvent.tracksAvailable) { [weak self] (event) in
+            guard let self = self else { return }
+            self.tracks = event.tracks
+            self.player.removeObserver(self, event: PlayerEvent.tracksAvailable)
+        }
+        player.addObserver(self, event: PlayerEvent.playing) { [weak self] (event) in
+            guard let self = self else { return }
+            self.stopTimer()
+            self.timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.timerTick), userInfo: nil, repeats: true)
         }
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        if self.player?.isPlaying == true {
+        if self.player.isPlaying == true {
             self.timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.timerTick), userInfo: nil, repeats: true)
         }
     }
@@ -111,21 +107,19 @@ class VideoViewController: UIViewController {
     
     @IBAction func playheadValueChanged(_ sender: UISlider) {
         // when playhead value changed seek to time
-        guard let player = self.player else { return }
         player.currentTime = Double(self.playheadSlider.value) * player.duration
     }
 
     @IBAction func playTouched(_ sender: UIButton) {
-        self.player?.play()
+        self.player.play()
     }
     
     @IBAction func pauseTouched(_ sender: UIButton) {
-        self.player?.pause()
+        self.player.pause()
         self.stopTimer()
     }
  
     @objc func timerTick() {
-        guard let player = self.player else { return }
         self.playheadSlider.value = Float(player.currentTime) / Float(player.duration)
     }
     
@@ -135,7 +129,7 @@ class VideoViewController: UIViewController {
     }
     
     deinit {
-        self.player?.destroy()
+        self.player.destroy()
     }
 }
 
@@ -190,10 +184,10 @@ extension VideoViewController: TracksViewControllerDelegate {
         self.selectedTextTrack = textTrack
         
         if audioTrack != nil {
-            self.player?.selectTrack(trackId: audioTrack!.id)
+            self.player.selectTrack(trackId: audioTrack!.id)
         }
         if textTrack != nil {
-            self.player?.selectTrack(trackId: textTrack!.id)
+            self.player.selectTrack(trackId: textTrack!.id)
         }
     }
 }
