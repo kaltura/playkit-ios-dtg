@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
   s.author           = { 'Kaltura' => 'community@kaltura.com' }
   s.source           = { :git => 'https://github.com/kaltura/playkit-ios-dtg.git', :tag => s.version.to_s }
-  s.swift_version    = '4.2'
+  s.swift_version    = '5.0'
 
   s.ios.deployment_target = '9.0'
 
@@ -18,6 +18,6 @@ Pod::Spec.new do |s|
   s.dependency 'M3U8Kit', '0.2.3'
   s.dependency 'GCDWebServer', '~> 3.5.2'
   s.dependency 'RealmSwift', '~> 3.13.1'
-  s.dependency 'XCGLogger', '~> 6.1.0'
-  s.dependency 'PlayKitUtils', '~> 0.2.0' + suffix
+  s.dependency 'XCGLogger', '~> 7.0.0'
+  s.dependency 'PlayKitUtils', '~> 0.3.0'# + suffix
 end

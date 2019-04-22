@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0940"
+   LastUpgradeVersion = "1020"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -42,7 +42,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "12239D17D4E719512B5D5E8C0390B6FC"
+               BlueprintIdentifier = "2921468CDB1EAD4ECCB255A25676D857"
                BuildableName = "DownloadToGo.framework"
                BlueprintName = "DownloadToGo"
                ReferencedContainer = "container:Pods/Pods.xcodeproj">
