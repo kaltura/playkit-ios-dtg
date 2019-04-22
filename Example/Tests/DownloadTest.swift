@@ -132,7 +132,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     func newItem(_ url: String, _ function: String = #function) {        
         self.id = function
         
-        try! cm.addItem(id: function, url: URL(string: url)!)
+        _ = try! cm.addItem(id: function, url: URL(string: url)!)
     }
     
     func loadItem(_ options: DTGSelectionOptions?) {
