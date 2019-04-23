@@ -7,9 +7,8 @@ swift_version = '5.0'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
-  pod 'PlayKit'           #, :path => '../../playkit-ios'
-  pod 'PlayKitProviders'  #, :path => '../../playkit-ios-providers'
-  
+  pod 'PlayKit',  '~> 3.10'
+  pod 'PlayKitProviders', '~> 1.3'
   
   pod 'Toast', '~> 4.0.0'
 
