@@ -11,9 +11,45 @@
 
 import Foundation
 import M3U8Kit
+import PlayKitUtils
 
 fileprivate let YES = "YES"
 fileprivate let NO = "NO"
+
+func syncHttpGetUtf8String(url: URL) throws -> String {
+    
+    var req = URLRequest(url: url)
+    req.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
+    let sem = DispatchSemaphore(value: 0)
+    var data: Data?
+    var err: Error?
+    
+    URLSession.shared.dataTask(with: req) { (d, resp, e) in
+        
+        data = d
+        err = e
+        
+        sem.signal()
+        
+    }.resume()
+    
+    if sem.wait(timeout: DispatchTime.now() + 10) == .timedOut {
+        throw DTGError.networkTimeout(url: url.absoluteString)
+    }
+    
+    print("*** SEM DONE ***")
+    
+    if let data = data {
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+
+    if let err = err {
+        throw err
+    }
+    
+    // we should never get here -- there must be either error or data, but just in case return empty String
+    return ""
+}
 
 struct MockVideoTrack: DTGVideoTrack {
     let width: Int?
@@ -48,7 +84,7 @@ public enum HLSLocalizerError: Error {
 
 
 func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
-    let text = try String.init(contentsOf: url)
+    let text = try syncHttpGetUtf8String(url: url)
     
     if let playlist = M3U8MasterPlaylist(content: text, baseURL: url.deletingLastPathComponent()) {
         return playlist
@@ -58,7 +94,7 @@ func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
 }
 
 func loadMediaPlaylist(url: URL, type: M3U8MediaPlaylistType) throws -> M3U8MediaPlaylist {
-    let text = try String.init(contentsOf: url)
+    let text = try syncHttpGetUtf8String(url: url)
 
     if let playlist = M3U8MediaPlaylist(content: text, type: type, baseURL: url.deletingLastPathComponent()) {
         return playlist
