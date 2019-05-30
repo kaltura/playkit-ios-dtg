@@ -16,6 +16,7 @@ import PlayKitUtils
 fileprivate let YES = "YES"
 fileprivate let NO = "NO"
 
+// This function works like String.init(contentsOf:url), but it allows to customize the user-agent header
 func syncHttpGetUtf8String(url: URL) throws -> String {
     
     var req = URLRequest(url: url)
