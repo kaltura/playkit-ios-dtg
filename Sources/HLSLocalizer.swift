@@ -19,16 +19,19 @@ fileprivate let NO = "NO"
 // This function works like String.init(contentsOf:url), but it allows to customize the user-agent header
 func syncHttpGetUtf8String(url: URL) throws -> String {
     
-    var req = URLRequest(url: url)
-    req.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
-    let sem = DispatchSemaphore(value: 0)
+    var request = URLRequest(url: url)
+    request.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
+
     var data: Data?
-    var err: Error?
+    var error: Error?
     
-    URLSession.shared.dataTask(with: req) { (d, resp, e) in
+    // We need to block the calling thread (which should NOT be the main thread anyway).
+    let sem = DispatchSemaphore(value: 0)
+    
+    URLSession.shared.dataTask(with: request) { (d, resp, e) in
         
         data = d
-        err = e
+        error = e
         
         sem.signal()
         
@@ -38,13 +41,12 @@ func syncHttpGetUtf8String(url: URL) throws -> String {
         throw DTGError.networkTimeout(url: url.absoluteString)
     }
     
-    print("*** SEM DONE ***")
     
     if let data = data {
         return String(data: data, encoding: .utf8) ?? ""
     }
 
-    if let err = err {
+    if let err = error {
         throw err
     }
     
