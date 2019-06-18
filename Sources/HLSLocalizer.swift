@@ -15,7 +15,16 @@ import M3U8Kit
 fileprivate let YES = "YES"
 fileprivate let NO = "NO"
 
-struct MockVideoTrack: DTGVideoTrack {
+typealias CodecTag = String
+typealias VideoCodec = DTGSelectionOptions.VideoCodec
+typealias AudioCodec = DTGSelectionOptions.AudioCodec
+typealias M3U8Stream = M3U8ExtXStreamInf
+
+func allowedCodecTags(with options: DTGSelectionOptions) -> Set<CodecTag> {
+    return Set(VideoCodec.allowedCodecs(with: options).map{$0.tag} + AudioCodec.allowedCodecs(with: options).map{$0.tag})
+}
+
+struct VideoTrack: DTGVideoTrack {
     let width: Int?
     
     let height: Int?
@@ -25,9 +34,7 @@ struct MockVideoTrack: DTGVideoTrack {
     let audioGroup: String?
     
     let textGroup: String?
-}
 
-extension MockVideoTrack {
     func groupId(for type: M3U8MediaPlaylistType) -> String? {
         switch type {
         case M3U8MediaPlaylistTypeAudio: return self.audioGroup
@@ -209,7 +216,7 @@ class HLSLocalizer {
     var duration: Double = Double.nan
     var estimatedSize: Int64?
     
-    var videoTrack: MockVideoTrack?
+    var videoTrack: VideoTrack?
     
     var masterPlaylist: MasterPlaylist?
     var selectedVideoStream: VideoStream?
@@ -226,8 +233,8 @@ class HLSLocalizer {
         self.audioBitrateEstimation = audioBitrateEstimation
     }
     
-    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> MockVideoTrack {
-        return MockVideoTrack(width: Int(videoStream.resolution.width), 
+    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> VideoTrack {
+        return VideoTrack(width: Int(videoStream.resolution.width), 
                               height: Int(videoStream.resolution.height), 
                               bitrate: videoStream.bandwidth, 
                               audioGroup: videoStream.audio, 
@@ -442,18 +449,19 @@ class HLSLocalizer {
         
         // Aliases
         
-        typealias Codec = DTGSelectionOptions.VideoCodec
-        typealias M3U8Stream = M3U8ExtXStreamInf
-        let avc1 = Codec.avc1
-        let hevc = Codec.hevc
-        let allCodecs = Codec.allCases
+        let avc1 = VideoCodec.avc1
+        let hevc = VideoCodec.hevc
         let mp4a = DTGSelectionOptions.AudioCodec.mp4a
         let ac3 = DTGSelectionOptions.AudioCodec.ac3
         let eac3 = DTGSelectionOptions.AudioCodec.eac3
+        
+        let videoCodecs = VideoCodec.allCases.map { $0.tag }
+        let audioCodecs = AudioCodec.allCases.map { $0.tag }
+        let allCodecs = videoCodecs + audioCodecs
 
         // Utils
         
-        func hasCodec(_ s: M3U8Stream, _ codec: String) -> Bool {
+        func hasCodec(_ s: M3U8Stream, _ codec: CodecTag) -> Bool {
             return s.codecs?.contains{($0 as? String)?.hasPrefix(codec) ?? false} ?? false
         }
         
@@ -486,36 +494,49 @@ class HLSLocalizer {
         let allowAC3 = CodecSupport.ac3
         let allowEC3 = CodecSupport.ec3
         
-        // Create a dictionary of streams by codec
-        var streams = [Codec: [M3U8Stream]]()
+        let allowedTags = allowedCodecTags(with: options)
+
+        // Create a dictionary of streams by codec.
+        // ONLY THE MAIN STREAMS are included -- not the alternates.
+        var mainStreams = [CodecTag: [M3U8Stream]]()
         for c in allCodecs {
-            streams[c] = []
+            mainStreams[c] = []
         }
         
         // Copy streams from M3U8Kit's structure
         let m3u8Streams = master.videoStreams()
         m3u8Streams.sortByBandwidth(inOrder: .orderedAscending)
+        
+        var hasVideo = false
+        var hasAudio = false
+        
         for i in 0 ..< m3u8Streams.countInt {
             let s = m3u8Streams[i]
 
-            // if the stream uses an audio codec we can't play, skip it.
-            if hasCodec(s, ac3.tag) && !allowAC3 {
+            // if the stream uses a codec we can't play, skip it.
+            if s.usesUnsupportedCodecs(with: options) {
                 continue
-            } else if hasCodec(s, eac3.tag) && !allowEC3{
-                continue
-            }
+            }            
             
             // add the stream to the correct array
-            if s.codecs == nil || hasCodec(s, avc1.tag) {
-                streams[avc1]?.append(s)
-            } else if allowHEVC && hasCodec(s, hevc.tag) {
-                streams[hevc]?.append(s)
+            if s.codecs == nil {
+                // Assume avc1/mp4a
+                mainStreams[avc1.tag]?.append(s)
+                hasVideo = true
+                
+            } else if let videoCodec = s.videoCodec() {
+                mainStreams[videoCodec]?.append(s)
+                hasVideo = true
+                
+            } else if let audioCodec = s.audioCodec() {
+                mainStreams[audioCodec]?.append(s)
+                hasAudio = true
             }
         }
                 
         
         #if DEBUG
-        print("Playable video streams:", streams)
+        print("Playable video streams:", mainStreams)
         #endif
 
         
@@ -523,12 +544,12 @@ class HLSLocalizer {
         
         for c in allCodecs {
             if let height = options.videoHeight {
-                streams[c] = filter(streams: streams[c]!, 
+                mainStreams[c] = filter(streams: mainStreams[c]!, 
                                     sortOrder: {$0.resolution.height < $1.resolution.height}, 
                                     filter: { $0.resolution.height >= Float(height) })
             }
             if let width = options.videoWidth {
-                streams[c] = filter(streams: streams[c]!, 
+                mainStreams[c] = filter(streams: mainStreams[c]!, 
                                     sortOrder: {$0.resolution.width < $1.resolution.width}, 
                                     filter: { $0.resolution.width >= Float(width) })
             }
@@ -544,37 +565,30 @@ class HLSLocalizer {
         }
         
         for (codec, bitrate) in videoBitrates {
-            guard let codecStreams = streams[codec] else { continue }
-            streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
+            guard let codecStreams = mainStreams[codec.tag] else { continue }
+            mainStreams[codec.tag] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
         }
 
         
         #if DEBUG
-        print("Filtered video streams:", streams)
+        print("Filtered video streams:", mainStreams)
         #endif
 
-        // Now we have two lists -- hevc and avc1. Look at codec prefs.
         
-        func videoStreamWithFirst(of codec: Codec) throws -> VideoStream {
-            guard let selected = streams[codec]?.first else {throw HLSLocalizerError.malformedPlaylist}
-            return try VideoStream(streamInfo: selected, mediaUrl: selected.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+        if hasVideo {
+            for codec in options.fullVideoCodecPriority() {
+                if let codecStreams = mainStreams[codec], let first = codecStreams.first {
+                    return try VideoStream(streamInfo: first, mediaUrl: first.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+                }
+            }
+        } else if hasAudio {
+            for codec in options.fullAudioCodecPriority() {
+                if let codecStreams = mainStreams[codec], let first = codecStreams.first {
+                    return try VideoStream(streamInfo: first, mediaUrl: first.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+                }
+            }
         }
-        
-        // The easy case: only one codec has valid streams. Select the first stream from that codec.
-        if streams[avc1]?.isEmpty ?? true {
-            return try videoStreamWithFirst(of: hevc)
-        } else if streams[hevc]?.isEmpty ?? true {
-            return try videoStreamWithFirst(of: avc1)
-        }
-        
-        // Ok, both codecs have valid streams. What does the app prefer?
-        if let firstPrefCodec = options.videoCodecs?.first {
-            return try videoStreamWithFirst(of: firstPrefCodec)
-            
-        } else {
-            // app did not select -- we'll go with hevc (remember it's not empty)
-            return try videoStreamWithFirst(of: hevc)
-        }
+        throw HLSLocalizerError.malformedPlaylist
     }
     
     private func addAllSegments(segmentList: M3U8SegmentInfoList, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
@@ -708,6 +722,52 @@ class HLSLocalizer {
     private func aggregateTrackSize(bitrate: Int) {
         let estimatedTrackSize = Int64(Double(bitrate) * duration / 8)
         estimatedSize = (estimatedSize ?? 0) + estimatedTrackSize
+    }
+}
+
+extension M3U8Stream {
+    func codecTags() -> Set<CodecTag> {
+        // `codecs` is an array of String, but it's declared as a non-generic `Array`.
+        // It might also be nil.
+        guard let codecs = self.codecs as? [String] else { return Set() }
+        
+        var tags = [CodecTag]()
+        
+        for c in codecs { 
+            guard let tag = c.split(separator: ".").first else {continue}
+            tags.append(CodecTag(tag))
+        }
+        
+        return Set(tags)
+    }
+    
+    func usesUnsupportedCodecs(with options: DTGSelectionOptions) -> Bool {
+        
+        for tag in codecTags() {
+            if !options.allowedCodecTags.contains(tag) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    func videoCodec() -> CodecTag? {
+        for tag in codecTags() {
+            if VideoCodec.allCases.contains(where: { $0.tag == tag }) {
+                return tag
+            }
+        }
+        return nil
+    }
+    
+    func audioCodec() -> CodecTag? {
+        for tag in codecTags() {
+            if AudioCodec.allCases.contains(where: { $0.tag == tag }) {
+                return tag
+            }
+        }
+        return nil
     }
 }
 
@@ -898,6 +958,24 @@ extension DTGSelectionOptions: CustomStringConvertible {
         Text: all=\(allTextLanguages) list=\(textLanguages ?? [])
         """
     }
+    
+    func fullVideoCodecPriority() -> [CodecTag] {
+        return DTGSelectionOptions.fullCodecPriority(requestedTags: (videoCodecs ?? []).map {$0.tag}, allowedTags: allowedVideoCodecTags)
+    }
+    
+    func fullAudioCodecPriority() -> [CodecTag] {
+        return DTGSelectionOptions.fullCodecPriority(requestedTags: (audioCodecs ?? []).map {$0.tag}, allowedTags: allowedAudioCodecTags)
+    }
+    
+    static func fullCodecPriority(requestedTags: [CodecTag], allowedTags: Set<CodecTag>) -> [CodecTag] {
+        var codecPriority = requestedTags
+        for codec in allowedTags {
+            if !codecPriority.contains(codec) {
+                codecPriority.append(codec)
+            }
+        }
+        return codecPriority
+    }
 }
 
 extension DTGSelectionOptions.VideoCodec: CustomStringConvertible {
@@ -905,10 +983,19 @@ extension DTGSelectionOptions.VideoCodec: CustomStringConvertible {
         return tag
     }
     
-    var tag: String {
+    var tag: CodecTag {
         switch self {
         case .avc1: return "avc1"
         case .hevc: return "hvc1"
+        }
+    }
+    
+    static func allowedCodecs(with options: DTGSelectionOptions) -> [DTGSelectionOptions.VideoCodec] {
+        return VideoCodec.allCases.filter {
+            switch $0 {
+            case .avc1: return true
+            case .hevc: return CodecSupport.hardwareHEVC || CodecSupport.softwareHEVC && options.allowInefficientCodecs
+            }
         }
     }
 }
@@ -918,11 +1005,21 @@ extension DTGSelectionOptions.AudioCodec: CustomStringConvertible {
         return tag
     }
     
-    var tag: String {
+    var tag: CodecTag {
         switch self {
         case .mp4a: return "mp4a"
         case .ac3: return "ac-3"
         case .eac3: return "ec-3"
+        }
+    }
+    
+    static func allowedCodecs(with options: DTGSelectionOptions) -> [DTGSelectionOptions.AudioCodec] {
+        return AudioCodec.allCases.filter {
+            switch $0 {
+            case .mp4a: return true
+            case .ac3: return CodecSupport.ac3
+            case .eac3: return CodecSupport.ec3
+            }
         }
     }
 }

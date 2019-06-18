@@ -123,7 +123,7 @@ public class DTGSelectionOptions {
         case hevc
     }
     
-    public enum AudioCodec {
+    public enum AudioCodec: CaseIterable {
         /// MP4A
         case mp4a
         
@@ -189,4 +189,19 @@ public class DTGSelectionOptions {
         self.allTextLanguages = true
         return self
     }
+    
+    
+    // Calculate and cache supported codecs
+    
+    internal lazy var allowedVideoCodecTags: Set<CodecTag> = {
+        return Set(VideoCodec.allowedCodecs(with: self).map{$0.tag})
+    }()
+
+    internal lazy var allowedAudioCodecTags: Set<CodecTag> = {
+        return Set(AudioCodec.allowedCodecs(with: self).map{$0.tag})
+    }()
+    
+    internal lazy var allowedCodecTags: Set<CodecTag> = {
+        return self.allowedVideoCodecTags.union(self.allowedAudioCodecTags)
+    }()
 }
