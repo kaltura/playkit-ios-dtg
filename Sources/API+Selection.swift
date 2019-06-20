@@ -194,15 +194,10 @@ public class DTGSelectionOptions {
     
     
     
-    internal lazy var allowedVideoCodecs = TrackCodec.videoCodecs.filter({$0.isAllowed(with: self)})
-
-    internal lazy var allowedAudioCodecs = TrackCodec.audioCodecs.filter({$0.isAllowed(with: self)})
-    
     // Calculate and cache supported codecs
-    
+    internal lazy var allowedVideoCodecs = TrackCodec.videoCodecs.filter({$0.isAllowed(with: self)})
+    internal lazy var allowedAudioCodecs = TrackCodec.audioCodecs.filter({$0.isAllowed(with: self)})
     internal lazy var allowedVideoCodecTags = allowedVideoCodecs.map{$0.tag}
-
     internal lazy var allowedAudioCodecTags = allowedAudioCodecs.map{$0.tag}
-    
     internal lazy var allowedCodecTags = allowedVideoCodecTags + allowedAudioCodecTags
 }
