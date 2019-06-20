@@ -428,5 +428,19 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         
         playItem()
     }
+
+    func testAudioOnly1() {
+        newItem("https://cfvod.kaltura.com/hls/p/2215841/sp/221584100/serveFlavor/entryId/1_ij3e1z2g/v/11/flavorId/1_,x408j5o1,2d6mzjpb,u4np8q06,k6kwjkwj,/name/a.mp4/index.m3u8.urlset/master.m3u8")
+        loadItem(nil)
+        
+        eq(item().estimatedSize, Int64(63971*52.524/8))
+        
+        startItem()
+        waitForDownload()
+        
+        eq(item().downloadedSize, 478648)
+        
+        playItem()
+    }
 }
 
