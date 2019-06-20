@@ -204,7 +204,9 @@ private extension DefaultDownloader {
             // if we have resume data create a task with the resume data and remove it from the downloadTask
             newTask = session.downloadTask(withResumeData: resumeData)
         } else {
-            newTask = session.downloadTask(with: downloadTask.contentUrl)
+            var req = URLRequest(url: downloadTask.contentUrl)
+            req.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
+            newTask = session.downloadTask(with: req)
         }
         
         self.activeDownloads[newTask] = downloadTask

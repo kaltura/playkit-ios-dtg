@@ -108,6 +108,8 @@ public enum DTGError: LocalizedError {
     case metadataLoading(itemId: String)
     /// insufficient disk space to start or continue the download
     case insufficientDiskSpace(freeSpaceInMegabytes: Int)
+    /// Network timeout
+    case networkTimeout(url: String)
     
     public var errorDescription: String? {
         switch self {
@@ -119,6 +121,8 @@ public enum DTGError: LocalizedError {
             return "Item \(itemId) is already in the process of loading metadata"
         case .insufficientDiskSpace(let freeSpaceInMegabytes):
             return "insufficient disk space to start or continue the download, only have \(freeSpaceInMegabytes)MB free..."
+        case .networkTimeout:
+            return "Network timeout"
         }
     }
 }
@@ -205,6 +209,9 @@ public class ContentManager: NSObject, DTGContentManager {
     private var metadataLoading = Set<String>()
     
     public weak var delegate: ContentManagerDelegate?
+    
+    static let userAgent = UserAgent.build(clientTag: clientTag)
+
 
     public var storagePath: URL {
         return DTGFilePaths.storagePath
