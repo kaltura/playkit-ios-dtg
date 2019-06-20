@@ -17,8 +17,12 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     var downloadedExp: XCTestExpectation?
     var id: String?
+    var source: PKMediaSource?
+    let lam = LocalAssetsManager.managerWithDefaultDataStore()
     
     static var items: [ItemJSON]!
+    
+    var progressLabel: UILabel?
     
     // It's not possible to play on travis because of the microphone permission issue (https://forums.developer.apple.com/thread/110423)
     #if targetEnvironment(simulator)
@@ -52,7 +56,39 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
                 print("QQQ removed leftover item \(i.id)")
             }
         }
+    }
+    
+    func createPlayerView() -> PlayerView {
+        let topViewController = (UIApplication.shared.keyWindow?.rootViewController as! UINavigationController).topViewController
+        let topView = topViewController!.view!
+        let playerView = PlayerView(frame: topView.frame)
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        let attributes: [NSLayoutConstraint.Attribute] = [.top, .bottom, .right, .left]
+        topView.addSubview(playerView)
         
+        NSLayoutConstraint.activate(attributes.map {
+            NSLayoutConstraint(item: playerView, attribute: $0, relatedBy: .equal, toItem: playerView.superview, attribute: $0, multiplier: 1, constant: 0)
+        })
+        
+        return playerView
+    }
+    
+    func createProgressLabel() -> UILabel {
+        let topViewController = (UIApplication.shared.keyWindow?.rootViewController as! UINavigationController).topViewController
+        let topView = topViewController!.view!
+        let label = UILabel(frame: topView.frame)
+        label.numberOfLines = 5
+        label.textAlignment = .center
+        label.backgroundColor = UIColor.white
+        label.translatesAutoresizingMaskIntoConstraints = false
+        topView.addSubview(label)
+        
+        let attributes: [NSLayoutConstraint.Attribute] = [.top, .bottom, .right, .left]
+        NSLayoutConstraint.activate(attributes.map {
+            NSLayoutConstraint(item: label, attribute: $0, relatedBy: .equal, toItem: label.superview, attribute: $0, multiplier: 1, constant: 0)
+        })
+        
+        return label
     }
     
     override class func tearDown() {
@@ -74,6 +110,11 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
 
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
+        if let label = progressLabel {
+            DispatchQueue.main.async {
+                label.text = "\(id)\n\(Int(totalBytesDownloaded)/1024/1024)/\(Int(totalBytesEstimated ?? -1)/1024/1024)MB"
+            }
+        }
         print(id, "\(Double(totalBytesDownloaded)/1024/1024) / \(Double(totalBytesEstimated ?? -1)/1024/1024)")
     }
     
@@ -106,6 +147,8 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
             print("QQQ download fulfilled")
+            progressLabel?.removeFromSuperview()
+            progressLabel = nil
         }
     }
     
@@ -127,12 +170,38 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         guard let id = self.id else {return}
         downloadedExp = XCTestExpectation(description: "Download item")
         try! cm.startItem(id: id)
+        
+        self.progressLabel = createProgressLabel()
     }
     
     func newItem(_ url: String, _ function: String = #function) {        
         self.id = function
         
         _ = try! cm.addItem(id: function, url: URL(string: url)!)
+    }
+    
+    func newItem(ottEnv: String, partnerId: Int, assetId: String, _ function: String = #function) {
+        self.id = function
+        
+        let exp = XCTestExpectation(description: "provider")
+                
+        PhoenixMediaProvider()
+            .set(sessionProvider: SimpleSessionProvider(serverURL: ottEnv, partnerId: Int64(partnerId), ks: nil))
+            .set(assetId: assetId)
+            .loadMedia { [weak self] (entry_, error) in
+                guard let self = self else {return}
+                guard let e = entry_ else {return}
+                
+                guard let source = self.lam.getPreferredDownloadableMediaSource(for: e), let url = source.contentUrl else {return}
+                
+                _ = try! self.cm.addItem(id: function, url: url)
+                
+                self.source = source
+                
+                exp.fulfill()
+        }
+        
+        wait(for: [exp], timeout: 5)
     }
     
     func loadItem(_ options: DTGSelectionOptions?) {
@@ -150,7 +219,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     func localEntry() -> PKMediaEntry {
         guard let id = self.id else {fatalError()}
-        return PKMediaEntry(id, sources: [PKMediaSource(id, contentUrl: try! cm.itemPlaybackUrl(id: id))])
+        return lam.createLocalMediaEntry(for: id, localURL: try! cm.itemPlaybackUrl(id: id)!)
     }
     
     func playItem(audioLangs: [String] = [], textLangs: [String] = []) {
@@ -162,6 +231,9 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         
         let player = PlayKitManager.shared.loadPlayer(pluginConfig: nil)
         
+        let playerView = createPlayerView()
+        player.view = playerView
+        
         let canPlay = XCTestExpectation(description: "canPlay \(id!)")
         let tracks = XCTestExpectation(description: "tracks for \(id!)")
         
@@ -169,21 +241,25 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             print("QQQ Player error: \(String(describing: e.error))")
         }
         
-        player.addObserver(self, event: PlayerEvent.tracksAvailable) { (e) in
-            
-            if let tracks = e.tracks {
-                let textTracks = tracks.textTracks?.map{ $0.language ?? "??" } ?? []
-                let audioTracks = tracks.audioTracks?.map{ $0.language ?? "??" } ?? []
-                print("QQQ tracks for \(self.id!):", audioTracks, textTracks)
+        if audioLangs.isEmpty && textLangs.isEmpty {
+            tracks.fulfill()    // don't wait for tracks
+        } else {
+            player.addObserver(self, event: PlayerEvent.tracksAvailable) { (e) in
                 
-                for lang in audioLangs {
-                    XCTAssert(audioTracks.contains(lang), "\(self.id!): \(audioTracks) does not contain \(lang)")
+                if let tracks = e.tracks {
+                    let textTracks = tracks.textTracks?.map{ $0.language ?? "??" } ?? []
+                    let audioTracks = tracks.audioTracks?.map{ $0.language ?? "??" } ?? []
+                    print("QQQ tracks for \(self.id!):", audioTracks, textTracks)
+                    
+                    for lang in audioLangs {
+                        XCTAssert(audioTracks.contains(lang), "\(self.id!): \(audioTracks) does not contain \(lang)")
+                    }
+                    for lang in textLangs {
+                        XCTAssert(textTracks.contains(lang), "\(self.id!): \(textTracks) does not contain \(lang)")
+                    }
                 }
-                for lang in textLangs {
-                    XCTAssert(textTracks.contains(lang), "\(self.id!): \(textTracks) does not contain \(lang)")
-                }
+                tracks.fulfill()
             }
-            tracks.fulfill()
         }
         
         let reached5sec = XCTestExpectation(description: "reached 5 seconds \(id!)")
@@ -220,9 +296,33 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         
         wait(for: [ended], timeout: 4)
 
+        player.view = nil
+        playerView.removeFromSuperview()
         player.destroy()
     }
     
+    func registerAsset() {
+        let exp = XCTestExpectation(description: "registerAsset")
+        lam.registerDownloadedAsset(location: try! cm.itemPlaybackUrl(id: self.id!)!, mediaSource: self.source!) { (err) in
+            if let e = err {
+                print("register failed with \(e)")
+            } else {
+                print("register succeeded")
+            }
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 4)
+    }
+    
+
+
+
+
+
+
+
+
+
     func _testFromJSON() {
         for it in DownloadTest.items {
             
@@ -248,13 +348,13 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     func testSmallBunny() {
         newItem("https://noamtamim.com/hls-bunny/index.m3u8")
-        loadItem(basic().setMinVideoBitrate(.avc1, 100))
-        eq(item().estimatedSize, 5066000)
+        loadItem(basic().setMinVideoBitrate(.avc1, 180_000))
+        eq(item().estimatedSize, 596*180_000/8)
         
         startItem()
         waitForDownload()
         
-        eq(item().downloadedSize, 5156458)
+        eq(item().downloadedSize, 12_906_952)
         
         playItem()
     }
