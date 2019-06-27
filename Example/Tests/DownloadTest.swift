@@ -189,8 +189,13 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
             .set(sessionProvider: SimpleSessionProvider(serverURL: ottEnv, partnerId: Int64(partnerId), ks: nil))
             .set(assetId: assetId)
             .loadMedia { [weak self] (entry_, error) in
-                guard let self = self else {return}
+                if let error = error {
+                    print("Error: ", error)
+                    return
+                }
                 guard let e = entry_ else {return}
+
+                guard let self = self else {return}
                 
                 guard let source = self.lam.getPreferredDownloadableMediaSource(for: e), let url = source.contentUrl else {return}
                 
@@ -202,6 +207,13 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         }
         
         wait(for: [exp], timeout: 5)
+    }
+    
+    func newItem(_ url: String, drmParam: FairPlayDRMParams, _ function: String = #function) {
+        self.id = function
+        let u = URL(string: url)!
+        self.source = PKMediaSource(function, contentUrl: u, mimeType: nil, drmData: [drmParam], mediaFormat: .hls)
+        _ = try! cm.addItem(id: function, url: u)
     }
     
     func loadItem(_ options: DTGSelectionOptions?) {
@@ -305,9 +317,9 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         let exp = XCTestExpectation(description: "registerAsset")
         lam.registerDownloadedAsset(location: try! cm.itemPlaybackUrl(id: self.id!)!, mediaSource: self.source!) { (err) in
             if let e = err {
-                print("register failed with \(e)")
+                NSLog("register failed with \(e)")
             } else {
-                print("register succeeded")
+                NSLog("register succeeded")
             }
             exp.fulfill()
         }
