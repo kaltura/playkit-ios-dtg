@@ -174,13 +174,15 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         self.progressLabel = createProgressLabel()
     }
     
+    // Test a simple clear asset
     func newItem(_ url: String, _ function: String = #function) {        
         self.id = function
         
         _ = try! cm.addItem(id: function, url: URL(string: url)!)
     }
     
-    func newItem(ottEnv: String, partnerId: Int, assetId: String, _ function: String = #function) {
+    // Test an OTT-based asset, using the PhoenixMediaProvider
+    func newOTTItem(ottEnv: String, partnerId: Int, assetId: String, _ function: String = #function) {
         self.id = function
         
         let exp = XCTestExpectation(description: "provider")
@@ -209,14 +211,47 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         wait(for: [exp], timeout: 5)
     }
     
-    func newItem(_ url: String, drmParam: FairPlayDRMParams, _ function: String = #function) {
+    // Test an OVP item, using OVPMediaProvider
+    func newOVPItem(partnerId: Int, entryId: String, _ function: String = #function) {
+        self.id = function
+
+        let exp = XCTestExpectation(description: "provider")
+        
+        OVPMediaProvider(SimpleSessionProvider(serverURL: "https://cdnapisec.kaltura.com", partnerId: Int64(partnerId), ks: nil))
+            .set(entryId: entryId)
+            .loadMedia { [weak self] (entry, error) in
+                
+                if let error = error {
+                    print("Error: ", error)
+                    return
+                }
+                guard let e = entry else {return}
+                
+                guard let self = self else {return}
+                
+                guard let source = self.lam.getPreferredDownloadableMediaSource(for: e), let url = source.contentUrl else {return}
+                
+                _ = try! self.cm.addItem(id: function, url: url)
+                
+                self.source = source
+
+                exp.fulfill()
+        }
+        
+        wait(for: [exp], timeout: 5)
+
+    }
+    
+    // Test a DRM protected asset with given params
+    func newDRMItem(_ url: String, drmParam: FairPlayDRMParams, _ function: String = #function) {
         self.id = function
         let u = URL(string: url)!
         self.source = PKMediaSource(function, contentUrl: u, mimeType: nil, drmData: [drmParam], mediaFormat: .hls)
         _ = try! cm.addItem(id: function, url: u)
     }
     
-    func loadItem(_ options: DTGSelectionOptions?) {
+    
+    func loadItem(_ options: DTGSelectionOptions? = nil) {
         guard let id = self.id else {return}
         try! cm.loadItemMetadata(id: id, options: options)
     }
@@ -453,6 +488,18 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         eq(item().downloadedSize, 478648)
         
         playItem()
+    }
+    
+    func testShortSintelFairPlay() {
+        newOVPItem(partnerId: 1851571, entryId: "0_pl5lbfo0")
+        loadItem()
+        
+        registerAsset()
+        
+        startItem()
+        waitForDownload()
+        
+        playItem()        
     }
 }
 
