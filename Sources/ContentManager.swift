@@ -210,6 +210,30 @@ fileprivate class SafeSet<T: Hashable> {
     }
 }
 
+fileprivate class SafeMap<K: Hashable, V: Any> {
+    private var map = [K:V]()
+    private let accessQueue = DispatchQueue(label: "SafeMap.accessQueue")
+    
+    subscript(key: K) -> V? {
+        get {
+            return self.accessQueue.sync {
+                map[key]
+            }
+        }
+        set {
+            self.accessQueue.sync {
+                map[key] = newValue
+            }
+        }
+    }
+    
+    func forEach(_ body: (K, V) -> Void) {
+        self.accessQueue.sync {
+            map.forEach(body)
+        }
+    }
+}
+
 
 /* ***********************************************************/
 // MARK: - ContentManager
@@ -257,7 +281,7 @@ public class ContentManager: NSObject, DTGContentManager {
     static let downloadMinimumDiskSpaceInMegabytes = 200
     
     // Map of item id and the related downloader
-    fileprivate var downloaders = [String: Downloader]()
+    fileprivate var downloaders = SafeMap<String, Downloader>()
     
     private override init() {
         /// create main directory
@@ -527,10 +551,9 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
-        for (_, downloader) in self.downloaders {
+        self.downloaders.forEach { (id, downloader) in
             if downloader.sessionIdentifier == identifier {
                 downloader.backgroundSessionCompletionHandler = completionHandler
-                break
             }
         }
     }
