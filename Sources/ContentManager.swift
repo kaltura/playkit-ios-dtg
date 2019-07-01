@@ -206,11 +206,11 @@ fileprivate class SafeSet<T: Hashable> {
     }
 }
 
-fileprivate class SafeMap<K: Hashable, V: Any> {
-    private var map = [K:V]()
+fileprivate class SafeMap<Key: Hashable, Value: Any> {
+    private var map = [Key: Value]()
     private let accessQueue = DispatchQueue(label: "SafeMap.accessQueue")
     
-    subscript(key: K) -> V? {
+    subscript(key: Key) -> Value? {
         get {
             return self.accessQueue.sync {
                 map[key]
@@ -223,9 +223,9 @@ fileprivate class SafeMap<K: Hashable, V: Any> {
         }
     }
     
-    func forEach(_ body: (K, V) -> Void) {
-        self.accessQueue.sync {
-            map.forEach(body)
+    func first(where predicate: ((key: Key, value: Value)) throws -> Bool) rethrows -> (key: Key, value: Value)? {
+        return try self.accessQueue.sync {
+            try map.first(where: predicate)
         }
     }
 }
@@ -547,10 +547,8 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
-        self.downloaders.forEach { (id, downloader) in
-            if downloader.sessionIdentifier == identifier {
-                downloader.backgroundSessionCompletionHandler = completionHandler
-            }
+        if let first = self.downloaders.first(where: { $0.value.sessionIdentifier == identifier }) {
+            first.value.backgroundSessionCompletionHandler = completionHandler
         }
     }
     
