@@ -294,15 +294,17 @@ class HLSLocalizer {
             
             // add the stream to the correct array
             if s.codecs == nil {
-                // Assume avc1/mp4a
+                // If no codec is specified, assume avc1/mp4a
                 mainStreams[TrackCodec.avc1.tag]?.append(s)
                 hasVideo = true
                 
             } else if let videoCodec = s.videoCodec() {
+                // A video codec was specified
                 mainStreams[videoCodec]?.append(s)
                 hasVideo = true
                 
             } else if let audioCodec = s.audioCodec() {
+                // An audio codec was specified with no video codec
                 mainStreams[audioCodec]?.append(s)
                 hasAudio = true
             }
