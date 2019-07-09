@@ -47,13 +47,13 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         let cm = ContentManager.shared
         
         try! cm.start { 
-            print("QQQ started dtg")
+            print("started dtg")
         }
         
         for s in DTGItemState.allCases {
             for i in try! cm.itemsByState(s) {
                 try! cm.removeItem(id: i.id)
-                print("QQQ removed leftover item \(i.id)")
+                print("removed leftover item \(i.id)")
             }
         }
     }
@@ -120,12 +120,12 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?) {
         
-        print("QQQ item \(id) moved to state \(newState)")
+        print("item \(id) moved to state \(newState)")
         
         if let selfId = self.id {
             if newState == .completed {
                 assert(id == selfId, "Id doesn't match")
-                print("QQQ item \(id) completed")
+                print("item \(id) completed")
                 
                 // Check if it's in completed state
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -137,21 +137,22 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         } else {
             // setUp
             assert(newState == .removed)
-            print("QQQ Removed \(id) in setUp()")
+            print("Removed \(id) in setUp()")
         }
     }
     
     let cm = ContentManager.shared
     
+    // MARK: - Test utils
+    
     func waitForDownload(_ timeout: TimeInterval = 300) {
         if let e = downloadedExp {
             wait(for: [e], timeout: timeout)
-            print("QQQ download fulfilled")
+            print("download fulfilled")
             progressLabel?.removeFromSuperview()
             progressLabel = nil
         }
     }
-    
     
     func item(_ id: String) -> DTGItem? {
         if let item = try! cm.itemById(id) {
@@ -285,7 +286,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         let tracks = XCTestExpectation(description: "tracks for \(id!)")
         
         player.addObserver(self, event: PlayerEvent.error) { (e) in
-            print("QQQ Player error: \(String(describing: e.error))")
+            print("Player error: \(String(describing: e.error))")
         }
         
         if audioLangs.isEmpty && textLangs.isEmpty {
@@ -296,7 +297,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
                 if let tracks = e.tracks {
                     let textTracks = tracks.textTracks?.map{ $0.language ?? "??" } ?? []
                     let audioTracks = tracks.audioTracks?.map{ $0.language ?? "??" } ?? []
-                    print("QQQ tracks for \(self.id!):", audioTracks, textTracks)
+                    print("tracks for \(self.id!):", audioTracks, textTracks)
                     
                     for lang in audioLangs {
                         XCTAssert(audioTracks.contains(lang), "\(self.id!): \(audioTracks) does not contain \(lang)")
@@ -314,23 +315,23 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
 
         player.addObserver(self, event: PlayerEvent.playheadUpdate) { (e) in
             if let time = e.currentTime, time.floatValue >= 5.0 {
-                print("QQQ reached 5 sec!")
+                print("reached 5 sec!")
                 reached5sec.fulfill()
             }
         }
         
         player.addObserver(self, event: PlayerEvent.ended) { (e) in
-            print("QQQ ended!")
+            print("ended!")
             ended.fulfill()
         }
         
         player.addObserver(self, event: PlayerEvent.canPlay) { (e) in
-            print("QQQ can play!")
+            print("can play!")
             canPlay.fulfill()
         }
         
         let entry = localEntry()
-        print("QQQ prepare \(entry)")
+        print("prepare \(entry)")
         player.prepare(MediaConfig(mediaEntry: entry))
         
         wait(for: [canPlay, tracks], timeout: 2)
@@ -361,14 +362,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         wait(for: [exp], timeout: 4)
     }
     
-
-
-
-
-
-
-
-
+    // MARK: - Test functions
 
     func _testFromJSON() {
         for it in DownloadTest.items {
