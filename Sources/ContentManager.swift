@@ -188,6 +188,53 @@ class DTGFilePaths {
     }
 }
 
+
+fileprivate class SafeSet<T: Hashable> {
+    private var set = Set<T>()
+    private let accessQueue = DispatchQueue(label: "SafeSet.accessQueue")
+
+    func add(_ member: T) -> Bool {
+        let oldMember = accessQueue.sync {
+            set.update(with: member)
+        }
+        return oldMember == nil
+    }
+
+    func remove(_ member: T) {
+        let removed = accessQueue.sync {
+            set.remove(member)
+        }
+        if removed == nil {
+            log.error("SafeSet.remove(): \(member) is missing from the set")
+        }
+    }
+}
+
+fileprivate class SafeMap<Key: Hashable, Value: Any> {
+    private var map = [Key: Value]()
+    private let accessQueue = DispatchQueue(label: "SafeMap.accessQueue")
+    
+    subscript(key: Key) -> Value? {
+        get {
+            return self.accessQueue.sync {
+                map[key]
+            }
+        }
+        set {
+            self.accessQueue.sync {
+                map[key] = newValue
+            }
+        }
+    }
+    
+    func first(where predicate: ((key: Key, value: Value)) throws -> Bool) rethrows -> (key: Key, value: Value)? {
+        return try self.accessQueue.sync {
+            try map.first(where: predicate)
+        }
+    }
+}
+
+
 /* ***********************************************************/
 // MARK: - ContentManager
 /* ***********************************************************/
@@ -206,12 +253,11 @@ public class ContentManager: NSObject, DTGContentManager {
     public var referrer: String?
     
     // Set of items that are currently in the transient metadata-loading state.
-    private var metadataLoading = Set<String>()
+    private var metadataLoadingSet = SafeSet<String>()
     
     public weak var delegate: ContentManagerDelegate?
     
     static let userAgent = UserAgent.build(clientTag: clientTag)
-
 
     public var storagePath: URL {
         return DTGFilePaths.storagePath
@@ -235,7 +281,7 @@ public class ContentManager: NSObject, DTGContentManager {
     static let downloadMinimumDiskSpaceInMegabytes = 200
     
     // Map of item id and the related downloader
-    fileprivate var downloaders = [String: Downloader]()
+    fileprivate var downloaders = SafeMap<String, Downloader>()
     
     private override init() {
         /// create main directory
@@ -343,12 +389,14 @@ public class ContentManager: NSObject, DTGContentManager {
         
         // can only load metadata on item in `.new` state.
         guard item.state == .new else { throw DTGError.invalidState(itemId: id) }
-        if metadataLoading.contains(id) { throw DTGError.metadataLoading(itemId: id)}
         
-        metadataLoading.update(with: id)
+        if !metadataLoadingSet.add(id) {
+            throw DTGError.metadataLoading(itemId: id)
+        }
+        
         defer {
             log.debug("removing \(id) from metadataLoading")
-            metadataLoading.remove(id)  // done, with or without error
+            metadataLoadingSet.remove(id)  // done, with or without error
         }
         
         let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
@@ -503,11 +551,8 @@ public class ContentManager: NSObject, DTGContentManager {
     }
     
     public func handleEventsForBackgroundURLSession(identifier: String, completionHandler: @escaping () -> Void) {
-        for (_, downloader) in self.downloaders {
-            if downloader.sessionIdentifier == identifier {
-                downloader.backgroundSessionCompletionHandler = completionHandler
-                break
-            }
+        if let first = self.downloaders.first(where: { $0.value.sessionIdentifier == identifier }) {
+            first.value.backgroundSessionCompletionHandler = completionHandler
         }
     }
     
