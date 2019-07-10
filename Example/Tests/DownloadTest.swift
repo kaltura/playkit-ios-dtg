@@ -484,6 +484,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         playItem()
     }
     
+    #if !targetEnvironment(simulator)
     func testShortSintelFairPlay() {
         newOVPItem(partnerId: 1851571, entryId: "0_pl5lbfo0")
         loadItem()
@@ -495,5 +496,6 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
         
         playItem()        
     }
+    #endif
 }
 
