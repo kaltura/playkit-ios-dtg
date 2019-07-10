@@ -363,7 +363,7 @@ class HLSLocalizer {
         } else if hasAudio {
             for codec in options.fullAudioCodecPriority() {
                 if let codecStreams = mainStreams[codec], let first = codecStreams.first {
-                    return try VideoStream(streamInfo: first, mediaUrl: first.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+                    return try VideoStream(streamInfo: first, mediaUrl: first.m3u8URL(), type: M3U8MediaPlaylistTypeAudio)
                 }
             }
         }

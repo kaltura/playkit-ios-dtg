@@ -350,6 +350,7 @@ func filter(streams: [M3U8Stream],
                         sortOrder: (M3U8Stream, M3U8Stream) -> Bool?, 
                         filter: (M3U8Stream) -> Bool) -> [M3U8Stream] {
     
+    
     if streams.count < 2 {
         return streams
     }
@@ -361,8 +362,6 @@ func filter(streams: [M3U8Stream],
     if filtered.isEmpty {
         if let s = sorted.last {
             return [s]
-        } else {
-            return []
         }
     }
     return filtered
