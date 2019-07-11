@@ -13,228 +13,10 @@ import Foundation
 import M3U8Kit
 import PlayKitUtils
 
-fileprivate let YES = "YES"
-fileprivate let NO = "NO"
 
-// This function works like String.init(contentsOf:url), but it allows to customize the user-agent header
-func syncHttpGetUtf8String(url: URL) throws -> String {
-    
-    var request = URLRequest(url: url)
-    request.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
+let KEYFORMAT_FAIRPLAY =    M3U8_EXT_X_KEY_KEYFORMAT + "=\"com.apple.streamingkeydelivery\""
+let MASTER_PLAYLIST_NAME =  "master.m3u8"
 
-    var data: Data?
-    var error: Error?
-    
-    // We need to block the calling thread (which should NOT be the main thread anyway).
-    let sem = DispatchSemaphore(value: 0)
-    
-    URLSession.shared.dataTask(with: request) { (d, resp, e) in
-        
-        data = d
-        error = e
-        
-        sem.signal()
-        
-    }.resume()
-    
-    if sem.wait(timeout: DispatchTime.now() + 10) == .timedOut {
-        throw DTGError.networkTimeout(url: url.absoluteString)
-    }
-    
-    
-    if let data = data {
-        return String(data: data, encoding: .utf8) ?? ""
-    }
-
-    if let err = error {
-        throw err
-    }
-    
-    // we should never get here -- there must be either error or data, but just in case return empty String
-    return ""
-}
-
-struct MockVideoTrack: DTGVideoTrack {
-    let width: Int?
-    
-    let height: Int?
-    
-    let bitrate: Int
-    
-    let audioGroup: String?
-    
-    let textGroup: String?
-}
-
-extension MockVideoTrack {
-    func groupId(for type: M3U8MediaPlaylistType) -> String? {
-        switch type {
-        case M3U8MediaPlaylistTypeAudio: return self.audioGroup
-        case M3U8MediaPlaylistTypeSubtitle: return self.textGroup
-        default: return nil
-        }
-    }
-}
-
-public enum HLSLocalizerError: Error {
-    /// sent when an unknown playlist type was encountered
-    case unknownPlaylistType
-    
-    case malformedPlaylist
-
-    case invalidState
-}
-
-
-func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
-    let text = try syncHttpGetUtf8String(url: url)
-    
-    if let playlist = M3U8MasterPlaylist(content: text, baseURL: url.deletingLastPathComponent()) {
-        return playlist
-    } else {
-        throw HLSLocalizerError.malformedPlaylist
-    }
-}
-
-func loadMediaPlaylist(url: URL, type: M3U8MediaPlaylistType) throws -> M3U8MediaPlaylist {
-    let text = try syncHttpGetUtf8String(url: url)
-
-    if let playlist = M3U8MediaPlaylist(content: text, type: type, baseURL: url.deletingLastPathComponent()) {
-        return playlist
-    } else {
-        throw HLSLocalizerError.malformedPlaylist
-    }
-}
-
-class Stream<T> {
-    let streamInfo: T
-    let mediaUrl: URL
-    let mediaPlaylist: M3U8MediaPlaylist
-    let type: M3U8MediaPlaylistType
-    let mapUrl: URL?
-    
-    init(streamInfo: T, mediaUrl: URL, type: M3U8MediaPlaylistType) throws {
-        
-        let playlist = try loadMediaPlaylist(url: mediaUrl, type: type)
-
-        self.streamInfo = streamInfo
-        self.mediaPlaylist = playlist
-        self.mediaUrl = mediaUrl
-        self.type = type
-        
-        if type != M3U8MediaPlaylistTypeSubtitle {
-            self.mapUrl = Stream.findMap(text: playlist.originalText)
-        } else {
-            self.mapUrl = nil
-        }
-    }
-    
-    static func findMap(text: String) -> URL? {
-        let reader = M3U8LineReader(text: text)
-        while true {
-            guard let line = reader?.next() else {return nil}
-            guard line.starts(with: M3U8_EXT_X_MAP) else {continue}
-            
-            guard let attr = line.m3u8Attribs(prefix: M3U8_EXT_X_MAP) else {continue}
-            
-            if let uri = attr[M3U8_EXT_X_MAP_URI] {
-                return URL(string: uri)
-            } else {
-                return nil
-            }
-        }
-    }
-    
-    var trackType: DownloadItemTaskType {
-        switch type {
-        case M3U8MediaPlaylistTypeAudio:
-            return .audio
-        case M3U8MediaPlaylistTypeVideo: 
-            fallthrough
-        case M3U8MediaPlaylistTypeMedia:
-            return .video
-        case M3U8MediaPlaylistTypeSubtitle:
-            return .text
-        default:
-            return .video
-        }
-    }
-}
-
-fileprivate func qs(_ s: String) -> String {
-    return "\"\(s)\""
-}
-
-class VideoStream: Stream<M3U8ExtXStreamInf>, CustomStringConvertible {
-    
-    var description: String {
-        return localMasterLine(hasAudio: true, hasText: true).replacingOccurrences(of: "\n", with: "\t")
-    }
-    
-    func localMasterLine(hasAudio: Bool, hasText: Bool) -> String {
-        let stream = streamInfo;
-        
-        var attribs = [(String, String)]()
-        
-        attribs.append((M3U8_EXT_X_STREAM_INF_BANDWIDTH, String(stream.bandwidth)))
-
-        attribs.append((M3U8_EXT_X_STREAM_INF_RESOLUTION, "\(Int(stream.resolution.width))x\(Int(stream.resolution.height))"))
-
-        if let audio = stream.audio, audio.count > 0, hasAudio {
-            attribs.append((M3U8_EXT_X_STREAM_INF_AUDIO, qs(audio)))
-        }
-        
-        if let subtitles = stream.subtitles, subtitles.count > 0, hasText {
-            attribs.append((M3U8_EXT_X_STREAM_INF_SUBTITLES, qs(subtitles)))
-        }
-        
-        if let codecsArray = stream.codecs as NSArray?, codecsArray.count > 0 {
-            let codecs = codecsArray.componentsJoined(by: ",")
-            attribs.append((M3U8_EXT_X_STREAM_INF_CODECS, qs(codecs)))
-        }
-        
-        return M3U8_EXT_X_STREAM_INF +
-            attribs.map { $0 + "=" + $1 }.joined(separator: ",") +
-            "\n" +
-            self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType)
-    }
-}
-
-class MediaStream: Stream<M3U8ExtXMedia>, CustomStringConvertible {
-
-    var description: String {
-        return localMasterLine().replacingOccurrences(of: "\n", with: "\t")
-    }
-    
-    func localMasterLine() -> String {
-        
-        let stream = streamInfo;
-        
-        var attribs = [(String, String)]()
-        
-        attribs.append((M3U8_EXT_X_MEDIA_TYPE, stream.type()))
-        attribs.append((M3U8_EXT_X_MEDIA_AUTOSELECT, stream.autoSelect() ? YES : NO))
-        attribs.append((M3U8_EXT_X_MEDIA_DEFAULT, stream.isDefault() ? YES : NO))
-        
-        attribs.append((M3U8_EXT_X_MEDIA_LANGUAGE, qs(stream.language())))
-        attribs.append((M3U8_EXT_X_MEDIA_GROUP_ID, qs(stream.groupId())))
-        attribs.append((M3U8_EXT_X_MEDIA_NAME, qs(stream.name())))
-        
-        attribs.append((M3U8_EXT_X_MEDIA_FORCED, stream.forced() ? YES : NO))
-        
-        if stream.bandwidth() > 0 {
-            attribs.append((M3U8_EXT_X_MEDIA_BANDWIDTH, String(stream.bandwidth())))
-        }
-        
-        attribs.append((M3U8_EXT_X_MEDIA_URI, qs(self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType))))
-        
-        return M3U8_EXT_X_MEDIA + attribs.map { $0 + "=" + $1 }.joined(separator: ",")
-    }
-    
-}
-
-fileprivate let KEYFORMAT_FAIRPLAY =    M3U8_EXT_X_KEY_KEYFORMAT + "=\"com.apple.streamingkeydelivery\""
-fileprivate let MASTER_PLAYLIST_NAME =  "master.m3u8"
 
 class HLSLocalizer {
     
@@ -248,7 +30,7 @@ class HLSLocalizer {
     var duration: Double = Double.nan
     var estimatedSize: Int64?
     
-    var videoTrack: MockVideoTrack?
+    var videoTrack: VideoTrack?
     
     var masterPlaylist: MasterPlaylist?
     var selectedVideoStream: VideoStream?
@@ -265,8 +47,8 @@ class HLSLocalizer {
         self.audioBitrateEstimation = audioBitrateEstimation
     }
     
-    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> MockVideoTrack {
-        return MockVideoTrack(width: Int(videoStream.resolution.width), 
+    private func videoTrack(videoStream: M3U8ExtXStreamInf) -> VideoTrack {
+        return VideoTrack(width: Int(videoStream.resolution.width), 
                               height: Int(videoStream.resolution.height), 
                               bitrate: videoStream.bandwidth, 
                               audioGroup: videoStream.audio, 
@@ -478,100 +260,79 @@ class HLSLocalizer {
         //options?.videoWidth|videoHeight
         //options?.videoBitrates
         //options?.videoCodecs
-        
-        // Aliases
-        
-        typealias Codec = DTGSelectionOptions.VideoCodec
-        typealias M3U8Stream = M3U8ExtXStreamInf
-        let avc1 = Codec.avc1
-        let hevc = Codec.hevc
-        let allCodecs = Codec.allCases
-        let mp4a = DTGSelectionOptions.AudioCodec.mp4a
-        let ac3 = DTGSelectionOptions.AudioCodec.ac3
-        let eac3 = DTGSelectionOptions.AudioCodec.eac3
+                        
+        let videoCodecs = TrackCodec.videoCodecs.map { $0.tag }
+        let audioCodecs = TrackCodec.audioCodecs.map { $0.tag }
+        let allCodecs = videoCodecs + audioCodecs
 
-        // Utils
-        
-        func hasCodec(_ s: M3U8Stream, _ codec: String) -> Bool {
-            return s.codecs?.contains{($0 as? String)?.hasPrefix(codec) ?? false} ?? false
-        }
-        
-        func filter(streams: [M3U8Stream], 
-                    sortOrder: (M3U8Stream, M3U8Stream) -> Bool?, 
-                    filter: (M3U8Stream) -> Bool) -> [M3U8Stream] {
-            
-            if streams.count < 2 {
-                return streams
-            }
-            
-            let sorted = streams.stableSorted(by: sortOrder)
-            
-            let filtered = sorted.filter( filter )
-            
-            if filtered.isEmpty {
-                if let s = sorted.last {
-                    return [s]
-                } else {
-                    return []
-                }
-            }
-            return filtered
-        }
-        
-        // Check if HEVC should be used. If not, we'll throw away all HEVC streams.
-        
-        let allowHEVC = CodecSupport.hardwareHEVC || (CodecSupport.softwareHEVC && options.allowInefficientCodecs)
-        
-        let allowAC3 = CodecSupport.ac3
-        let allowEC3 = CodecSupport.ec3
-        
-        // Create a dictionary of streams by codec
-        var streams = [Codec: [M3U8Stream]]()
+        // Create a dictionary of streams by codec.
+        // ONLY THE MAIN STREAMS are included -- not the alternates.
+        var mainStreams = [CodecTag: [M3U8Stream]]()
         for c in allCodecs {
-            streams[c] = []
+            mainStreams[c] = []
         }
         
         // Copy streams from M3U8Kit's structure
         let m3u8Streams = master.videoStreams()
         m3u8Streams.sortByBandwidth(inOrder: .orderedAscending)
+        
+        var hasVideo = false
+        var hasAudio = false
+        var hasResolution = false
+        
         for i in 0 ..< m3u8Streams.countInt {
             let s = m3u8Streams[i]
 
-            // if the stream uses an audio codec we can't play, skip it.
-            if hasCodec(s, ac3.tag) && !allowAC3 {
-                continue
-            } else if hasCodec(s, eac3.tag) && !allowEC3{
+            // if the stream uses a codec we can't play, skip it.
+            if s.usesUnsupportedCodecs(with: options) {
                 continue
             }
             
+            if s.resolution.height > 0 && s.resolution.width > 0 {
+                hasResolution = true
+            }
+            
             // add the stream to the correct array
-            if s.codecs == nil || hasCodec(s, avc1.tag) {
-                streams[avc1]?.append(s)
-            } else if allowHEVC && hasCodec(s, hevc.tag) {
-                streams[hevc]?.append(s)
+            if s.codecs == nil {
+                // If no codec is specified, assume avc1/mp4a
+                mainStreams[TrackCodec.avc1.tag]?.append(s)
+                hasVideo = true
+                
+            } else if let videoCodec = s.videoCodec() {
+                // A video codec was specified
+                mainStreams[videoCodec]?.append(s)
+                hasVideo = true
+                
+            } else if let audioCodec = s.audioCodec() {
+                // An audio codec was specified with no video codec
+                mainStreams[audioCodec]?.append(s)
+                hasAudio = true
             }
         }
                 
         
         #if DEBUG
-        print("Playable video streams:", streams)
+        print("Playable video streams:", mainStreams)
         #endif
 
         
         // Filter streams by video HEIGHT and WIDTH
         
-        for c in allCodecs {
-            if let height = options.videoHeight {
-                streams[c] = filter(streams: streams[c]!, 
-                                    sortOrder: {$0.resolution.height < $1.resolution.height}, 
-                                    filter: { $0.resolution.height >= Float(height) })
-            }
-            if let width = options.videoWidth {
-                streams[c] = filter(streams: streams[c]!, 
-                                    sortOrder: {$0.resolution.width < $1.resolution.width}, 
-                                    filter: { $0.resolution.width >= Float(width) })
+        if hasResolution {  // Don't sort/filter by resolution if not set
+            for c in videoCodecs {
+                if let height = options.videoHeight {
+                    mainStreams[c] = filter(streams: mainStreams[c]!, 
+                                            sortOrder: {$0.resolution.height < $1.resolution.height}, 
+                                            filter: { $0.resolution.height >= Float(height) })
+                }
+                if let width = options.videoWidth {
+                    mainStreams[c] = filter(streams: mainStreams[c]!, 
+                                            sortOrder: {$0.resolution.width < $1.resolution.width}, 
+                                            filter: { $0.resolution.width >= Float(width) })
+                }
             }
         }
+        
         
         // Filter by bitrate
         var videoBitrates = options.videoBitrates
@@ -583,37 +344,30 @@ class HLSLocalizer {
         }
         
         for (codec, bitrate) in videoBitrates {
-            guard let codecStreams = streams[codec] else { continue }
-            streams[codec] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
+            guard let codecStreams = mainStreams[codec.tag] else { continue }
+            mainStreams[codec.tag] = filter(streams: codecStreams, sortOrder: {$0.bandwidth < $1.bandwidth}, filter: {$0.bandwidth >= bitrate})
         }
 
         
         #if DEBUG
-        print("Filtered video streams:", streams)
+        print("Filtered video streams:", mainStreams)
         #endif
 
-        // Now we have two lists -- hevc and avc1. Look at codec prefs.
         
-        func videoStreamWithFirst(of codec: Codec) throws -> VideoStream {
-            guard let selected = streams[codec]?.first else {throw HLSLocalizerError.malformedPlaylist}
-            return try VideoStream(streamInfo: selected, mediaUrl: selected.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+        if hasVideo {
+            for codec in options.fullVideoCodecPriority() {
+                if let codecStreams = mainStreams[codec], let first = codecStreams.first {
+                    return try VideoStream(streamInfo: first, mediaUrl: first.m3u8URL(), type: M3U8MediaPlaylistTypeVideo)
+                }
+            }
+        } else if hasAudio {
+            for codec in options.fullAudioCodecPriority() {
+                if let codecStreams = mainStreams[codec], let first = codecStreams.first {
+                    return try VideoStream(streamInfo: first, mediaUrl: first.m3u8URL(), type: M3U8MediaPlaylistTypeAudio)
+                }
+            }
         }
-        
-        // The easy case: only one codec has valid streams. Select the first stream from that codec.
-        if streams[avc1]?.isEmpty ?? true {
-            return try videoStreamWithFirst(of: hevc)
-        } else if streams[hevc]?.isEmpty ?? true {
-            return try videoStreamWithFirst(of: avc1)
-        }
-        
-        // Ok, both codecs have valid streams. What does the app prefer?
-        if let firstPrefCodec = options.videoCodecs?.first {
-            return try videoStreamWithFirst(of: firstPrefCodec)
-            
-        } else {
-            // app did not select -- we'll go with hevc (remember it's not empty)
-            return try videoStreamWithFirst(of: hevc)
-        }
+        throw HLSLocalizerError.malformedPlaylist
     }
     
     private func addAllSegments(segmentList: M3U8SegmentInfoList, type: M3U8MediaPlaylistType, setDuration: Bool = false) throws {
@@ -748,9 +502,6 @@ class HLSLocalizer {
         let estimatedTrackSize = Int64(Double(bitrate) * duration / 8)
         estimatedSize = (estimatedSize ?? 0) + estimatedTrackSize
     }
-}
-
-extension HLSLocalizer {
     
     var availableTextTracksInfo: [TrackInfo] {
         guard let masterPlaylist = self.masterPlaylist else { return [] }
@@ -791,178 +542,3 @@ extension HLSLocalizer {
         return tracksInfo
     }
 }
-
-/************************************************************/
-// MARK: - M3U8Kit convenience extensions
-/************************************************************/
-
-typealias MasterPlaylist = M3U8MasterPlaylist
-typealias MediaPlaylist = M3U8MediaPlaylist
-
-private extension M3U8MediaPlaylistType {
-    func asString() -> String {
-        switch self {
-        case M3U8MediaPlaylistTypeVideo:
-            return "video"
-        case M3U8MediaPlaylistTypeAudio:
-            return "audio"
-        case M3U8MediaPlaylistTypeSubtitle:
-            return "text"
-        default:
-            return "unknown"
-        }
-    }
-    
-    func asDownloadItemTaskType() -> DownloadItemTaskType? {
-        switch self {
-        case M3U8MediaPlaylistTypeVideo:
-            return .video
-        case M3U8MediaPlaylistTypeAudio:
-            return .audio
-        case M3U8MediaPlaylistTypeSubtitle:
-            return .text
-        default:
-            return nil
-        }
-    }
-    
-    func isAudio() -> Bool {
-        return self == M3U8MediaPlaylistTypeAudio
-    }
-    
-    func isText() -> Bool {
-        return self == M3U8MediaPlaylistTypeSubtitle
-    }
-}
-
-private extension M3U8MasterPlaylist {
-    func videoStreams() -> M3U8ExtXStreamInfList {
-        return self.xStreamList
-    }
-    
-    func audioStreams() -> M3U8ExtXMediaList? {
-        return self.xMediaList.audio()
-    }
-    
-    func textStreams() -> M3U8ExtXMediaList {
-        return self.xMediaList.subtitle()
-    }
-}
-
-private extension M3U8ExtXStreamInfList {
-    subscript(index: Int) -> M3U8ExtXStreamInf {
-        get {
-            return self.xStreamInf(at: UInt(index))
-        }
-    }
-    var countInt: Int {
-        return Int(count)
-    }
-}
-
-private extension M3U8ExtXMediaList {
-    subscript(index: Int) -> M3U8ExtXMedia {
-        get {
-            return self.xMedia(at: UInt(index))
-        }
-    }
-    var countInt: Int {
-        return Int(count)
-    }
-}
-
-private extension M3U8SegmentInfoList {
-    subscript(index: Int) -> M3U8SegmentInfo {
-        get {
-            return self.segmentInfo(at: UInt(index))
-        }
-    }
-    var countInt: Int {
-        return Int(count)
-    }
-}
-
-extension String {
-    func md5() -> String {
-        return md5WithString(self)
-    }
-    
-    func safeItemPathName() -> String {
-        return self.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlHostAllowed) ?? self.md5()
-    }
-    
-    func m3u8Attribs(prefix: String) -> [String:String]? {
-        return parseM3U8Attributes(self, prefix)
-    }
-}
-
-extension URL {
-    func mediaPlaylistRelativeLocalPath(as type: DownloadItemTaskType) -> String {
-        return "\(type.asString())/\(absoluteString.md5()).\(pathExtension)"
-    }
-    
-    func segmentRelativeLocalPath() -> String {
-        return "\(absoluteString.md5()).\(pathExtension)"
-    }
-}
-
-extension NSMutableString {
-    func replace(playlistUrl: URL?, type: DownloadItemTaskType) {
-        if let url = playlistUrl {
-            self.replaceOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type), options: [], range: NSMakeRange(0, self.length))
-        }
-    }
-    
-    func replace(segmentUrl: String, relativeTo: URL) throws {
-        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else { throw HLSLocalizerError.invalidState }
-        self.replaceOccurrences(of: segmentUrl, with: relativeLocalPath, options: [], range: NSMakeRange(0, self.length))
-    }
-}
-
-extension String {
-    func replacing(playlistUrl: URL?, type: DownloadItemTaskType) -> String {
-        if let url = playlistUrl {
-            return self.replacingOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type))
-        } else {
-            return self
-        }
-    }
-}
-
-extension DTGSelectionOptions: CustomStringConvertible {
-    public var description: String {
-        return """
-        Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1) codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates)
-        Audio: all=\(allAudioLanguages) list=\(audioLanguages ?? []) codecs=\(audioCodecs ?? [])
-        Text: all=\(allTextLanguages) list=\(textLanguages ?? [])
-        """
-    }
-}
-
-extension DTGSelectionOptions.VideoCodec: CustomStringConvertible {
-    public var description: String {
-        return tag
-    }
-    
-    var tag: String {
-        switch self {
-        case .avc1: return "avc1"
-        case .hevc: return "hvc1"
-        }
-    }
-}
-
-extension DTGSelectionOptions.AudioCodec: CustomStringConvertible {
-    public var description: String {
-        return tag
-    }
-    
-    var tag: String {
-        switch self {
-        case .mp4a: return "mp4a"
-        case .ac3: return "ac-3"
-        case .eac3: return "ec-3"
-        }
-    }
-}
-

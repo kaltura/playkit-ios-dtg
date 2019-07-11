@@ -21,7 +21,7 @@ struct ItemJSON: Codable {
     let title: String?
     let partnerId: Int?
     let ks: String?
-    let env: String = defaultEnv
+    let env: String?
     
     let url: String?
     
@@ -61,7 +61,7 @@ struct OptionsJSON: Codable {
         opts.allowInefficientCodecs = allowInefficientCodecs ?? false
         
         if let codecs = audioCodecs {
-            opts.audioCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.AudioCodec? in
+            opts.videoCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.TrackCodec? in
                 switch tag {
                 case "mp4a": return .mp4a
                 case "ac3": return .ac3
@@ -72,7 +72,7 @@ struct OptionsJSON: Codable {
         }
         
         if let codecs = videoCodecs {
-            opts.videoCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.VideoCodec? in
+            opts.videoCodecs = codecs.compactMap({ (tag) -> DTGSelectionOptions.TrackCodec? in
                 switch tag {
                 case "avc1": return .avc1
                 case "hevc", "hvc1": return .hevc
@@ -86,7 +86,7 @@ struct OptionsJSON: Codable {
         
         if let bitrates = videoBitrates {
             for (codecId, bitrate) in bitrates {
-                let codec: DTGSelectionOptions.VideoCodec
+                let codec: DTGSelectionOptions.TrackCodec
                 switch codecId {
                 case "avc1": codec = .avc1
                 case "hevc", "hvc1": codec = .hevc

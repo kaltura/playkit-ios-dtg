@@ -80,7 +80,7 @@ public class DTGSelectionOptions {
     /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
     /// For example, if the list is `[.hevc]`, but the stream has only `avc1`, `avc1` will be selected. Likewise,
     /// if the list contains only `.hevc` but the device does not support it, `.avc1` will be selected.
-    public var videoCodecs: [VideoCodec]? = nil 
+    public var videoCodecs: [TrackCodec]? = nil
     
     /// Preferred audio codecs.
     ///
@@ -90,7 +90,7 @@ public class DTGSelectionOptions {
     /// A given codec may be selected even if it isn't listed if there's no other way to satisfy the download.
     /// For example, if the list is `[.ac3, .eac3]`, but the stream has only `mp4a`, `mp4a` will be selected. Likewise,
     /// if the list contains only `.eac3` but the device does not support it, `.ac3` or `.mp4a` will be selected.
-    public var audioCodecs: [AudioCodec]? = nil
+    public var audioCodecs: [TrackCodec]? = nil
     
     /// Preferred video width in pixels. DTG will prefer the smallest rendition that is large enough.
     public var videoWidth: Int? = nil
@@ -107,23 +107,25 @@ public class DTGSelectionOptions {
     /// When setting this property, it is advised to include the max bitrate for every codec.
     /// Otherwise, if a codec not on this list is selected for download, the selected
     /// bitrate is not defined.
-    public var videoBitrates: [VideoCodec: Int] = [:]
+    public var videoBitrates: [TrackCodec: Int] = [:]
     
     /// Allow or disallow codecs that are not implemented in hardware.
     /// iOS 11 and up support HEVC, but hardware support is only available in iPhone 7 and later.
     /// Using a software decoder causes higher energy consumption, affecting battery life.
     public var allowInefficientCodecs: Bool = false
     
-    public enum VideoCodec: CaseIterable {
+    public enum TrackCodec: CaseIterable {
+        
+        // Video Codecs
         
         /// AVC1 codec, AKA H.264
         case avc1
         
         /// HEVC codec, AKA HVC1 or H.265
         case hevc
-    }
-    
-    public enum AudioCodec {
+
+        // Audio Codecs
+        
         /// MP4A
         case mp4a
         
@@ -149,19 +151,19 @@ public class DTGSelectionOptions {
     }
     
     @discardableResult
-    public func setMinVideoBitrate(_ codec: VideoCodec, _ bitrate: Int) -> Self {
+    public func setMinVideoBitrate(_ codec: TrackCodec, _ bitrate: Int) -> Self {
         self.videoBitrates[codec] = bitrate
         return self
     }
     
     @discardableResult
-    public func setPreferredVideoCodecs(_ codecs: [VideoCodec]) -> Self {
+    public func setPreferredVideoCodecs(_ codecs: [TrackCodec]) -> Self {
         self.videoCodecs = codecs
         return self
     }
     
     @discardableResult
-    public func setPreferredAudioCodecs(_ codecs: [AudioCodec]) -> Self {
+    public func setPreferredAudioCodecs(_ codecs: [TrackCodec]) -> Self {
         self.audioCodecs = codecs
         return self
     }
@@ -189,4 +191,13 @@ public class DTGSelectionOptions {
         self.allTextLanguages = true
         return self
     }
+    
+    
+    
+    // Calculate and cache supported codecs
+    internal lazy var allowedVideoCodecs = TrackCodec.videoCodecs.filter({$0.isAllowed(with: self)})
+    internal lazy var allowedAudioCodecs = TrackCodec.audioCodecs.filter({$0.isAllowed(with: self)})
+    internal lazy var allowedVideoCodecTags = allowedVideoCodecs.map{$0.tag}
+    internal lazy var allowedAudioCodecTags = allowedAudioCodecs.map{$0.tag}
+    internal lazy var allowedCodecTags = allowedVideoCodecTags + allowedAudioCodecTags
 }
