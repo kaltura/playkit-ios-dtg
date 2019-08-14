@@ -1,3 +1,7 @@
+# Next
+
+Allow sample app to handle OTT assets from JSON.
+
 # 3.9.0
 
 ## Changes

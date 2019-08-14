@@ -14,6 +14,18 @@ import PlayKitProviders
 
 let defaultAudioBitrateEstimation: Int = 64000
 
+func maybeSetSmallDuration(entry: PKMediaEntry) {
+    if let minutes = setSmallerOfflineDRMExpirationMinutes {
+        entry.sources?.forEach({ (source) in
+            if let drmData = source.drmData, let fpsData = drmData.first as? FairPlayDRMParams {
+                var lic = fpsData.licenseUri!.absoluteString
+                lic.append(contentsOf: "&rental_duration=\(minutes*60)")
+                fpsData.licenseUri = URL(string: lic)
+            }
+        })
+    }
+}
+
 class Item {
     static let defaultEnv = "http://cdnapi.kaltura.com"
     let id: String
@@ -30,7 +42,7 @@ class Item {
         let title = json.title ?? json.id
         
         if let partnerId = json.partnerId {
-            self.init(title, id: json.id, partnerId: partnerId, ks: json.ks, env: json.env)
+            self.init(title, id: json.id, partnerId: partnerId, ks: json.ks, env: json.env, ott: json.ott ?? false, ottParams: json.ottParams)
         } else if let url = json.url {
             self.init(title, id: json.id, url: url)
         } else {
@@ -50,28 +62,41 @@ class Item {
         self.partnerId = nil
     }
     
-    init(_ title: String, id: String, partnerId: Int, ks: String? = nil, env: String? = nil) {
+    init(_ title: String, id: String, partnerId: Int, ks: String? = nil, env: String? = nil, ott: Bool = false, ottParams: ItemOTTParamsJSON? = nil) {
         self.id = id
         self.title = title
         self.partnerId = partnerId
-        
         self.url = nil
         
-        OVPMediaProvider(SimpleSessionProvider(serverURL: env ?? Item.defaultEnv, partnerId: Int64(partnerId), ks: ks))
-            .set(entryId: id)
-            .loadMedia { (entry, error) in
-                
-                if let minutes = setSmallerOfflineDRMExpirationMinutes {
-                    entry?.sources?.forEach({ (source) in
-                        if let drmData = source.drmData, let fpsData = drmData.first as? FairPlayDRMParams {
-                            var lic = fpsData.licenseUri!.absoluteString
-                            lic.append(contentsOf: "&rental_duration=\(minutes*60)")
-                            fpsData.licenseUri = URL(string: lic)
-                        }
-                    })
+        let session = SimpleSessionProvider(serverURL: env ?? Item.defaultEnv, partnerId: Int64(partnerId), ks: ks)
+        
+        let provider: MediaEntryProvider
+        
+        if ott {
+            let ottProvider = PhoenixMediaProvider().set(sessionProvider: session)
+                .set(assetId: self.id)
+                .set(type: .media)
+            
+            if let ottParams = ottParams {
+                if let format = ottParams.format {
+                    ottProvider.set(formats: [format])
                 }
-                
+            }
+            
+            provider = ottProvider
+            
+        } else {
+            provider = OVPMediaProvider(session)
+                .set(entryId: id)
+            
+            return
+        }
+        
+        provider.loadMedia { (entry, error) in
+            if let entry = entry {
+                maybeSetSmallDuration(entry: entry)
                 self.entry = entry
+            }
         }
     }
 }
