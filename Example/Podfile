@@ -7,11 +7,13 @@ swift_version = '5.0'
 
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
+
+  pod 'PlayKit', '~> 3.11.0'
 #  pod 'PlayKit', :path => '../../playkit-ios'
-#  pod 'PlayKit', '~> 3.10.1'
-  pod 'PlayKit', :git => 'https://github.com/kaltura/playkit-ios', :branch => 'develop'
-  pod 'PlayKitProviders'  #, :path => '../../playkit-ios-providers'
-  
+#  pod 'PlayKit', :git => 'https://github.com/kaltura/playkit-ios', :branch => 'develop'
+
+  pod 'PlayKitProviders', '~> 1.3.2'
+#  pod 'PlayKitProviders'  #, :path => '../../playkit-ios-providers'
   
   pod 'Toast', '~> 4.0.0'
 
