@@ -10,8 +10,8 @@ import PlayKit
 import PlayKitProviders
 import DownloadToGo
 
-let setSmallerOfflineDRMExpirationMinutes: Int? = 5
-//let setSmallerOfflineDRMExpirationMinutes: Int? = nil
+//let setSmallerOfflineDRMExpirationMinutes: Int? = 5
+let setSmallerOfflineDRMExpirationMinutes: Int? = nil
 
 
 let defaultEnv = "http://cdnapi.kaltura.com"

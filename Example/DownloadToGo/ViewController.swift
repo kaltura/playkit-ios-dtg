@@ -88,8 +88,6 @@ class Item {
         } else {
             provider = OVPMediaProvider(session)
                 .set(entryId: id)
-            
-            return
         }
         
         provider.loadMedia { (entry, error) in
