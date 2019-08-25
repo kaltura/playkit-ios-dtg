@@ -151,12 +151,12 @@ struct DownloadItem: DTGItem {
 }
 
 public struct TrackInfo: Hashable {
-    public let type: TrackType
-    public let languageCode: String
-    public let title: String
+    public let type: TrackType          // TYPE in M3U8
+    public let languageCode: String?    // LANGUAGE in M3U8
+    public let title: String            // NAME in M3U8
     
-    var id: String {
-        return "\(self.languageCode):\(self.title)"
+    var id_: String {
+        return "\(self.languageCode ?? "<unknown>"):\(self.title)"
     }
     
     public enum TrackType: String {

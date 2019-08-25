@@ -75,7 +75,7 @@ fileprivate func migrate_to_3(_ migration: Migration) {
 
 fileprivate let config = Realm.Configuration(
     fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
-    schemaVersion: 4,
+    schemaVersion: 5,
     migrationBlock: { migration, oldSchemaVersion in
         
         // We haven’t migrated anything yet, so oldSchemaVersion == 0
@@ -98,6 +98,11 @@ fileprivate let config = Realm.Configuration(
         // 3 -> 4
         if (oldSchemaVersion < 4) {
             // Primary key for DownloadItemTaskRealm has changed, nothing to do
+        }
+        
+        // 4 -> 5
+        if (oldSchemaVersion < 5) {
+            // Property 'TrackInfoRealm.languageCode' has been made optional. Nothing to do.
         }
     },
     objectTypes: [DTGItemRealm.self, DownloadItemTaskRealm.self, TrackInfoRealm.self]

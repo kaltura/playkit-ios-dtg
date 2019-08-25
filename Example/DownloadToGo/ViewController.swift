@@ -94,6 +94,11 @@ class Item {
             if let entry = entry {
                 maybeSetSmallDuration(entry: entry)
                 self.entry = entry
+                
+                print("entry: \(entry)")
+                
+            } else if let error = error {
+                print("error: \(error)")
             }
         }
     }
@@ -363,8 +368,11 @@ class ViewController: UIViewController {
     
     @IBAction func showInfo(_ sender: UIButton) {
         
-        func name(_ code: String) -> String {
-            return Locale.current.localizedString(forLanguageCode: code) ?? (code + "?")
+        func name(_ code: String?) -> String {
+            if let code = code {
+                return Locale.current.localizedString(forLanguageCode: code) ?? (code + "?")
+            }
+            return "<unknown>"
         }
         
         var msg = ""

@@ -216,9 +216,17 @@ class MediaStream: Stream<M3U8ExtXMedia>, CustomStringConvertible {
         attribs.append((M3U8_EXT_X_MEDIA_AUTOSELECT, stream.autoSelect() ? YES : NO))
         attribs.append((M3U8_EXT_X_MEDIA_DEFAULT, stream.isDefault() ? YES : NO))
         
-        attribs.append((M3U8_EXT_X_MEDIA_LANGUAGE, qs(stream.language())))
-        attribs.append((M3U8_EXT_X_MEDIA_GROUP_ID, qs(stream.groupId())))
-        attribs.append((M3U8_EXT_X_MEDIA_NAME, qs(stream.name())))
+        if let lang = stream.language() {
+            attribs.append((M3U8_EXT_X_MEDIA_LANGUAGE, qs(lang)))
+        }
+        
+        if let groupId = stream.groupId() {
+            attribs.append((M3U8_EXT_X_MEDIA_GROUP_ID, qs(groupId)))
+        }
+        
+        if let name = stream.name() {
+            attribs.append((M3U8_EXT_X_MEDIA_NAME, qs(name)))
+        }
         
         attribs.append((M3U8_EXT_X_MEDIA_FORCED, stream.forced() ? YES : NO))
         

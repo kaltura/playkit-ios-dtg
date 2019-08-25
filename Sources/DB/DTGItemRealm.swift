@@ -14,12 +14,13 @@ import RealmSwift
 
 class TrackInfoRealm: Object {
     @objc dynamic var title: String = ""
-    @objc dynamic var languageCode: String = ""
+    @objc dynamic var languageCode: String?     // HLS LANGUAGE is optional
     @objc dynamic var type: String = ""
     @objc dynamic var selected = false
     
     convenience init(trackInfo: TrackInfo, selected: Bool) {
         self.init()
+        
         self.title = trackInfo.title
         self.languageCode = trackInfo.languageCode
         self.type = trackInfo.type.rawValue
