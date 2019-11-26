@@ -331,7 +331,11 @@ class ViewController: UIViewController {
                         
             lam.renewDownloadedAsset(location: url, mediaSource: source) { (error) in
                 DispatchQueue.main.async {
-                    self.toast("Renew complete")
+                    if let e = error {
+                        self.toast("Failed with \(e)")
+                    } else {
+                        self.toast("Renew complete")
+                    }
                 }
             }
             
