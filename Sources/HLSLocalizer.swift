@@ -142,7 +142,7 @@ class HLSLocalizer {
         try save(text: localMaster.joined(separator: "\n") + "\n", as: MASTER_PLAYLIST_NAME)
         
         // Localize the selected video stream
-        try saveMediaPlaylist(videoStream)
+        try saveMediaPlaylist(videoStream, forceVideo: true)
         
         // Localize the selected audio and text streams
         for stream in selectedAudioStreams {
@@ -175,11 +175,11 @@ class HLSLocalizer {
         return line.hasPrefix("#EXT-X-SESSION-KEY:") && line.contains(KEYFORMAT_FAIRPLAY)
     }
     
-    private func saveMediaPlaylist<T>(_ stream: Stream<T>) throws {
+    private func saveMediaPlaylist<T>(_ stream: Stream<T>, forceVideo: Bool = false) throws {
         let mediaPlaylist = stream.mediaPlaylist
         let originalUrl = stream.mediaUrl
         let mapUrl = stream.mapUrl
-        let type = stream.trackType
+        let type = forceVideo ? DownloadItemTaskType.video : stream.trackType
         
         guard let originalText = mediaPlaylist.originalText else { throw HLSLocalizerError.invalidState }
         #if DEBUG
