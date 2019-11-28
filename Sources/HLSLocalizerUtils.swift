@@ -196,7 +196,7 @@ class VideoStream: Stream<M3U8ExtXStreamInf>, CustomStringConvertible {
         return M3U8_EXT_X_STREAM_INF +
             attribs.map { $0 + "=" + $1 }.joined(separator: ",") +
             "\n" +
-            self.mediaUrl.mediaPlaylistRelativeLocalPath(as: self.trackType)
+            self.mediaUrl.mediaPlaylistRelativeLocalPath(as: .video)
     }
 }
 
