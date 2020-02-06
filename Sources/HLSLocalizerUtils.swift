@@ -27,33 +27,37 @@ typealias TrackCodec = DTGSelectionOptions.TrackCodec
 typealias M3U8Stream = M3U8ExtXStreamInf
 
 // This function works like String.init(contentsOf:url), but it allows to customize the user-agent header
-func syncHttpGetUtf8String(url: URL) throws -> String {
+func syncHttpGetUtf8String(url: URL) throws -> (String, URL) {
     
     var request = URLRequest(url: url)
     request.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
     
     var data: Data?
     var error: Error?
+    var finalURL: URL?
     
     // We need to block the calling thread (which should NOT be the main thread anyway).
     let sem = DispatchSemaphore(value: 0)
     
     URLSession.shared.dataTask(with: request) { (d, resp, e) in
         
+        finalURL = resp?.url
         data = d
         error = e
         
         sem.signal()
         
-        }.resume()
+    }.resume()
     
     if sem.wait(timeout: DispatchTime.now() + 10) == .timedOut {
         throw DTGError.networkTimeout(url: url.absoluteString)
     }
     
-    
     if let data = data {
-        return String(data: data, encoding: .utf8) ?? ""
+        return (
+            String(data: data, encoding: .utf8) ?? "",
+            finalURL ?? url
+        )
     }
     
     if let err = error {
@@ -61,7 +65,7 @@ func syncHttpGetUtf8String(url: URL) throws -> String {
     }
     
     // we should never get here -- there must be either error or data, but just in case return empty String
-    return ""
+    return ("", url)
 }
 
 struct VideoTrack: DTGVideoTrack {
@@ -87,9 +91,9 @@ struct VideoTrack: DTGVideoTrack {
 
 
 func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
-    let text = try syncHttpGetUtf8String(url: url)
+    let (text, finalURL) = try syncHttpGetUtf8String(url: url)
     
-    if let playlist = M3U8MasterPlaylist(content: text, baseURL: url.deletingLastPathComponent()) {
+    if let playlist = M3U8MasterPlaylist(content: text, baseURL: finalURL.deletingLastPathComponent()) {
         return playlist
     } else {
         throw HLSLocalizerError.malformedPlaylist
@@ -97,9 +101,9 @@ func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
 }
 
 func loadMediaPlaylist(url: URL, type: M3U8MediaPlaylistType) throws -> M3U8MediaPlaylist {
-    let text = try syncHttpGetUtf8String(url: url)
+    let (text, finalURL) = try syncHttpGetUtf8String(url: url)
     
-    if let playlist = M3U8MediaPlaylist(content: text, type: type, baseURL: url.deletingLastPathComponent()) {
+    if let playlist = M3U8MediaPlaylist(content: text, type: type, baseURL: finalURL.deletingLastPathComponent()) {
         return playlist
     } else {
         throw HLSLocalizerError.malformedPlaylist

@@ -558,7 +558,9 @@ extension ViewController {
 extension ViewController: ContentManagerDelegate {
     
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
-        if let totalBytesEstimated = totalBytesEstimated, id == self.selectedItem.id {
+        if id != selectedItem.id {return}   // only update the view for selected item.
+        
+        if let totalBytesEstimated = totalBytesEstimated {
             if totalBytesEstimated > totalBytesDownloaded {
                 DispatchQueue.main.async {
                     self.progressView.progress = Float(totalBytesDownloaded) / Float(totalBytesEstimated)
