@@ -1,9 +1,9 @@
-suffix = '-dev'   # Dev mode
-# suffix = ''       # Release
+# suffix = '-dev'   # Dev mode
+suffix = ''       # Release
 
 Pod::Spec.new do |s|
   s.name             = 'DownloadToGo'
-  s.version          = '3.11.0' + suffix
+  s.version          = '3.11.1' + suffix
   s.summary          = 'DownloadToGo -- download manager for HLS'
   s.homepage         = 'https://github.com/kaltura/playkit-ios-dtg'
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
