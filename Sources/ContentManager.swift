@@ -34,6 +34,8 @@ public class ContentManager: NSObject, DTGContentManager {
     public var referrer: String?
     
     var manifestRequestAdapter: DTGRequestParamsAdapter? = PlayManifestDTGRequestParamsAdapter()
+    var chunksRequestAdapter: DTGRequestParamsAdapter?
+
     // Set of items that are currently in the transient metadata-loading state.
     private var metadataLoadingSet = SafeSet<String>()
     
@@ -288,7 +290,7 @@ public class ContentManager: NSObject, DTGContentManager {
         
         try self.update(itemState: .inProgress, byId: id)
         
-        let downloader = DefaultDownloader(itemId: id, tasks: tasks)
+        let downloader = DefaultDownloader(itemId: id, tasks: tasks, chunksRequestAdapter: chunksRequestAdapter)
         downloader.delegate = self
         self.downloaders[id] = downloader
         try downloader.start()
@@ -357,6 +359,10 @@ public class ContentManager: NSObject, DTGContentManager {
 
     public func setManifestRequestAdapter(adapter: DTGRequestParamsAdapter) {
         self.manifestRequestAdapter = adapter
+    }
+    
+    public func setChunksRequestAdapter(adapter: DTGRequestParamsAdapter) {
+        self.chunksRequestAdapter = adapter
     }
 }
 

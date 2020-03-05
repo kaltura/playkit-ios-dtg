@@ -112,6 +112,7 @@ public protocol DTGContentManager: class {
     func setDefaultAudioBitrateEstimation(bitrate: Int)
     
     func setManifestRequestAdapter(adapter: DTGRequestParamsAdapter)
+    func setChunksRequestAdapter(adapter: DTGRequestParamsAdapter)
 }
 
 

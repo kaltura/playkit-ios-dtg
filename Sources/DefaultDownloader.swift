@@ -40,6 +40,8 @@ class DefaultDownloader: NSObject, Downloader {
     // MARK: - Private Properties
     /************************************************************/
     
+    private let chunksRequestAdapter: DTGRequestParamsAdapter?
+    
     private var blockNewTasks = false
     
     /// Holds all the active downloads map of session task and the corresponding download task.
@@ -92,8 +94,9 @@ class DefaultDownloader: NSObject, Downloader {
     /************************************************************/
     // MARK: - Initialization
     /************************************************************/
-    required init(itemId: String, tasks: [DownloadItemTask]) {
+    required init(itemId: String, tasks: [DownloadItemTask], chunksRequestAdapter: DTGRequestParamsAdapter?) {
         self.dtgItemId = itemId
+        self.chunksRequestAdapter = chunksRequestAdapter
         super.init()
         self.downloadItemTasksQueue.enqueue(tasks)
         self.state.onChange { [weak self] (state) in
@@ -190,6 +193,22 @@ private extension DefaultDownloader {
         }
     }
     
+    func validResumeData(downloadTask: DownloadItemTask) -> Data? {
+        if let resumeData = downloadTask.resumeData {
+            return resumeData.count >= invalidResumeDataSize ? resumeData : nil
+        }
+        return nil
+    }
+    
+    func createTask(session: URLSession, params: DTGRequestParams) -> URLSessionDownloadTask {
+        var req = URLRequest(url: params.url)
+        for header in params.headers {
+            req.setValue(header.value, forHTTPHeaderField: header.key)
+        }
+        
+        return session.downloadTask(with: req)
+    }
+    
     func start(downloadTask: DownloadItemTask) {
         
         // Validate that the downloadURLSession wasn't invalidated
@@ -198,15 +217,25 @@ private extension DefaultDownloader {
             return
         }
         
+        let headers = ["user-agent": ContentManager.userAgent]
+        let reqParams = (url: downloadTask.contentUrl, headers: headers)
+        
         let newTask: URLSessionDownloadTask
         
-        if let resumeData = downloadTask.resumeData, resumeData.count >= invalidResumeDataSize {
-            // if we have resume data create a task with the resume data and remove it from the downloadTask
+        // Start a new task or resume an old one.
+        
+        if let adapter = chunksRequestAdapter {
+            // If there's an adapter, we can't resume even if there's resume data,
+            // because the original URL cannot be changed.
+            newTask = createTask(session: session, params: adapter.adapt(reqParams))
+            
+        } else if let resumeData = validResumeData(downloadTask: downloadTask) {
+            // We have resume data and there's no adapter - resume the old session.
             newTask = session.downloadTask(withResumeData: resumeData)
+            
         } else {
-            var req = URLRequest(url: downloadTask.contentUrl)
-            req.addValue(ContentManager.userAgent, forHTTPHeaderField: "user-agent")
-            newTask = session.downloadTask(with: req)
+            // No resume data - create a new task.
+            newTask = createTask(session: session, params: reqParams)
         }
         
         self.activeDownloads[newTask] = downloadTask
