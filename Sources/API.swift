@@ -110,6 +110,8 @@ public protocol DTGContentManager: class {
     
     /// Set the default audio bitrate for size-estimation purposes. Defaults to 64000.
     func setDefaultAudioBitrateEstimation(bitrate: Int)
+    
+    func setManifestRequestAdapter(adapter: DTGRequestParamsAdapter)
 }
 
 
@@ -254,4 +256,9 @@ public enum LogLevel {
         case .error: return .error
         }
     }
+}
+
+public typealias DTGRequestParams = (url: URL, headers: [String:String])
+public protocol DTGRequestParamsAdapter: class {
+    func adapt(_ params: DTGRequestParams) -> DTGRequestParams
 }

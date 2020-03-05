@@ -33,6 +33,7 @@ public class ContentManager: NSObject, DTGContentManager {
     /// A custom referrer, used for requesting the play manifest, if no referrer is set app id is used.
     public var referrer: String?
     
+    var manifestRequestAdapter: DTGRequestParamsAdapter? = PlayManifestDTGRequestParamsAdapter()
     // Set of items that are currently in the transient metadata-loading state.
     private var metadataLoadingSet = SafeSet<String>()
     
@@ -80,6 +81,7 @@ public class ContentManager: NSObject, DTGContentManager {
         
         // initialize db
         self.db = RealmDB()
+        
         super.init()
         log.debug("*** ContentManager ***")
     }
@@ -163,6 +165,10 @@ public class ContentManager: NSObject, DTGContentManager {
 
         return item
     }
+    
+    private func referrerB64() -> String {
+        return (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
+    }
 
     public func loadItemMetadata(id: String, options: DTGSelectionOptions?) throws {
         
@@ -179,10 +185,17 @@ public class ContentManager: NSObject, DTGContentManager {
             log.debug("removing \(id) from metadataLoading")
             metadataLoadingSet.remove(id)  // done, with or without error
         }
-        
-        let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
-        let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
-        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), 
+
+        var url = item.remoteUrl
+        if let adapter = manifestRequestAdapter {
+            if let pmAdapter = adapter as? PlayManifestDTGRequestParamsAdapter {
+                pmAdapter.referrer = referrerB64()
+                pmAdapter.sessionId = sessionId.uuidString
+            }
+            url = adapter.adapt((url: url, headers: [:])).url
+        }
+        let localizer = HLSLocalizer(id: id, 
+                                     url: url, 
                                      downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), 
                                      options: options, 
                                      audioBitrateEstimation: defaultAudioBitrateEstimation)
@@ -340,6 +353,10 @@ public class ContentManager: NSObject, DTGContentManager {
     public func setup() throws {
         // gets the realm instance, when migration is needed sets up the new scheme and migration block.
         _ = try getRealm()
+    }
+
+    public func setManifestRequestAdapter(adapter: DTGRequestParamsAdapter) {
+        self.manifestRequestAdapter = adapter
     }
 }
 

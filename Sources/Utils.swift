@@ -9,6 +9,7 @@ import Foundation
 import XCGLogger
 import AVFoundation
 import VideoToolbox
+import PlayKitUtils
 
 extension RandomAccessCollection {
     
@@ -260,5 +261,13 @@ extension MutableCollection {
     }
 }
 
-
-
+class PlayManifestDTGRequestParamsAdapter: DTGRequestParamsAdapter {
+    var sessionId: String = ""
+    var referrer: String = ""
+    
+    func adapt(_ params: DTGRequestParams) -> DTGRequestParams {
+        let altUrl = PlayManifestRequestAdapter(url: params.url, sessionId: sessionId, clientTag: ContentManager.clientTag, 
+            referrer: referrer, playbackType: "offline").adapt()
+        return (altUrl, params.headers)
+    }
+}
