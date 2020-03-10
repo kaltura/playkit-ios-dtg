@@ -590,6 +590,10 @@ extension ViewController: ContentManagerDelegate {
             self.statusLabel.text = newState.asString()
         }
     }
+    
+    func serverDidChangeState(_ state: DTGServerState) {
+        print("serverDidChangeState: \(state)")
+    }
 }
 
 /************************************************************/
