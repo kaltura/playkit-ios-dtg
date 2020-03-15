@@ -122,7 +122,8 @@ struct CodecSupport {
 // MARK: - DownloadItemTaskType
 /************************************************************/
 
-enum DownloadItemTaskType {
+enum DownloadItemTaskType: CustomStringConvertible {
+        
     case video
     case audio
     case text
@@ -149,6 +150,10 @@ enum DownloadItemTaskType {
         case .text: return "text"
         case .key: return "key"
         }
+    }
+    
+    var description: String {
+        asString()
     }
 }
 
