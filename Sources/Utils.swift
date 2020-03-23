@@ -153,7 +153,7 @@ enum DownloadItemTaskType: CustomStringConvertible {
     }
     
     var description: String {
-        asString()
+        return asString()
     }
 }
 
