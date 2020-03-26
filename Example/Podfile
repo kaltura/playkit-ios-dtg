@@ -8,8 +8,6 @@ swift_version = '5.0'
 target 'DownloadToGo_Example' do
   pod 'DownloadToGo', :path => '..'
   
-  pod 'M3U8Kit', :git => 'https://github.com/kaltura/M3U8Paser', :tag => 'k0.3.2'
-
   pod 'PlayKit', '~> 3.12.1'
 #  pod 'PlayKit', :path => '../../playkit-ios'
 #  pod 'PlayKit', :git => 'https://github.com/kaltura/playkit-ios', :branch => 'develop'
