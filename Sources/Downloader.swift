@@ -68,7 +68,7 @@ protocol Downloader: class {
     /// The state of the downloader.
     var state: SynchronizedProperty<DownloaderState> { get }
     
-    init(itemId: String, tasks: [DownloadItemTask])
+    init(itemId: String, tasks: [DownloadItemTask], chunksRequestAdapter: DTGRequestParamsAdapter?)
     
     /// Starts the download according to the tasks ordering in the queue.
     /// use this only for the initial start.
