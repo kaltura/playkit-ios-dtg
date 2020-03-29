@@ -182,6 +182,10 @@ class VideoStream: Stream<M3U8ExtXStreamInf>, CustomStringConvertible {
         
         attribs.append((M3U8_EXT_X_STREAM_INF_BANDWIDTH, String(stream.bandwidth)))
         
+        if stream.averageBandwidth > 0 {
+            attribs.append((M3U8_EXT_X_STREAM_INF_AVERAGE_BANDWIDTH, String(stream.averageBandwidth)))
+        }
+        
         attribs.append((M3U8_EXT_X_STREAM_INF_RESOLUTION, "\(Int(stream.resolution.width))x\(Int(stream.resolution.height))"))
         
         if let audio = stream.audio, audio.count > 0, hasAudio {

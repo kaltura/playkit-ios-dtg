@@ -1,5 +1,5 @@
 # Download To Go
-Download-to-Go (DTG) framework for iOS. 
+Download-to-Go (DTG) for iOS. 
 
 Used to download Kaltura HLS streams for offline playback. 
 

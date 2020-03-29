@@ -62,7 +62,6 @@ class HLSLocalizer {
         // Only one video stream
         let videoStream = try selectVideoStream(master: master)
         
-        
         if let mapUrl = videoStream.mapUrl {
             self.tasks.append(downloadItemTask(url: mapUrl, type: .video, order: 0))
         }
@@ -71,7 +70,11 @@ class HLSLocalizer {
         
         self.videoTrack = videoTrack(videoStream: videoStream.streamInfo)
     
-        aggregateTrackSize(bitrate: videoStream.streamInfo.bandwidth)
+        var trackBandwidth = videoStream.streamInfo.averageBandwidth
+        if trackBandwidth == 0 {
+            trackBandwidth = videoStream.streamInfo.bandwidth
+        }
+        aggregateTrackSize(bitrate: trackBandwidth)
         
         self.selectedAudioStreams.removeAll()
         try addAll(streams: master.audioStreams(), type: M3U8MediaPlaylistTypeAudio)
