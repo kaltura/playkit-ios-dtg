@@ -93,7 +93,11 @@ struct VideoTrack: DTGVideoTrack {
 func loadMasterPlaylist(url: URL) throws -> M3U8MasterPlaylist {
     let (text, finalURL) = try syncHttpGetUtf8String(url: url)
     
-    if let playlist = M3U8MasterPlaylist(content: text, baseURL: finalURL.deletingLastPathComponent()) {
+    // The parser has an issue with \r in master playlists - as a workaround,
+    // replace "\r\n" and "\r" to "\n" before sending the text to the parser.
+    let cleanText = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        
+    if let playlist = M3U8MasterPlaylist(content: cleanText, baseURL: finalURL.deletingLastPathComponent()) {
         return playlist
     } else {
         throw HLSLocalizerError.malformedPlaylist
