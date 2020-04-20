@@ -261,14 +261,6 @@ extension String {
     func m3u8Attribs(prefix: String) -> [String:String]? {
         return parseM3U8Attributes(self, prefix)
     }
-
-    func replacing(playlistUrl: URL?, type: DownloadItemTaskType) -> String {
-        if let url = playlistUrl {
-            return self.replacingOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type))
-        } else {
-            return self
-        }
-    }
 }
 
 extension URL {
@@ -278,19 +270,6 @@ extension URL {
     
     func segmentRelativeLocalPath() -> String {
         return "\(absoluteString.md5()).\(pathExtension)"
-    }
-}
-
-extension NSMutableString {
-    func replace(playlistUrl: URL?, type: DownloadItemTaskType) {
-        if let url = playlistUrl {
-            self.replaceOccurrences(of: url.absoluteString, with: url.mediaPlaylistRelativeLocalPath(as: type), options: [], range: NSMakeRange(0, self.length))
-        }
-    }
-    
-    func replace(segmentUrl: String, relativeTo: URL) throws {
-        guard let relativeLocalPath = URL(string: segmentUrl, relativeTo: relativeTo)?.segmentRelativeLocalPath() else { throw HLSLocalizerError.invalidState }
-        self.replaceOccurrences(of: segmentUrl, with: relativeLocalPath, options: [], range: NSMakeRange(0, self.length))
     }
 }
 
