@@ -276,3 +276,45 @@ class PlayManifestDTGRequestParamsAdapter: DTGRequestParamsAdapter {
         return (altUrl, params.headers)
     }
 }
+
+//  Converted to Swift 5.2 by Swiftify v5.2.19603 - https://swiftify.com/
+func parseM3U8Attributes(_ str: String?, _ prefix: String?) -> [String : String]? {
+
+    if !(str?.hasPrefix(prefix ?? "") ?? false) {
+        return nil
+    }
+    var attribute_list = (str as NSString?)?.substring(from: prefix?.count ?? 0)
+
+    var dict: [AnyHashable : Any] = [:]
+
+    var equalMarkRange = (attribute_list as NSString?)?.range(of: "=")
+
+    while NSNotFound != equalMarkRange?.location {
+        let key = (attribute_list as NSString?)?.substring(to: equalMarkRange?.location ?? 0)
+        attribute_list = (attribute_list as NSString?)?.substring(from: (equalMarkRange?.location ?? 0) + 1)
+        var value = ""
+
+        if attribute_list?.hasPrefix("\"") ?? false {
+            attribute_list = (attribute_list as NSString?)?.substring(from: 1)
+            let quoteRange = (attribute_list as NSString?)?.range(of: "\"")
+            value = (attribute_list as NSString?)?.substring(to: quoteRange?.location ?? 0) ?? ""
+            attribute_list = (attribute_list as NSString?)?.substring(from: (quoteRange?.location ?? 0) + 1)
+        } else {
+            let commaRange = (attribute_list as NSString?)?.range(of: ",")
+            if NSNotFound == commaRange?.location {
+                value = attribute_list ?? ""
+            } else {
+                value = (attribute_list as NSString?)?.substring(to: commaRange?.location ?? 0) ?? ""
+                attribute_list = (attribute_list as NSString?)?.substring(from: (commaRange?.location ?? 0) + 1)
+            }
+        }
+        if attribute_list?.hasPrefix(",") ?? false {
+            attribute_list = (attribute_list as NSString?)?.substring(from: 1)
+        }
+        equalMarkRange = (attribute_list as NSString?)?.range(of: "=")
+
+        dict[key ?? ""] = value
+    }
+    return dict as? [String : String]
+}
+

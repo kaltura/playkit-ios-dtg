@@ -6,7 +6,12 @@
 //
 
 import Foundation
-import M3U8Kit
+
+#if canImport(M3U8Parser)
+import M3U8Parser   // SPM
+#else
+import M3U8Kit      // Pod
+#endif
 
 typealias MasterPlaylist = M3U8MasterPlaylist
 typealias MediaPlaylist = M3U8MediaPlaylist

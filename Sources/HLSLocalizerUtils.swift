@@ -6,8 +6,14 @@
 //
 
 import Foundation
-import M3U8Kit
 import PlayKitUtils
+import CommonCrypto
+
+#if canImport(M3U8Parser)
+import M3U8Parser   // SPM
+#else
+import M3U8Kit      // Pod
+#endif
 
 public enum HLSLocalizerError: Error {
     /// sent when an unknown playlist type was encountered
@@ -251,7 +257,17 @@ class MediaStream: Stream<M3U8ExtXMedia>, CustomStringConvertible {
 
 extension String {
     func md5() -> String {
-        return md5WithString(self)
+        let str = self.cString(using: .utf8)
+        let strLen = CUnsignedInt(self.lengthOfBytes(using: .utf8))
+        let digestLen = Int(CC_MD5_DIGEST_LENGTH)
+        let result = UnsafeMutablePointer<CUnsignedChar>.allocate(capacity: digestLen)
+        CC_MD5(str!, strLen, result)
+        let hash = NSMutableString()
+        for i in 0..<digestLen {
+            hash.appendFormat("%02x", result[i])
+        }
+        result.deallocate()
+        return hash as String
     }
     
     func safeItemPathName() -> String {

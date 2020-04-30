@@ -10,8 +10,13 @@
 
 
 import Foundation
-import M3U8Kit
 import PlayKitUtils
+
+#if canImport(M3U8Parser)
+import M3U8Parser   // SPM
+#else
+import M3U8Kit      // Pod
+#endif
 
 
 let KEYFORMAT_FAIRPLAY =    M3U8_EXT_X_KEY_KEYFORMAT + "=\"com.apple.streamingkeydelivery\""
