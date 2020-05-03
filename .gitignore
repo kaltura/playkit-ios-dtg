@@ -64,3 +64,4 @@ fastlane/test_output
 
 # Intentionally ignore Podfile.lock in samples.
 Podfile.lock
+Package.resolved
