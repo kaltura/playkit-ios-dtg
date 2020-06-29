@@ -506,7 +506,7 @@ class ViewController: UIViewController {
     func toast(_ message: String, _ duration: TimeInterval = 0) {
         print("[TOAST]", message)
         self.view!.makeToast(message, 
-                             duration: duration > 0 ? duration : Double(message.count) * 0.050, 
+                             duration: duration > 0 ? duration : min(10, Double(message.count) * 0.050), 
                              position: CSToastPositionCenter)
     }
 }

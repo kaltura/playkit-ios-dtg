@@ -130,25 +130,14 @@ public class ContentManager: NSObject, DTGContentManager {
     }
 
     public func startItems(inStates states: DTGItemStartableState...) throws {
-        if states.contains(.inProgress) {
-            for item in try itemsByState(.inProgress) {
-                try startItem(id: item.id)
-            }
-        }
-        if states.contains(.paused) {
-            for item in try itemsByState(.paused) {
-                try startItem(id: item.id)
-            }
-        }
-        if states.contains(.interrupted) {
-            for item in try itemsByState(.interrupted) {
+        for state in states {
+            for item in try itemsByState(state.asItemState()) {
                 try startItem(id: item.id)
             }
         }
     }
 
     public func itemsByState(_ state: DTGItemState) throws -> [DTGItem] {
-
         return try db.getItems(byState: state)
     }
     
@@ -363,6 +352,20 @@ public class ContentManager: NSObject, DTGContentManager {
     
     public func setChunksRequestAdapter(adapter: DTGRequestParamsAdapter) {
         self.chunksRequestAdapter = adapter
+    }
+}
+
+
+extension DTGItemStartableState {
+    func asItemState() -> DTGItemState {
+        switch self {
+        case .inProgress:
+            return .inProgress
+        case .paused:
+            return .paused
+        case .interrupted:
+            return .interrupted
+        }
     }
 }
 

@@ -35,7 +35,7 @@ fileprivate let invalidResumeDataSize = 200
 
 /// `Downloader` object is responsible for downloading files locally and reporting progres.
 class DefaultDownloader: NSObject, Downloader {
-    
+
     /************************************************************/
     // MARK: - Private Properties
     /************************************************************/
@@ -240,7 +240,7 @@ private extension DefaultDownloader {
         
         self.activeDownloads[newTask] = downloadTask
         newTask.resume()
-        log.debug("Started download task with identifier: \(newTask.taskIdentifier)")
+        log.verbose("Started download task with identifier: \(newTask.taskIdentifier)")
     }
     
     func pauseDownloadTasks(completionHandler: @escaping ([DownloadItemTask]) -> Void) {

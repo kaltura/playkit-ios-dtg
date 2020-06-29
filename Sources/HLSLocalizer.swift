@@ -479,7 +479,7 @@ class HLSLocalizer {
                 }
             }
 
-            let url: URL = stream.m3u8URL()
+            guard let url: URL = stream.m3u8URL() else {continue}
             do {
                 let mediaStream = try MediaStream(streamInfo: stream, mediaUrl: url, type: type)
                 if let mapUrl = mediaStream.mapUrl {
