@@ -171,6 +171,7 @@ class ViewController: UIViewController {
             }
         }
 
+        cm.setExperimentalMaxTaskQueueSize(maxQueueSize: 100)
         cm.setDefaultAudioBitrateEstimation(bitrate: defaultAudioBitrateEstimation)
 
         // initialize UI
