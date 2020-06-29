@@ -21,6 +21,10 @@ import AVFoundation
 /* ***********************************************************/
 
 public class ContentManager: NSObject, DTGContentManager {
+    public func setExperimentalMaxTaskQueueSize(maxQueueSize: Int) {
+        maxTaskQueueSize = maxQueueSize
+    }
+    
     /// shared singleton object
     public static let shared: DTGContentManager = ContentManager()
     
@@ -35,6 +39,7 @@ public class ContentManager: NSObject, DTGContentManager {
     
     var manifestRequestAdapter: DTGRequestParamsAdapter? = PlayManifestDTGRequestParamsAdapter()
     var chunksRequestAdapter: DTGRequestParamsAdapter?
+    var maxTaskQueueSize: Int = 4
 
     // Set of items that are currently in the transient metadata-loading state.
     private var metadataLoadingSet = SafeSet<String>()
@@ -279,7 +284,7 @@ public class ContentManager: NSObject, DTGContentManager {
         
         try self.update(itemState: .inProgress, byId: id)
         
-        let downloader = DefaultDownloader(itemId: id, tasks: tasks, chunksRequestAdapter: chunksRequestAdapter)
+        let downloader = DefaultDownloader(itemId: id, tasks: tasks, chunksRequestAdapter: chunksRequestAdapter, maxTaskQueueSize: maxTaskQueueSize)
         downloader.delegate = self
         self.downloaders[id] = downloader
         try downloader.start()

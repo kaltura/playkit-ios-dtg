@@ -59,16 +59,13 @@ protocol Downloader: class {
     /// Should be invoked when `urlSessionDidFinishEvents` is called.
     var backgroundSessionCompletionHandler: (() -> Void)? { get set }
     
-    /// The max allowed concurrent download tasks.
-    var maxConcurrentDownloadItemTasks: Int { get }
-    
     /// The related dtg item id
     var dtgItemId: String { get }
     
     /// The state of the downloader.
     var state: SynchronizedProperty<DownloaderState> { get }
     
-    init(itemId: String, tasks: [DownloadItemTask], chunksRequestAdapter: DTGRequestParamsAdapter?)
+    init(itemId: String, tasks: [DownloadItemTask], chunksRequestAdapter: DTGRequestParamsAdapter?, maxTaskQueueSize: Int)
     
     /// Starts the download according to the tasks ordering in the queue.
     /// use this only for the initial start.

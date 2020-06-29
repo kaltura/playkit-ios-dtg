@@ -113,6 +113,7 @@ public protocol DTGContentManager: class {
     
     func setManifestRequestAdapter(adapter: DTGRequestParamsAdapter)
     func setChunksRequestAdapter(adapter: DTGRequestParamsAdapter)
+    func setExperimentalMaxTaskQueueSize(maxQueueSize: Int)
 }
 
 

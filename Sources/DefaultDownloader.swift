@@ -85,7 +85,7 @@ class DefaultDownloader: NSObject, Downloader {
         }
     }
     
-    let maxConcurrentDownloadItemTasks: Int = 4
+    let maxTaskQueueSize: Int
     
     let dtgItemId: String
     
@@ -94,9 +94,16 @@ class DefaultDownloader: NSObject, Downloader {
     /************************************************************/
     // MARK: - Initialization
     /************************************************************/
-    required init(itemId: String, tasks: [DownloadItemTask], chunksRequestAdapter: DTGRequestParamsAdapter?) {
+    required init(itemId: String, tasks: [DownloadItemTask], chunksRequestAdapter: DTGRequestParamsAdapter?, maxTaskQueueSize: Int) {
         self.dtgItemId = itemId
         self.chunksRequestAdapter = chunksRequestAdapter
+        
+        if #available(iOS 13, *) {
+            self.maxTaskQueueSize = maxTaskQueueSize
+        } else {
+            self.maxTaskQueueSize = 4
+        }
+        
         super.init()
         self.downloadItemTasksQueue.enqueue(tasks)
         self.state.onChange { [weak self] (state) in
@@ -107,6 +114,7 @@ class DefaultDownloader: NSObject, Downloader {
     
     private func createSession() -> URLSession {
         let backgroundSessionConfiguration = URLSessionConfiguration.background(withIdentifier: self.sessionIdentifier)
+//        backgroundSessionConfiguration.isDiscretionary = true
         return URLSession(configuration: backgroundSessionConfiguration, delegate: self, delegateQueue: nil)
     }
 
@@ -187,7 +195,7 @@ private extension DefaultDownloader {
             return
         }
         
-        while self.currentTasksCount < self.maxConcurrentDownloadItemTasks && self.downloadItemTasksQueue.count > 0 {
+        while self.currentTasksCount < self.maxTaskQueueSize && self.downloadItemTasksQueue.count > 0 {
             guard let downloadTask = self.downloadItemTasksQueue.dequeue() else { continue }
             self.start(downloadTask: downloadTask)
         }
@@ -377,7 +385,11 @@ extension DefaultDownloader: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let fileManager = FileManager.default
-        log.debug("active task identifiers = \(self.activeDownloads.map { $0.0.taskIdentifier })")
+        if self.activeDownloads.count > 10 {
+            log.debug("active task count = \(self.activeDownloads.count)")
+        } else {
+            log.debug("active task identifiers = \(self.activeDownloads.map { $0.0.taskIdentifier })")
+        }
         log.debug("task finished, identifier = \(downloadTask.taskIdentifier)")
         guard let downloadItemTask = self.activeDownloads[downloadTask] else {
             log.debug("no active download for this task")
