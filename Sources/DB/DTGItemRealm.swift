@@ -54,6 +54,8 @@ class DTGItemRealm: Object {
     @objc dynamic var downloadedSize: Int64 = 0
     
     var duration = RealmOptional<TimeInterval>()
+    var totalTaskCount = RealmOptional<Int64>()
+    var completedTaskCount = RealmOptional<Int64>()
 
     let textTracks = List<TrackInfoRealm>()
     let audioTracks = List<TrackInfoRealm>()
@@ -79,6 +81,8 @@ class DTGItemRealm: Object {
         item.duration = self.duration.value
         item.estimatedSize = self.estimatedSize.value
         item.downloadedSize = self.downloadedSize
+        item.totalTaskCount = self.totalTaskCount.value
+        item.completedTaskCount = self.completedTaskCount.value
         item.availableTextTracks = self.textTracks.filter("type = 'text'").compactMap({ $0.asTrackInfo() })
         item.selectedTextTracks = self.textTracks.filter("type = 'text' AND selected = true").compactMap({ $0.asTrackInfo() })
         item.availableAudioTracks = self.audioTracks.filter("type = 'audio'").compactMap({ $0.asTrackInfo() })

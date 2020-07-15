@@ -197,7 +197,9 @@ struct DownloadItem: DTGItem {
     let id: String 
     let remoteUrl: URL
     var state: DTGItemState = .new 
-    var estimatedSize: Int64? 
+    var estimatedSize: Int64?
+    var totalTaskCount: Int64?
+    var completedTaskCount: Int64?
     var downloadedSize: Int64 = 0
     var duration: TimeInterval?
     var availableTextTracks: [TrackInfo] = [] 

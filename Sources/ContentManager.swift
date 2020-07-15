@@ -211,6 +211,8 @@ public class ContentManager: NSObject, DTGContentManager {
         item.state = .metadataLoaded
         item.duration = localizer.duration
         item.estimatedSize = localizer.estimatedSize
+        item.totalTaskCount = Int64(localizer.tasks.count)
+        item.completedTaskCount = 0
         item.availableTextTracks = localizer.availableTextTracksInfo
         item.availableAudioTracks = localizer.availableAudioTracksInfo
         item.selectedTextTracks = localizer.selectedTextTracksInfo
