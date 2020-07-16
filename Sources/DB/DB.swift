@@ -104,6 +104,11 @@ fileprivate let config = Realm.Configuration(
         if (oldSchemaVersion < 5) {
             // Property 'TrackInfoRealm.languageCode' has been made optional. Nothing to do.
         }
+        
+        // 5 -> 6
+        if oldSchemaVersion < 6 {
+            // Added totalTaskCount and completedTaskCount in DTGItemRealm. Nothing to do.
+        }
     },
     objectTypes: [DTGItemRealm.self, DownloadItemTaskRealm.self, TrackInfoRealm.self]
 )
@@ -260,7 +265,8 @@ extension RealmDB {
             return false
         }
         
-        try write(getRealm()) { 
+        try write(getRealm()) {
+            if item.isInvalidated {return}
             item.completedTaskCount.value = completedTaskCount
         }
         
