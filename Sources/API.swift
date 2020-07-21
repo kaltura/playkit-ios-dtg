@@ -125,7 +125,7 @@ extension DTGContentManager {
 /// Delegate that will receive download events.
 public protocol ContentManagerDelegate: class {
     /// Some data was downloaded for the item. 
-    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?)
+    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?, completedFraction: Float)
     
     /// Item has changed state. in case state will be failed, the error will be provided (interupted state could also provide error).
     func item(id: String, didChangeToState newState: DTGItemState, error: Error?)
@@ -147,6 +147,9 @@ public protocol DTGItem {
     
     /// Downloaded size in bytes.
     var downloadedSize: Int64 { get }
+    
+    /// Estimation of the completion status, 0.0 to 1.0. Suitable for use in `UIProgress.progress`.
+    var completedFraction: Float { get }
         
     /// The selected text tracks for download (when download finishes this represents the downloaded tracks)
     var selectedTextTracks: [TrackInfo] { get }

@@ -75,7 +75,7 @@ fileprivate func migrate_to_3(_ migration: Migration) {
 
 fileprivate let config = Realm.Configuration(
     fileURL: DTGFilePaths.storagePath.appendingPathComponent("downloadToGo.realm"),
-    schemaVersion: 5,
+    schemaVersion: 6,
     migrationBlock: { migration, oldSchemaVersion in
         
         // We haven’t migrated anything yet, so oldSchemaVersion == 0
@@ -103,6 +103,11 @@ fileprivate let config = Realm.Configuration(
         // 4 -> 5
         if (oldSchemaVersion < 5) {
             // Property 'TrackInfoRealm.languageCode' has been made optional. Nothing to do.
+        }
+        
+        // 5 -> 6
+        if oldSchemaVersion < 6 {
+            // Added totalTaskCount and completedTaskCount in DTGItemRealm. Nothing to do.
         }
     },
     objectTypes: [DTGItemRealm.self, DownloadItemTaskRealm.self, TrackInfoRealm.self]
@@ -150,6 +155,7 @@ extension RealmDB {
             realmItem.state = DTGItemState.metadataLoaded.asString()
             realmItem.duration.value = item.duration
             realmItem.estimatedSize.value = item.estimatedSize ?? -1
+            realmItem.totalTaskCount.value = item.totalTaskCount
             convertTracks(itemId: item.id, type: .text, available: item.availableTextTracks, selected: item.selectedTextTracks, list: realmItem.textTracks)
             convertTracks(itemId: item.id, type: .audio, available: item.availableAudioTracks, selected: item.selectedAudioTracks, list: realmItem.audioTracks)
         }
@@ -251,6 +257,21 @@ extension RealmDB {
         
         return false
     }
+    
+    @discardableResult
+    func updateItemTaskCompletionCount(id: String, completedTaskCount: Int64) throws -> Bool {
+        guard let item = try self.realmItem(id) else {
+            log.error("No such item \(id)")
+            return false
+        }
+        
+        try write(getRealm()) {
+            if item.isInvalidated {return}
+            item.completedTaskCount.value = completedTaskCount
+        }
+        
+        return true
+    }
 }
 
 /************************************************************/
@@ -267,7 +288,7 @@ extension RealmDB {
                 if let et = rlm.object(ofType: DownloadItemTaskRealm.self, forPrimaryKey: t.destinationUrl) {
                     log.warning("Task with key \(et.destinationUrl) already exists (item=\(et.dtgItemId) url=\(et.contentUrl) type=\(et.type))")
                 } else {
-                    rlm.add(t, update: true)    // Using update so it won't crash if exists
+                    rlm.add(t, update: .all)
                 }
             }
         }

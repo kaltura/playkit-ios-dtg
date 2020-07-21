@@ -11,6 +11,17 @@ import AVFoundation
 import VideoToolbox
 import PlayKitUtils
 
+
+typealias TaskProgress = (total: Int64, completed: Int64)
+
+func calcCompletedFraction(downloadedBytes: Int64, estimatedTotalBytes: Int64, completedTaskCount: Int64?, totalTaskCount: Int64?) -> Float {
+    if let total = totalTaskCount, let completed = completedTaskCount, total > 0 {
+        return Float(completed) / Float(total)
+    }
+    
+    return estimatedTotalBytes > 0 ? Float(downloadedBytes) / Float(estimatedTotalBytes) : 0
+}
+
 extension RandomAccessCollection {
     
     /// - Parameter areInIncreasingOrder: return nil when two element are equal
@@ -197,13 +208,21 @@ struct DownloadItem: DTGItem {
     let id: String 
     let remoteUrl: URL
     var state: DTGItemState = .new 
-    var estimatedSize: Int64? 
+    var estimatedSize: Int64?
     var downloadedSize: Int64 = 0
+    var totalTaskCount: Int64?
+    var completedTaskCount: Int64?
     var duration: TimeInterval?
     var availableTextTracks: [TrackInfo] = [] 
     var availableAudioTracks: [TrackInfo] = [] 
     var selectedTextTracks: [TrackInfo] = [] 
     var selectedAudioTracks: [TrackInfo] = []
+    
+    var completedFraction: Float {
+        DownloadToGo.calcCompletedFraction(
+            downloadedBytes: downloadedSize, estimatedTotalBytes: estimatedSize ?? 0, 
+            completedTaskCount: completedTaskCount, totalTaskCount: totalTaskCount)
+    }
     
     init(id: String, url: URL) {
         self.id = id
