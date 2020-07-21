@@ -539,30 +539,6 @@ private extension ContentManager {
     }
     
     func update(itemState: DTGItemState, byId id: String, error: Error? = nil) throws {
-//                
-//        switch itemState {
-//        case .new: break
-//        case .metadataLoaded: break
-//            
-//        // Pause and resume
-//        case .paused:
-//            progressMap[id]?.pause()
-//        case .inProgress:
-//            progressMap[id]?.resume()
-//            
-//        // States that cause progress cancellation
-//        case .failed: fallthrough
-//        case .interrupted: fallthrough
-//        case .removed: fallthrough
-//        case .dbFailure:
-//            progressMap[id]?.cancel()
-//        
-//        case .completed:
-//            if let p = progressMap[id] {
-//                p.completedUnitCount = p.totalUnitCount
-//            }
-//        }
-//
         if itemState == .failed {
             try self.removeItem(id: id)
         } else {
