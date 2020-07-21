@@ -295,9 +295,6 @@ public class ContentManager: NSObject, DTGContentManager {
         try self.update(itemState: .inProgress, byId: id)
         
         if let totalTaskCount = item.totalTaskCount {
-            let progress = Progress(totalUnitCount: totalTaskCount)
-            progress.completedUnitCount = item.completedTaskCount ?? 0
-            
             progressMap[id] = TaskProgress(totalTaskCount, item.completedTaskCount ?? 0)
         }
         
