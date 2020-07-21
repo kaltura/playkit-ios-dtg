@@ -67,8 +67,6 @@ public class ContentManager: NSObject, DTGContentManager {
     // Map of item id and the related downloader
     fileprivate var downloaders = SafeMap<String, Downloader>()
     
-    private var progressMap = SafeMap<String, TaskProgress>()
-    
     private override init() {
         /// create main directory
         try! FileManager.default.createDirectory(at: DTGFilePaths.storagePath, withIntermediateDirectories: true, attributes: nil)
@@ -213,8 +211,6 @@ public class ContentManager: NSObject, DTGContentManager {
         item.state = .metadataLoaded
         item.duration = localizer.duration
         item.estimatedSize = localizer.estimatedSize
-        item.totalTaskCount = Int64(localizer.tasks.count)
-        item.completedTaskCount = 0
         item.availableTextTracks = localizer.availableTextTracksInfo
         item.availableAudioTracks = localizer.availableAudioTracksInfo
         item.selectedTextTracks = localizer.selectedTextTracksInfo
@@ -293,13 +289,6 @@ public class ContentManager: NSObject, DTGContentManager {
         }
         
         try self.update(itemState: .inProgress, byId: id)
-        
-        if let totalTaskCount = item.totalTaskCount {
-            let progress = Progress(totalUnitCount: totalTaskCount)
-            progress.completedUnitCount = item.completedTaskCount ?? 0
-            
-            progressMap[id] = TaskProgress(totalTaskCount, item.completedTaskCount ?? 0)
-        }
         
         let downloader = DefaultDownloader(itemId: id, tasks: tasks, chunksRequestAdapter: chunksRequestAdapter)
         downloader.delegate = self
@@ -410,9 +399,7 @@ extension ContentManager: DownloaderDelegate {
 
             let (newSize, estSize) = try self.updateItem(id: downloader.dtgItemId, incrementDownloadSize: bytesWritten, state: newState)
             
-            let progress = calcCompletedFraction(downloadedBytes: newSize, estimatedTotalBytes: estSize, completedTaskCount: progressMap[downloader.dtgItemId]?.completed, totalTaskCount: progressMap[downloader.dtgItemId]?.total)
-            
-            self.delegate?.item(id: downloader.dtgItemId, didDownloadData: newSize, totalBytesEstimated: estSize, completedFraction: progress)
+            self.delegate?.item(id: downloader.dtgItemId, didDownloadData: newSize, totalBytesEstimated: estSize)
             
         } catch {
             // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
@@ -427,7 +414,6 @@ extension ContentManager: DownloaderDelegate {
         do {
             // Save pasued tasks to db
             try self.db.pauseTasks(tasks)
-
         } catch {
             self.notifyItemState(downloader.dtgItemId, newState: .dbFailure, error: error)
         }
@@ -448,14 +434,6 @@ extension ContentManager: DownloaderDelegate {
         do {
             // Remove the task from the db tasks objects
             try self.db.removeTask(downloadItemTask)
-            
-            if var progress = progressMap[downloadItemTask.dtgItemId] {
-                progress.completed += 1
-                try self.db.updateItemTaskCompletionCount(
-                    id: downloadItemTask.dtgItemId, completedTaskCount: progress.completed)
-                progressMap[downloadItemTask.dtgItemId] = progress
-            }
-            
         } catch {
             // Remove the downloader, data storage has an issue or is full no need to keep downloading for now.
             self.removeDownloader(withId: downloader.dtgItemId)

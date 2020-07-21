@@ -109,7 +109,7 @@ class DownloadTest: XCTestCase, ContentManagerDelegate {
     
 
     
-    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?, completedFraction: Float) {
+    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         if let label = progressLabel {
             DispatchQueue.main.async {
                 label.text = "\(id)\n\(Int(totalBytesDownloaded)/1024/1024)/\(Int(totalBytesEstimated ?? -1)/1024/1024)MB"

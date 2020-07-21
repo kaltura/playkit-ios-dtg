@@ -127,8 +127,8 @@ class ViewController: UIViewController {
                     self.statusLabel.text = item?.state.asString() ?? ""
                     if item?.state == .completed {
                         self.progressView.progress = 1.0
-                    } else if let completedFraction = item?.completedFraction {
-                        self.progressView.progress = completedFraction
+                    } else if let downloadedSize = item?.downloadedSize, let estimatedSize = item?.estimatedSize, estimatedSize > 0 {
+                        self.progressView.progress = Float(downloadedSize) / Float(estimatedSize)
                     } else {
                         self.progressView.progress = 0.0
                     }
@@ -556,14 +556,25 @@ extension ViewController {
 /************************************************************/
 
 extension ViewController: ContentManagerDelegate {
-    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?, completedFraction: Float) {
+    
+    func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?) {
         if id != selectedItem.id {return}   // only update the view for selected item.
         
-        PKLog.debug("item=\(id) completedFraction=\(completedFraction)")
-        
-        DispatchQueue.main.async {
-            self.progressView.progress = completedFraction
-            self.view.layoutIfNeeded()
+        if let totalBytesEstimated = totalBytesEstimated {
+            if totalBytesEstimated > totalBytesDownloaded {
+                DispatchQueue.main.async {
+                    self.progressView.progress = Float(totalBytesDownloaded) / Float(totalBytesEstimated)
+                    self.view.layoutIfNeeded()
+                }
+            } else if totalBytesDownloaded >= totalBytesEstimated && totalBytesEstimated > 0 {
+                DispatchQueue.main.async {
+                    self.progressView.progress = 1.0
+                }
+            } else {
+                print("issue with calculating progress, estimated: \(totalBytesEstimated), downloaded: \(totalBytesDownloaded)")
+            }
+        } else {
+            print("issue with calculating progress, no estimated size.")
         }
     }
     
