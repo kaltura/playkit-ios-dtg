@@ -20,7 +20,7 @@ Pod::Spec.new do |s|
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64'
   }
 
-  s.dependency 'M3U8Kit', '0.4.1'
+  s.dependency 'M3U8Kit', '1.0.0'
   s.dependency 'GCDWebServer', '~> 3.5.4'
   s.dependency 'RealmSwift', '~> 5.5.0'
   s.dependency 'XCGLogger', '~> 7.0.0'
