@@ -15,14 +15,9 @@ Pod::Spec.new do |s|
 
   s.source_files = 'Sources/**/*'
 
-  s.xcconfig = {
-### The following is required for Xcode 12 (https://stackoverflow.com/questions/63607158/xcode-12-building-for-ios-simulator-but-linking-in-object-file-built-for-ios)
-    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64'
-  }
-
   s.dependency 'M3U8Kit', '1.0.0'
   s.dependency 'GCDWebServer', '~> 3.5.4'
-  s.dependency 'RealmSwift', '~> 5.5.0'
+  s.dependency 'RealmSwift', '~> 10.1.0'
   s.dependency 'XCGLogger', '~> 7.0.0'
   s.dependency 'PlayKitUtils', '~> 0.5'
 end
