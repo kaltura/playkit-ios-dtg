@@ -17,7 +17,7 @@ testApp() {
   cd Example
   pod install
   CODE=0
-  xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone 11' | tee xcodebuild.log | xcpretty -r html || CODE=$?
+  travis_wait xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone 11' | tee xcodebuild.log | xcpretty -r html || CODE=$?
   export CODE
   env > env.txt
   zip --junk-paths data.zip xcodebuild.log build/reports/tests.html env.txt
