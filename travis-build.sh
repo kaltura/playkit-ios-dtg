@@ -33,8 +33,8 @@ libLint() {
 
 FLAG=$(mktemp)
 
+keepAlive $FLAG &
 if [ -n "$TRAVIS_TAG" ] || [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
-  keepAlive $FLAG &
   libLint
 else
   testApp
