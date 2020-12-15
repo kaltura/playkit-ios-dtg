@@ -1,4 +1,4 @@
-suffix = '-dev'   # Dev mode
+suffix = '.0000'   # Dev mode
 # suffix = ''       # Release
 
 Pod::Spec.new do |s|
@@ -11,13 +11,13 @@ Pod::Spec.new do |s|
   s.source           = { :git => 'https://github.com/kaltura/playkit-ios-dtg.git', :tag => s.version.to_s }
   s.swift_version    = '5.0'
 
-  s.ios.deployment_target = '9.0'
+  s.ios.deployment_target = '10.0'
 
   s.source_files = 'Sources/**/*'
 
-  s.dependency 'M3U8Kit', '0.4.1'
+  s.dependency 'M3U8Kit', '1.0.0'
   s.dependency 'GCDWebServer', '~> 3.5.4'
-  s.dependency 'RealmSwift', '~> 5.2.0'
+  s.dependency 'RealmSwift', '~> 10.2.0'
   s.dependency 'XCGLogger', '~> 7.0.0'
-  s.dependency 'PlayKitUtils', '~> 0.4.0'
+  s.dependency 'PlayKitUtils', '~> 0.5'
 end

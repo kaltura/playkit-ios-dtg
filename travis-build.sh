@@ -17,7 +17,7 @@ testApp() {
   cd Example
   pod install
   CODE=0
-  xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone X' | tee xcodebuild.log | xcpretty -r html || CODE=$?
+  xcodebuild test -workspace DownloadToGo.xcworkspace -scheme DownloadToGo-Example -sdk iphonesimulator ONLY_ACTIVE_ARCH=NO -destination 'platform=iOS Simulator,name=iPhone 11' | tee xcodebuild.log | xcpretty -r html || CODE=$?
   export CODE
   env > env.txt
   zip --junk-paths data.zip xcodebuild.log build/reports/tests.html env.txt
@@ -33,8 +33,8 @@ libLint() {
 
 FLAG=$(mktemp)
 
+keepAlive $FLAG &
 if [ -n "$TRAVIS_TAG" ] || [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
-  keepAlive $FLAG &
   libLint
 else
   testApp
