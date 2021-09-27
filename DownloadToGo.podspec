@@ -3,7 +3,7 @@ suffix = '.0000'   # Dev mode
 
 Pod::Spec.new do |s|
   s.name             = 'DownloadToGo'
-  s.version          = '3.14.1' + suffix
+  s.version          = '3.15.0' + suffix
   s.summary          = 'DownloadToGo -- download manager for HLS'
   s.homepage         = 'https://github.com/kaltura/playkit-ios-dtg'
   s.license          = { :type => 'AGPLv3', :file => 'LICENSE' }
@@ -17,8 +17,8 @@ Pod::Spec.new do |s|
 
   s.dependency 'M3U8Kit', '1.0.0'
   s.dependency 'GCDWebServer', '~> 3.5.4'
-  s.dependency 'RealmSwift', '~> 10.7.2'
-  s.dependency 'Realm', '~> 10.7.2'
+  s.dependency 'RealmSwift', '~> 10.15.1'
+  s.dependency 'Realm', '~> 10.15.1'
   s.dependency 'XCGLogger', '~> 7.0.0'
   s.dependency 'PlayKitUtils', '~> 0.5'
 end
