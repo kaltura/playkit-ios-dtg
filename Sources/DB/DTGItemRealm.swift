@@ -49,13 +49,13 @@ class DTGItemRealm: Object {
     /// The item's current state.
     @objc dynamic var state: String = ""
     /// Estimated size of the item.
-    var estimatedSize = RealmOptional<Int64>()
+    var estimatedSize = RealmProperty<Optional<Int64>>()
     /// Downloaded size in bytes.
     @objc dynamic var downloadedSize: Int64 = 0
     
-    var duration = RealmOptional<TimeInterval>()
-    var totalTaskCount = RealmOptional<Int64>()
-    var completedTaskCount = RealmOptional<Int64>()
+    var duration = RealmProperty<Optional<TimeInterval>>()
+    var totalTaskCount = RealmProperty<Optional<Int64>>()
+    var completedTaskCount = RealmProperty<Optional<Int64>>()
 
     let textTracks = List<TrackInfoRealm>()
     let audioTracks = List<TrackInfoRealm>()

@@ -25,7 +25,7 @@ class DownloadItemTaskRealm: Object {
     
     @objc dynamic var resumeData: Data? = nil
     
-    let order = RealmOptional<Int>()
+    let order = RealmProperty<Optional<Int>>()
     
     override static func primaryKey() -> String? {
         return "destinationUrl"
