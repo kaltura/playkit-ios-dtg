@@ -164,10 +164,11 @@ class ViewController: UIViewController {
         
         items = loadedItems.map{Item(json: $0)}
         
-        let completedItems = try! self.cm.itemsByState(.completed)
-        for (index, item) in completedItems.enumerated() {
-            if item.id.hasPrefix("test") && item.id.hasSuffix("()") {
-                self.items.insert(Item(item.id, id: item.id, url: "file://foo.bar/baz"), at: index)
+        if let completedItems = try? self.cm.itemsByState(.completed) {
+            for (index, item) in completedItems.enumerated() {
+                if item.id.hasPrefix("test") && item.id.hasSuffix("()") {
+                    self.items.insert(Item(item.id, id: item.id, url: "file://foo.bar/baz"), at: index)
+                }
             }
         }
 
