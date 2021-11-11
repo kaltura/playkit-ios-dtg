@@ -11,14 +11,16 @@
 
 import Foundation
 
-public class DTGSelectionOptions {
+@objc public class DTGSelectionOptions: NSObject {
     
     /// Initialize a new SelectionSettings object.
     /// The default behavior is as follows:
     /// - Video: select the track most suitable for the current device (codec, width, height)
     /// - Audio: select the default, as specified by the HLS playlist
     /// - Subtitles: select nothing
-    public init() {}
+    @objc public override init() {
+        super.init()
+    }
     
     /// Audio languages to download.
     ///
@@ -29,7 +31,7 @@ public class DTGSelectionOptions {
     /// ["fr", "de"]
     /// ```
     /// An empty array means not downloading extra audio tracks at all.
-    public var audioLanguages: [String]? = nil {
+    @objc public var audioLanguages: [String]? = nil {
         didSet {
             if audioLanguages != nil {
                 allAudioLanguages = false
@@ -46,7 +48,7 @@ public class DTGSelectionOptions {
     /// ["en"]
     /// ```
     /// An empty array means not downloading text tracks at all.
-    public var textLanguages: [String]? = nil {
+    @objc public var textLanguages: [String]? = nil {
         didSet {
             if textLanguages != nil {
                 allTextLanguages = false
@@ -55,7 +57,7 @@ public class DTGSelectionOptions {
     }
     
     /// Select all audio languages.
-    public var allAudioLanguages: Bool = false {
+    @objc public var allAudioLanguages: Bool = false {
         didSet {
             if allAudioLanguages {
                 audioLanguages = nil
@@ -64,7 +66,7 @@ public class DTGSelectionOptions {
     }
     
     /// Select all subtitle languages.
-    public var allTextLanguages: Bool = false {
+    @objc public var allTextLanguages: Bool = false {
         didSet {
             if allTextLanguages {
                 textLanguages = nil
@@ -112,9 +114,9 @@ public class DTGSelectionOptions {
     /// Allow or disallow codecs that are not implemented in hardware.
     /// iOS 11 and up support HEVC, but hardware support is only available in iPhone 7 and later.
     /// Using a software decoder causes higher energy consumption, affecting battery life.
-    public var allowInefficientCodecs: Bool = false
+    @objc public var allowInefficientCodecs: Bool = false
     
-    public enum TrackCodec: CaseIterable {
+    @objc public enum TrackCodec: Int, CaseIterable {
         
         // Video Codecs
         
@@ -139,21 +141,39 @@ public class DTGSelectionOptions {
     // Convenience methods for setting the properties.
     
     @discardableResult
-    public func setMinVideoWidth(_ width: Int) -> Self {
+    @objc public func setMinVideoWidth(_ width: Int) -> Self {
         self.videoWidth = width
         return self
     }
     
     @discardableResult
-    public func setMinVideoHeight(_ height: Int) -> Self {
+    @objc public func setMinVideoHeight(_ height: Int) -> Self {
         self.videoHeight = height
         return self
     }
     
+    @available(*, deprecated, message: "Use setMinVideoBitrate(Int, forCodec: TrackCodec)")
     @discardableResult
     public func setMinVideoBitrate(_ codec: TrackCodec, _ bitrate: Int) -> Self {
-        self.videoBitrates[codec] = bitrate
+        return setMinVideoBitrate(bitrate, forCodec: codec)
+    }
+    
+    @discardableResult
+    @objc public func setMinVideoBitrate(_ bitrate: Int, forCodec codec: TrackCodec) -> Self {
+        if TrackCodec.allCases.contains(codec) {
+            self.videoBitrates[codec] = bitrate
+        }
         return self
+    }
+    
+    /// Set value of TrackCodec type
+    @objc public func setPreferredVideoCodecs(_ codecs: [Int]) {
+        self.videoCodecs = codecs.compactMap({ TrackCodec(rawValue: $0) })
+    }
+    
+    /// Set value of TrackCodec type
+    @objc public func setPreferredAudioCodecs(_ codecs: [Int]) {
+        self.audioCodecs = codecs.compactMap({ TrackCodec(rawValue: $0) })
     }
     
     @discardableResult
