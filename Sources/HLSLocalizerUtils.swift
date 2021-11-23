@@ -273,12 +273,17 @@ extension URL {
     }
 }
 
-extension DTGSelectionOptions: CustomStringConvertible {
-    public var description: String {
+extension DTGSelectionOptions {
+    
+    public override var description: String {
         return """
-        Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1) codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates)
-        Audio: all=\(allAudioLanguages) list=\(audioLanguages ?? []) codecs=\(audioCodecs ?? [])
-        Text: all=\(allTextLanguages) list=\(textLanguages ?? [])
+        Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1)
+        Video codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates)
+        Audio codecs=\(audioCodecs ?? [])
+        Audio: all=\(allAudioLanguages)
+        Audio languages list=\(audioLanguages ?? [])
+        Text: all=\(allTextLanguages)
+        Text languages list=\(textLanguages ?? [])
         """
     }
     
