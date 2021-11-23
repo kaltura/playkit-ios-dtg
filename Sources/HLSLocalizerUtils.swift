@@ -276,7 +276,8 @@ extension URL {
 extension DTGSelectionOptions {
     
     public override var description: String {
-        return """
+        return super.description + "\n" +
+        """
         Video: height=\(videoHeight ?? -1) width=\(videoWidth ?? -1)
         Video codecs=\(videoCodecs ?? []) bitrates=\(videoBitrates)
         Audio codecs=\(audioCodecs ?? [])
