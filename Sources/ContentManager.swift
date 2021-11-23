@@ -236,8 +236,8 @@ public class ContentManager: NSObject, DTGContentManager {
         
         // Set video bitrate, assuming the given value refers to AVC1
         if let pvb = preferredVideoBitrate {
-            options.setMinVideoBitrate(.avc1, pvb)
-            options.setMinVideoBitrate(.hevc, Int(Double(pvb) * 0.70))   // Careful conversion ratio - 70/30%
+            options.setMinVideoBitrate(pvb, forCodec: .avc1)
+            options.setMinVideoBitrate(Int(Double(pvb) * 0.70), forCodec:.hevc)   // Careful conversion ratio - 70/30%
         }
         
         try loadItemMetadata(id: id, options: options)
