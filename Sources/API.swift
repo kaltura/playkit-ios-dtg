@@ -13,7 +13,7 @@ import Foundation
 import XCGLogger
 
 /// Main entry point of the library, used to control item download and get their playback URL.
-public protocol DTGContentManager: class {
+public protocol DTGContentManager: AnyObject {
     
     /// The storage path for directories and files.
     var storagePath: URL { get }
@@ -123,7 +123,7 @@ extension DTGContentManager {
 }
 
 /// Delegate that will receive download events.
-public protocol ContentManagerDelegate: class {
+public protocol ContentManagerDelegate: AnyObject {
     /// Some data was downloaded for the item. 
     func item(id: String, didDownloadData totalBytesDownloaded: Int64, totalBytesEstimated: Int64?, completedFraction: Float)
     
@@ -263,6 +263,6 @@ public enum LogLevel {
 }
 
 public typealias DTGRequestParams = (url: URL, headers: [String:String])
-public protocol DTGRequestParamsAdapter: class {
+public protocol DTGRequestParamsAdapter: AnyObject {
     func adapt(_ params: DTGRequestParams) -> DTGRequestParams
 }

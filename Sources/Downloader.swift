@@ -48,7 +48,7 @@ enum DownloaderState: String {
     case cancelled
 }
 
-protocol Downloader: class {
+protocol Downloader: AnyObject {
     /// The session identifier, used to restore background sessions and to identify them.
     var sessionIdentifier: String { get }
     
@@ -90,7 +90,7 @@ protocol Downloader: class {
     func refreshSession()
 }
 
-protocol DownloaderDelegate: class {
+protocol DownloaderDelegate: AnyObject {
     func downloader(_ downloader: Downloader, didProgress bytesWritten: Int64)
     func downloader(_ downloader: Downloader, didPauseDownloadTasks tasks: [DownloadItemTask])
     func downloaderDidCancelDownloadTasks(_ downloader: Downloader)
